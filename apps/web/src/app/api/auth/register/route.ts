@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { getDataSource } from "@/lib/database";
-import { User } from "@/entities";
-import { UserRole } from "@langopia/shared/types";
+// @ts-ignore
+import { Client } from "pg";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,33 +21,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ds = await getDataSource();
-    const userRepo = ds.getRepository(User);
+    const client = new Client({ connectionString: process.env.DATABASE_URL });
+    await client.connect();
 
-    const existingUser = await userRepo.findOne({ where: { email } });
-    if (existingUser) {
-      return NextResponse.json(
-        { error: "A user with this email already exists" },
-        { status: 409 }
+    try {
+      // Check if user exists
+      const existing = await client.query(
+        'SELECT id FROM users WHERE email = $1',
+        [email]
       );
+      if (existing.rows.length > 0) {
+        return NextResponse.json(
+          { error: "A user with this email already exists" },
+          { status: 409 }
+        );
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      await client.query(
+        `INSERT INTO users (id, email, "passwordHash", name, role, "isActive", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, 'admin', true, NOW(), NOW())`,
+        [email, passwordHash, name]
+      );
+
+      return NextResponse.json(
+        { message: "Account created successfully" },
+        { status: 201 }
+      );
+    } finally {
+      await client.end();
     }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-
-    const user = userRepo.create({
-      name,
-      email,
-      passwordHash,
-      role: UserRole.ADMIN,
-      isActive: true,
-    });
-
-    await userRepo.save(user);
-
-    return NextResponse.json(
-      { message: "Account created successfully" },
-      { status: 201 }
-    );
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(

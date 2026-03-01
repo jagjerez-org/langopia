@@ -1,9 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import bcrypt from "bcryptjs";
-import { getDataSource } from "@/lib/database";
-import { User } from "@/entities";
 import type { UserRole } from "@langopia/shared/types";
 
 declare module "next-auth" {
@@ -25,6 +22,7 @@ declare module "next-auth" {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -41,32 +39,44 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        const ds = await getDataSource();
-        const userRepo = ds.getRepository(User);
-        const user = await userRepo.findOne({
-          where: { email: credentials.email as string },
-        });
+        const { default: bcrypt } = await import("bcryptjs");
+        // @ts-ignore
+        const pg = await import("pg");
+        const Client = pg.default?.Client || pg.Client;
 
-        if (!user || !user.passwordHash) {
-          return null;
+        const client = new Client({ connectionString: process.env.DATABASE_URL });
+        await client.connect();
+
+        try {
+          const result = await client.query(
+            'SELECT id, email, name, role, "passwordHash", "academyId" FROM users WHERE email = $1',
+            [credentials.email as string]
+          );
+
+          const user = result.rows[0];
+          if (!user || !user.passwordHash) {
+            return null;
+          }
+
+          const isValid = await bcrypt.compare(
+            credentials.password as string,
+            user.passwordHash
+          );
+
+          if (!isValid) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            academyId: user.academyId,
+          };
+        } finally {
+          await client.end();
         }
-
-        const isValid = await bcrypt.compare(
-          credentials.password as string,
-          user.passwordHash
-        );
-
-        if (!isValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          academyId: user.academyId,
-        };
       },
     }),
   ],

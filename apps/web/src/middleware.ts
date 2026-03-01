@@ -1,20 +1,12 @@
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
-import { UserRole } from "@langopia/shared/types";
+import NextAuth from "next-auth";
+import authConfig from "@/auth.config";
 
-const protectedPaths = ["/dashboard", "/classroom", "/reports", "/admin", "/session", "/settings", "/profile"];
+const { auth } = NextAuth(authConfig);
+
 const adminPaths = ["/admin"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
-
-  const isProtected = protectedPaths.some((path) =>
-    pathname.startsWith(path)
-  );
-
-  if (!isProtected) {
-    return NextResponse.next();
-  }
 
   if (!req.auth) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
@@ -22,15 +14,16 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  const role = req.auth.user?.role as UserRole | undefined;
-
+  const role = req.auth.user?.role as string | undefined;
   const isAdminRoute = adminPaths.some((path) => pathname.startsWith(path));
-  if (isAdminRoute && role !== UserRole.ADMIN) {
+  if (isAdminRoute && role !== "admin") {
     return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
   }
 
   return NextResponse.next();
 });
+
+import { NextResponse } from "next/server";
 
 export const config = {
   matcher: [

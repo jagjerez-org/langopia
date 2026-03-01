@@ -31,7 +31,7 @@ export function createDataSource(): DataSource {
     type: "postgres",
     url: process.env.DATABASE_URL,
     entities,
-    synchronize: process.env.NODE_ENV === "development",
+    synchronize: false,
     logging: process.env.NODE_ENV === "development",
     migrations: ["src/migrations/*.ts"],
   });

@@ -26,10 +26,10 @@ export class Academy {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column({ length: 255 })
+  @Column({ type: "varchar", length: 255 })
   name!: string;
 
-  @Column({ length: 255, unique: true })
+  @Column({ type: "varchar", length: 255, unique: true })
   slug!: string;
 
   @Column({ type: "enum", enum: AcademyPlan, default: AcademyPlan.FREE })
@@ -38,13 +38,13 @@ export class Academy {
   @Column({ type: "jsonb", default: {} })
   settings!: Record<string, unknown>;
 
-  @Column({ length: 100, default: "UTC" })
+  @Column({ type: "varchar", length: 100, default: "UTC" })
   timezone!: string;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   stripeCustomerId!: string | null;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   stripeSubscriptionId!: string | null;
 
   @OneToMany(() => User, (user) => user.academy)
@@ -53,10 +53,10 @@ export class Academy {
   @OneToMany(() => Classroom, (classroom) => classroom.academy)
   classrooms!: Classroom[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: "timestamptz" })
   updatedAt!: Date;
 }
 
@@ -67,13 +67,13 @@ export class User {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column({ length: 255, unique: true })
+  @Column({ type: "varchar", length: 255, unique: true })
   email!: string;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   passwordHash!: string | null;
 
-  @Column({ length: 255 })
+  @Column({ type: "varchar", length: 255 })
   name!: string;
 
   @Column({ type: "enum", enum: UserRole, default: UserRole.STUDENT })
@@ -82,10 +82,10 @@ export class User {
   @Column({ type: "uuid", nullable: true })
   academyId!: string | null;
 
-  @Column({ length: 500, nullable: true })
+  @Column({ type: "varchar", length: 500, nullable: true })
   profileImageUrl!: string | null;
 
-  @Column({ default: true })
+  @Column({ type: "boolean", default: true })
   isActive!: boolean;
 
   @Column({ type: "timestamptz", nullable: true })
@@ -101,10 +101,10 @@ export class User {
   @OneToMany(() => ClassroomEnrollment, (enrollment) => enrollment.student)
   enrollments!: ClassroomEnrollment[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: "timestamptz" })
   updatedAt!: Date;
 }
 
@@ -121,7 +121,7 @@ export class Classroom {
   @Column({ type: "uuid" })
   teacherId!: string;
 
-  @Column({ length: 255 })
+  @Column({ type: "varchar", length: 255 })
   name!: string;
 
   @Column({ type: "text", nullable: true })
@@ -134,7 +134,7 @@ export class Classroom {
   })
   type!: ClassroomType;
 
-  @Column({ length: 100 })
+  @Column({ type: "varchar", length: 100 })
   languageTarget!: string;
 
   @Column({ type: "int", default: 1 })
@@ -154,10 +154,10 @@ export class Classroom {
   @OneToMany(() => ClassroomEnrollment, (enrollment) => enrollment.classroom)
   enrollments!: ClassroomEnrollment[];
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: "timestamptz" })
   updatedAt!: Date;
 }
 
@@ -183,7 +183,7 @@ export class ClassroomEnrollment {
   @JoinColumn({ name: "studentId" })
   student!: User;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   enrolledAt!: Date;
 }
 
@@ -216,13 +216,13 @@ export class Session {
   })
   status!: SessionStatus;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   livekitRoomId!: string | null;
 
-  @Column({ length: 500, nullable: true })
+  @Column({ type: "varchar", length: 500, nullable: true })
   recordingUrl!: string | null;
 
-  @Column({ length: 255, nullable: true })
+  @Column({ type: "varchar", length: 255, nullable: true })
   egressId!: string | null;
 
   @ManyToOne(() => Academy)
@@ -239,10 +239,10 @@ export class Session {
   @OneToOne(() => ClassReport, (report) => report.session)
   classReport!: ClassReport | null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: "timestamptz" })
   updatedAt!: Date;
 }
 
@@ -274,7 +274,7 @@ export class Transcription {
   @Column({ type: "jsonb", default: [] })
   wordTimestamps!: Record<string, unknown>[];
 
-  @Column({ length: 10, nullable: true })
+  @Column({ type: "varchar", length: 10, nullable: true })
   languageDetected!: string | null;
 
   @ManyToOne(() => Academy)
@@ -285,7 +285,7 @@ export class Transcription {
   @JoinColumn({ name: "sessionId" })
   session!: Session;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
 }
 
@@ -325,10 +325,10 @@ export class ClassReport {
   @JoinColumn({ name: "sessionId" })
   session!: Session;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: "timestamptz" })
   updatedAt!: Date;
 }
 
@@ -351,7 +351,7 @@ export class LearningProfile {
   @Column({ type: "jsonb", default: [] })
   grammarPatterns!: Record<string, unknown>[];
 
-  @Column({ length: 10, nullable: true })
+  @Column({ type: "varchar", length: 10, nullable: true })
   cefrLevelEstimate!: string | null;
 
   @ManyToOne(() => Academy)
@@ -362,7 +362,7 @@ export class LearningProfile {
   @JoinColumn({ name: "studentId" })
   student!: User;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ type: "timestamptz" })
   updatedAt!: Date;
 }
 
@@ -406,6 +406,6 @@ export class ProgressReport {
   @JoinColumn({ name: "classroomId" })
   classroom!: Classroom;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
 }
