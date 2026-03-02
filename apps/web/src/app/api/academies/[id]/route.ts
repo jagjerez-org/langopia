@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { auth } from "@/auth";
 import { getDataSource } from "@/lib/database";
 import { Academy, AcademyMember } from "@/entities";
-import { AcademyRole } from "@langopia/shared/types";
+import { hasPermission, Permission } from "@/lib/permissions";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -34,8 +34,10 @@ export async function GET(req: NextRequest, { params }: Params) {
     id: membership.academy.id,
     name: membership.academy.name,
     slug: membership.academy.slug,
-    role: membership.role,
-    apiKey: membership.role === AcademyRole.OWNER ? membership.academy.apiKey : undefined,
+    role: membership.roles.includes("owner") ? "owner" : membership.roles[0],
+    roles: membership.roles,
+    academyType: membership.academy.academyType,
+    apiKey: membership.roles.includes("owner") ? membership.academy.apiKey : undefined,
     settings: membership.academy.settings,
     memberCount,
     createdAt: membership.academy.createdAt,
@@ -61,7 +63,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Academy not found" }, { status: 404 });
   }
 
-  if (membership.role !== AcademyRole.OWNER && membership.role !== AcademyRole.ADMIN) {
+  if (!hasPermission(membership.roles, Permission.MANAGE_SETTINGS)) {
     return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
   }
 
@@ -96,7 +98,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     relations: ["academy"],
   });
 
-  if (!membership || membership.role !== AcademyRole.OWNER) {
+  if (!membership || !membership.roles.includes("owner")) {
     return NextResponse.json({ error: "Only the owner can regenerate the API key" }, { status: 403 });
   }
 

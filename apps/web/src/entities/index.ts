@@ -15,10 +15,15 @@ import {
 import {
   UserPlan,
   AcademyRole,
+  AcademyType,
+  ClassStatus,
+  ClassType,
+  ClassStudentStatus,
   RoomStatus,
   ParticipantRole,
   ReportStatus,
   ExerciseSource,
+  LearningPathStatus,
   LessonStatus,
   UsageMetric,
 } from "@langopia/shared/types";
@@ -83,6 +88,9 @@ export class Academy {
   @Column({ type: "varchar", length: 255, unique: true })
   apiKey!: string;
 
+  @Column({ type: "varchar", length: 20, default: "academy" })
+  academyType!: string;
+
   @Column({ type: "jsonb", default: {} })
   settings!: Record<string, unknown>;
 
@@ -94,6 +102,9 @@ export class Academy {
 
   @OneToMany(() => Room, (r) => r.academy)
   rooms!: Room[];
+
+  @OneToMany(() => Class, (c) => c.academy)
+  classes!: Class[];
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
@@ -116,8 +127,8 @@ export class AcademyMember {
   @Column({ type: "uuid" })
   academyId!: string;
 
-  @Column({ type: "enum", enum: AcademyRole, default: AcademyRole.TEACHER })
-  role!: AcademyRole;
+  @Column({ type: "jsonb", default: ["teacher"] })
+  roles!: string[];
 
   @ManyToOne(() => User, (u) => u.academyMemberships)
   @JoinColumn({ name: "userId" })
@@ -169,6 +180,244 @@ export class Student {
 
   @UpdateDateColumn({ type: "timestamptz" })
   lastSeenAt!: Date;
+}
+
+// ─── Lesson ─────────────────────────────────────────
+
+@Entity("lessons")
+export class Lesson {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  title!: string;
+
+  @Column({ type: "text", nullable: true })
+  description!: string | null;
+
+  @Column({ type: "varchar", length: 10, default: "en" })
+  language!: string;
+
+  @Column({ type: "varchar", length: 10 })
+  cefrLevel!: string;
+
+  @Column({ type: "enum", enum: LessonStatus, default: LessonStatus.DRAFT })
+  status!: LessonStatus;
+
+  @ManyToOne(() => Academy)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
+
+  @OneToMany(() => LessonExercise, (le) => le.lesson)
+  lessonExercises!: LessonExercise[];
+
+  @OneToMany(() => LearningPathLesson, (lpl) => lpl.lesson)
+  learningPathLessons!: LearningPathLesson[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
+}
+
+// ─── LearningPath ─────────────────────────────────────────
+
+@Entity("learning_paths")
+export class LearningPath {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  title!: string;
+
+  @Column({ type: "text", nullable: true })
+  description!: string | null;
+
+  @Column({ type: "varchar", length: 10 })
+  language!: string;
+
+  @Column({ type: "varchar", length: 5 })
+  cefrLevel!: string;
+
+  @Column({ type: "enum", enum: LearningPathStatus, default: LearningPathStatus.DRAFT })
+  status!: LearningPathStatus;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  thumbnailUrl!: string | null;
+
+  @Column({ type: "float", nullable: true })
+  estimatedHours!: number | null;
+
+  @ManyToOne(() => Academy)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
+
+  @OneToMany(() => LearningPathLesson, (lpl) => lpl.learningPath)
+  learningPathLessons!: LearningPathLesson[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
+}
+
+// ─── LearningPathLesson (LearningPath ↔ Lesson join) ─────
+
+@Entity("learning_path_lessons")
+@Unique(["learningPathId", "lessonId"])
+export class LearningPathLesson {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  learningPathId!: string;
+
+  @Column({ type: "uuid" })
+  lessonId!: string;
+
+  @Column({ type: "int", default: 0 })
+  sortOrder!: number;
+
+  @ManyToOne(() => LearningPath, (lp) => lp.learningPathLessons, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "learningPathId" })
+  learningPath!: LearningPath;
+
+  @ManyToOne(() => Lesson, (l) => l.learningPathLessons, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "lessonId" })
+  lesson!: Lesson;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+}
+
+// ─── Class (Scheduled Session) ───────────────────────────
+
+@Entity("classes")
+export class Class {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "uuid" })
+  createdByUserId!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  title!: string;
+
+  @Column({ type: "text", nullable: true })
+  description!: string | null;
+
+  @Column({ type: "varchar", length: 20, default: "individual" })
+  classType!: string;
+
+  @Column({ type: "int", default: 1 })
+  maxStudents!: number;
+
+  @Column({ type: "varchar", length: 100, default: "en" })
+  language!: string;
+
+  @Column({ type: "uuid", nullable: true })
+  lessonId!: string | null;
+
+  @Column({ type: "uuid", nullable: true })
+  teacherId!: string | null;
+
+  @Column({ type: "varchar", length: 20, default: "scheduled" })
+  status!: string;
+
+  @Column({ type: "timestamptz" })
+  scheduledAt!: Date;
+
+  @Column({ type: "int", default: 60 })
+  durationMinutes!: number;
+
+  @Column({ type: "int", default: 60 })
+  cancellationMinutes!: number;
+
+  @Column({ type: "timestamptz", nullable: true })
+  cancelledAt!: Date | null;
+
+  @Column({ type: "text", nullable: true })
+  cancelReason!: string | null;
+
+  @Index({ unique: true })
+  @Column({ type: "varchar", length: 255, unique: true })
+  teacherToken!: string;
+
+  @Index({ unique: true })
+  @Column({ type: "varchar", length: 255, unique: true })
+  studentToken!: string;
+
+  @Column({ type: "uuid", nullable: true })
+  roomId!: string | null;
+
+  @ManyToOne(() => Academy, (a) => a.classes)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
+
+  @ManyToOne(() => Lesson, { nullable: true })
+  @JoinColumn({ name: "lessonId" })
+  lesson!: Lesson | null;
+
+  @ManyToOne(() => AcademyMember, { nullable: true })
+  @JoinColumn({ name: "teacherId" })
+  teacher!: AcademyMember | null;
+
+  @ManyToOne(() => Room, { nullable: true })
+  @JoinColumn({ name: "roomId" })
+  room!: Room | null;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "createdByUserId" })
+  createdBy!: User;
+
+  @OneToMany(() => ClassStudent, (cs) => cs.class_)
+  classStudents!: ClassStudent[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
+}
+
+// ─── ClassStudent ────────────────────────────────────────
+
+@Entity("class_students")
+@Unique(["classId", "studentId"])
+export class ClassStudent {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  classId!: string;
+
+  @Column({ type: "uuid" })
+  studentId!: string;
+
+  @Column({ type: "varchar", length: 20, default: "enrolled" })
+  status!: string;
+
+  @ManyToOne(() => Class, (c) => c.classStudents, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "classId" })
+  class_!: Class;
+
+  @ManyToOne(() => Student)
+  @JoinColumn({ name: "studentId" })
+  student!: Student;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
 }
 
 // ─── Room ─────────────────────────────────────────────────
@@ -560,48 +809,6 @@ export class Exercise {
 
   @OneToMany(() => ReportExercise, (re) => re.exercise)
   reportExercises!: ReportExercise[];
-
-  @CreateDateColumn({ type: "timestamptz" })
-  createdAt!: Date;
-
-  @UpdateDateColumn({ type: "timestamptz" })
-  updatedAt!: Date;
-}
-
-// ─── Lesson ─────────────────────────────────────────
-
-@Entity("lessons")
-export class Lesson {
-  @PrimaryGeneratedColumn("uuid")
-  id!: string;
-
-  @Column({ type: "uuid" })
-  academyId!: string;
-
-  @Column({ type: "varchar", length: 255 })
-  title!: string;
-
-  @Column({ type: "text", nullable: true })
-  description!: string | null;
-
-  @Column({ type: "varchar", length: 10, default: "en" })
-  language!: string;
-
-  @Column({ type: "varchar", length: 10 })
-  cefrLevel!: string;
-
-  @Column({ type: "varchar", length: 255, nullable: true })
-  topic!: string | null;
-
-  @Column({ type: "enum", enum: LessonStatus, default: LessonStatus.DRAFT })
-  status!: LessonStatus;
-
-  @ManyToOne(() => Academy)
-  @JoinColumn({ name: "academyId" })
-  academy!: Academy;
-
-  @OneToMany(() => LessonExercise, (le) => le.lesson)
-  lessonExercises!: LessonExercise[];
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;

@@ -34,10 +34,12 @@ export async function authenticateApiKey(
   }
 
   // Find the owner of this academy for plan limit checks
-  const ownerMember = await ds.getRepository(AcademyMember).findOne({
-    where: { academyId: academy.id, role: "owner" as never },
-    relations: ["user"],
-  });
+  const ownerMember = await ds.getRepository(AcademyMember)
+    .createQueryBuilder("m")
+    .leftJoinAndSelect("m.user", "user")
+    .where("m.academyId = :academyId", { academyId: academy.id })
+    .andWhere("m.roles @> :roles", { roles: JSON.stringify(["owner"]) })
+    .getOne();
 
   if (!ownerMember) {
     return NextResponse.json(

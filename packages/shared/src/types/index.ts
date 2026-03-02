@@ -11,6 +11,38 @@ export enum AcademyRole {
   OWNER = "owner",
   ADMIN = "admin",
   TEACHER = "teacher",
+  PLANNER = "planner",
+  CONTENT_CREATOR = "content_creator",
+  STAFF = "staff",
+}
+
+// ─── Academy Type ──────────────────────────────────────────
+
+export enum AcademyType {
+  ACADEMY = "academy",
+  FREELANCE = "freelance",
+}
+
+// ─── Class ──────────────────────────────────────────────
+
+export enum ClassStatus {
+  SCHEDULED = "scheduled",
+  CONFIRMED = "confirmed",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled",
+}
+
+export enum ClassType {
+  INDIVIDUAL = "individual",
+  GROUP = "group",
+}
+
+export enum ClassStudentStatus {
+  ENROLLED = "enrolled",
+  ATTENDED = "attended",
+  NO_SHOW = "no_show",
+  CANCELLED = "cancelled",
 }
 
 // ─── Room ────────────────────────────────────────────────
@@ -56,6 +88,14 @@ export enum TargetSkill {
   READING = "reading",
   WRITING = "writing",
   LISTENING = "listening",
+}
+
+// ─── Learning Path ──────────────────────────────────
+
+export enum LearningPathStatus {
+  DRAFT = "draft",
+  PUBLISHED = "published",
+  ARCHIVED = "archived",
 }
 
 // ─── Lesson ─────────────────────────────────────────

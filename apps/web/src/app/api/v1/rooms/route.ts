@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { getDataSource } from "@/lib/database";
-import { Room, AcademyMember, User } from "@/entities";
+import { Room, Lesson, User } from "@/entities";
 import { RoomStatus, UsageMetric } from "@langopia/shared/types";
 import { authenticateApiKey, incrementUsage, checkPlanLimit } from "@/lib/api-auth";
 import { getRoomService } from "@/lib/livekit";
@@ -31,10 +31,20 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { title, language, maxStudents, slides, scheduledAt } = body;
+  const { title, language, maxStudents, slides, scheduledAt, lessonId } = body;
 
   if (!title) {
     return NextResponse.json({ error: "title is required" }, { status: 400 });
+  }
+
+  // Validate lessonId if provided
+  if (lessonId) {
+    const lesson = await ds.getRepository(Lesson).findOne({
+      where: { id: lessonId, academyId: academy.id },
+    });
+    if (!lesson) {
+      return NextResponse.json({ error: "Lesson not found or belongs to a different academy" }, { status: 400 });
+    }
   }
 
   // Generate unique tokens for URLs
@@ -67,6 +77,7 @@ export async function POST(req: NextRequest) {
   room.slides = slides ?? [];
   room.livekitRoomId = livekitRoomId;
   room.scheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+  room.lessonId = lessonId ?? null;
 
   const saved = await ds.getRepository(Room).save(room);
 
@@ -83,6 +94,7 @@ export async function POST(req: NextRequest) {
       studentUrl: `${APP_URL}/room/${saved.id}?token=${studentToken}`,
       status: saved.status,
       slides: saved.slides,
+      lessonId: saved.lessonId,
       scheduledAt: saved.scheduledAt,
       createdAt: saved.createdAt,
     },

@@ -100,7 +100,7 @@ export default function ApiKeysPage() {
                   {selectedAcademyData?.name}
                 </h3>
                 <p className="text-xs capitalize text-zinc-500">
-                  {selectedAcademyData?.role}
+                  {selectedAcademyData?.roles?.join(", ")}
                 </p>
               </div>
             </div>

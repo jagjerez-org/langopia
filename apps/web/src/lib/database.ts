@@ -5,6 +5,11 @@ import {
   Academy,
   AcademyMember,
   Student,
+  Lesson,
+  LearningPath,
+  LearningPathLesson,
+  Class,
+  ClassStudent,
   Room,
   RoomParticipant,
   RoomNotes,
@@ -13,6 +18,8 @@ import {
   ClassReport,
   ExerciseTemplate,
   Exercise,
+  LessonExercise,
+  ReportExercise,
   UsageRecord,
 } from "@/entities";
 
@@ -21,6 +28,11 @@ const entities = [
   Academy,
   AcademyMember,
   Student,
+  Lesson,
+  LearningPath,
+  LearningPathLesson,
+  Class,
+  ClassStudent,
   Room,
   RoomParticipant,
   RoomNotes,
@@ -29,6 +41,8 @@ const entities = [
   ClassReport,
   ExerciseTemplate,
   Exercise,
+  LessonExercise,
+  ReportExercise,
   UsageRecord,
 ];
 

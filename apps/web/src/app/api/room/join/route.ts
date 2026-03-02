@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import { getDataSource } from "@/lib/database";
-import { Room, Student, RoomParticipant } from "@/entities";
+import { Room, Student, RoomParticipant, Class } from "@/entities";
 import { RoomStatus, ParticipantRole } from "@langopia/shared/types";
 import { createParticipantToken } from "@/lib/livekit";
+import { getRoomService } from "@/lib/livekit";
 
 // POST /api/room/join - Join a room using token (from teacher/student URL)
 export async function POST(req: NextRequest) {
@@ -16,19 +18,77 @@ export async function POST(req: NextRequest) {
   const ds = await getDataSource();
 
   // Find room by teacher or student token
-  const room = await ds.getRepository(Room).findOne({
+  let room = await ds.getRepository(Room).findOne({
     where: [{ teacherToken: token }, { studentToken: token }],
   });
 
+  let isTeacher: boolean;
+
+  // If no Room found, try Class token lookup
   if (!room) {
-    return NextResponse.json({ error: "Invalid room token" }, { status: 404 });
+    const cls = await ds.getRepository(Class).findOne({
+      where: [{ teacherToken: token }, { studentToken: token }],
+    });
+
+    if (!cls) {
+      return NextResponse.json({ error: "Invalid room token" }, { status: 404 });
+    }
+
+    if (cls.status === "completed" || cls.status === "cancelled") {
+      return NextResponse.json({ error: "Class is no longer active" }, { status: 410 });
+    }
+
+    isTeacher = token === cls.teacherToken;
+
+    // If Class has a Room already, use it
+    if (cls.roomId) {
+      room = await ds.getRepository(Room).findOne({ where: { id: cls.roomId } });
+    }
+
+    // If no Room exists yet, create one on-demand
+    if (!room) {
+      const livekitRoomId = `room-${crypto.randomBytes(8).toString("hex")}`;
+
+      try {
+        const roomService = getRoomService();
+        await roomService.createRoom({
+          name: livekitRoomId,
+          emptyTimeout: 600,
+          maxParticipants: (cls.maxStudents ?? 1) + 1,
+        });
+      } catch (err) {
+        console.error("Failed to create LiveKit room for class:", err);
+        return NextResponse.json({ error: "Failed to create video room" }, { status: 500 });
+      }
+
+      const newRoom = new Room();
+      newRoom.academyId = cls.academyId;
+      newRoom.createdByUserId = cls.createdByUserId;
+      newRoom.title = cls.title;
+      newRoom.language = cls.language;
+      newRoom.maxStudents = cls.maxStudents;
+      newRoom.teacherToken = cls.teacherToken;
+      newRoom.studentToken = cls.studentToken;
+      newRoom.livekitRoomId = livekitRoomId;
+      newRoom.scheduledAt = cls.scheduledAt;
+      newRoom.lessonId = cls.lessonId;
+      newRoom.status = RoomStatus.WAITING;
+
+      room = await ds.getRepository(Room).save(newRoom);
+
+      // Link Room to Class and update Class status
+      cls.roomId = room.id;
+      cls.status = "in_progress";
+      await ds.getRepository(Class).save(cls);
+    }
+  } else {
+    isTeacher = token === room.teacherToken;
   }
 
   if (room.status === RoomStatus.COMPLETED || room.status === RoomStatus.CANCELLED) {
     return NextResponse.json({ error: "Room is no longer active" }, { status: 410 });
   }
 
-  const isTeacher = token === room.teacherToken;
   const role = isTeacher ? ParticipantRole.TEACHER : ParticipantRole.STUDENT;
 
   // Students must provide name and email

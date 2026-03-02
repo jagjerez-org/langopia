@@ -9,7 +9,7 @@ import { useAcademy } from "@/components/academy-provider";
 import {
   LayoutDashboard,
   Key,
-  Video,
+  Calendar,
   FileText,
   Users,
   BookOpen,
@@ -19,6 +19,9 @@ import {
   Check,
   Plus,
   Loader2,
+  Route,
+  Dumbbell,
+  GraduationCap,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -43,10 +46,12 @@ const globalNavItems = [
 ];
 
 const academyNavItems = [
-  { href: "/dashboard/rooms", label: "Rooms", icon: Video },
-  { href: "/dashboard/reports", label: "Reports", icon: FileText },
+  { href: "/dashboard/classes", label: "Classes", icon: Calendar },
+  { href: "/dashboard/learning-paths", label: "Learning Paths", icon: Route },
+  { href: "/dashboard/lessons", label: "Lessons", icon: BookOpen },
+  { href: "/dashboard/exercises", label: "Exercise Bank", icon: Dumbbell },
   { href: "/dashboard/students", label: "Students", icon: Users },
-  { href: "/dashboard/exercises", label: "Exercises", icon: BookOpen },
+  { href: "/dashboard/reports", label: "Reports", icon: FileText },
   { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
 ];
 
@@ -179,7 +184,7 @@ export function Sidebar() {
                     {selectedAcademyData?.name ?? "Select academy"}
                   </p>
                   <p className="truncate text-xs capitalize text-zinc-500">
-                    {selectedAcademyData?.role ?? ""}
+                    {selectedAcademyData?.roles?.join(", ") ?? ""}
                   </p>
                 </div>
                 <ChevronDown className="h-4 w-4 shrink-0 text-zinc-400" />
@@ -211,7 +216,7 @@ export function Sidebar() {
                       variant="secondary"
                       className="mt-0.5 px-1.5 py-0 text-[10px] capitalize"
                     >
-                      {academy.role}
+                      {academy.roles?.join(", ") ?? academy.role}
                     </Badge>
                   </div>
                   {academy.id === selectedAcademy && (
@@ -251,7 +256,13 @@ export function Sidebar() {
                     <div className="h-3 w-20 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
                   </div>
                 ))
-              : renderNavItems(academyNavItems)}
+              : (
+                <>
+                  {renderNavItems(academyNavItems)}
+                  {selectedAcademyData?.academyType === "academy" &&
+                    renderNavItems([{ href: "/dashboard/teachers", label: "Teachers", icon: GraduationCap }])}
+                </>
+              )}
           </>
         )}
       </nav>

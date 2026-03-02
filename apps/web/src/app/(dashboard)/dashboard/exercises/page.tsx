@@ -9,13 +9,9 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  Send,
   Filter,
   Eye,
   EyeOff,
-  GripVertical,
-  ArrowUpDown,
-  RotateCcw,
   Lightbulb,
   RefreshCw,
   Volume2,
@@ -374,7 +370,6 @@ export default function ExercisesPage() {
   // Filters
   const [filterSkill, setFilterSkill] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterCefrLevel, setFilterCefrLevel] = useState<string>("all");
   const [groupBy, setGroupBy] = useState<"topic" | "level">("topic");
 
@@ -383,11 +378,6 @@ export default function ExercisesPage() {
 
   // Regenerating exercises
   const [regeneratingIds, setRegeneratingIds] = useState<Set<string>>(new Set());
-
-  // Answer state
-  const [answerResults, setAnswerResults] = useState<
-    Record<string, { id: string; isCorrect: boolean; correctAnswer: string; explanation: string }>
-  >({});
 
   const apiKey = selectedAcademyData?.apiKey;
 
@@ -543,52 +533,6 @@ export default function ExercisesPage() {
     }
   }
 
-  async function handleAnswer(id: string, answer: string) {
-    if (!apiKey) return;
-
-    const detailRes = await fetch(`/api/v1/exercises/${id}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (detailRes.ok) {
-      const full = await detailRes.json();
-      setExercises((prev) => prev.map((ex) => (ex.id === id ? { ...ex, ...full } : ex)));
-    }
-
-    const res = await fetch(`/api/v1/exercises/${id}`, {
-      method: "PATCH",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ studentAnswer: answer }),
-    });
-
-    if (res.ok) {
-      const result = await res.json();
-      setAnswerResults((prev) => ({ ...prev, [id]: result }));
-      setExercises((prev) =>
-        prev.map((ex) =>
-          ex.id === id
-            ? { ...ex, isCompleted: true, isCorrect: result.isCorrect, studentAnswer: answer, correctAnswer: result.correctAnswer, explanation: result.explanation }
-            : ex
-        )
-      );
-    }
-  }
-
-  function handleReset(id: string) {
-    setExercises((prev) =>
-      prev.map((ex) =>
-        ex.id === id ? { ...ex, isCompleted: false, isCorrect: null, studentAnswer: null } : ex
-      )
-    );
-    setAnswerResults((prev) => {
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-  }
-
   async function handleRegenerate(id: string) {
     if (!apiKey) return;
 
@@ -603,11 +547,6 @@ export default function ExercisesPage() {
         setExercises((prev) =>
           prev.map((ex) => (ex.id === id ? newExercise : ex))
         );
-        setAnswerResults((prev) => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
       }
     } finally {
       setRegeneratingIds((prev) => {
@@ -754,10 +693,6 @@ export default function ExercisesPage() {
   const filtered = exercises.filter((ex) => {
     if (filterSkill !== "all" && ex.targetSkill !== filterSkill) return false;
     if (filterType !== "all" && ex.type !== filterType) return false;
-    if (filterStatus === "completed" && !ex.isCompleted) return false;
-    if (filterStatus === "pending" && ex.isCompleted) return false;
-    if (filterStatus === "correct" && ex.isCorrect !== true) return false;
-    if (filterStatus === "incorrect" && ex.isCorrect !== false) return false;
     if (filterCefrLevel !== "all" && ex.cefrLevel !== filterCefrLevel) return false;
     return true;
   });
@@ -785,7 +720,7 @@ export default function ExercisesPage() {
   const skills = [...new Set(exercises.map((e) => e.targetSkill))];
   const types = [...new Set(exercises.map((e) => e.type))];
 
-  const hasActiveFilters = filterSkill !== "all" || filterType !== "all" || filterStatus !== "all" || filterCefrLevel !== "all";
+  const hasActiveFilters = filterSkill !== "all" || filterType !== "all" || filterCefrLevel !== "all";
 
   if (academyLoading) {
     return (
@@ -1153,17 +1088,6 @@ export default function ExercisesPage() {
           ))}
         </select>
         <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800"
-        >
-          <option value="all">All status</option>
-          <option value="pending">Pending</option>
-          <option value="completed">Completed</option>
-          <option value="correct">Correct</option>
-          <option value="incorrect">Incorrect</option>
-        </select>
-        <select
           value={filterCefrLevel}
           onChange={(e) => setFilterCefrLevel(e.target.value)}
           className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800"
@@ -1200,7 +1124,7 @@ export default function ExercisesPage() {
 
         {hasActiveFilters && (
           <button
-            onClick={() => { setFilterSkill("all"); setFilterType("all"); setFilterStatus("all"); setFilterCefrLevel("all"); }}
+            onClick={() => { setFilterSkill("all"); setFilterType("all"); setFilterCefrLevel("all"); }}
             className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           >
             <X className="h-3 w-3" /> Clear
@@ -1212,9 +1136,6 @@ export default function ExercisesPage() {
       <div className="space-y-6">
         {[...grouped.entries()].map(([groupKey, groupExercises]) => {
           const isCollapsed = collapsedGroups.has(groupKey);
-          const completedCount = groupExercises.filter((e) => e.isCompleted).length;
-          const correctCount = groupExercises.filter((e) => e.isCorrect === true).length;
-
           return (
             <div key={groupKey}>
               {/* Group header */}
@@ -1232,11 +1153,6 @@ export default function ExercisesPage() {
                   <span className="text-xs text-zinc-500">
                     {groupExercises.length} exercise{groupExercises.length !== 1 ? "s" : ""}
                   </span>
-                  {completedCount > 0 && (
-                    <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                      {correctCount}/{completedCount} correct
-                    </span>
-                  )}
                 </div>
               </button>
 
@@ -1262,17 +1178,6 @@ export default function ExercisesPage() {
                             <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                               {getTypeLabel(ex.type, templates)}
                             </span>
-                            {ex.isCompleted && (
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                  ex.isCorrect
-                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                                }`}
-                              >
-                                {ex.isCorrect ? "Correct" : "Incorrect"}
-                              </span>
-                            )}
                           </div>
                           <p className="text-sm font-medium">{ex.instruction}</p>
                           <p className="mt-0.5 text-sm text-zinc-500 line-clamp-1">{ex.content}</p>
@@ -1330,12 +1235,7 @@ export default function ExercisesPage() {
                       {/* Inline preview */}
                       {previewingIds.has(ex.id) && (
                         <div className="border-t border-zinc-100 p-5 dark:border-zinc-800">
-                          <ExercisePreview
-                            exercise={ex}
-                            onAnswer={handleAnswer}
-                            onReset={handleReset}
-                            answerResult={answerResults[ex.id] ?? null}
-                          />
+                          <ExercisePreview exercise={ex} />
                         </div>
                       )}
 
@@ -1364,7 +1264,7 @@ export default function ExercisesPage() {
             <Filter className="mb-3 h-8 w-8 text-zinc-400" />
             <p className="font-medium text-zinc-500">No exercises match your filters</p>
             <button
-              onClick={() => { setFilterSkill("all"); setFilterType("all"); setFilterStatus("all"); setFilterCefrLevel("all"); }}
+              onClick={() => { setFilterSkill("all"); setFilterType("all"); setFilterCefrLevel("all"); }}
               className="mt-2 text-sm text-violet-600 hover:underline dark:text-violet-400"
             >
               Clear filters

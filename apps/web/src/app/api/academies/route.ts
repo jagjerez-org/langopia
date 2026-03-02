@@ -3,7 +3,7 @@ import crypto from "crypto";
 import { auth } from "@/auth";
 import { getDataSource } from "@/lib/database";
 import { Academy, AcademyMember, User } from "@/entities";
-import { AcademyRole, PLAN_LIMITS, UserPlan } from "@langopia/shared/types";
+import { PLAN_LIMITS, UserPlan } from "@langopia/shared/types";
 
 // GET /api/academies - List user's academies
 export async function GET() {
@@ -24,8 +24,10 @@ export async function GET() {
       id: m.academy.id,
       name: m.academy.name,
       slug: m.academy.slug,
-      role: m.role,
-      apiKey: m.role === AcademyRole.OWNER ? m.academy.apiKey : undefined,
+      role: m.roles.includes("owner") ? "owner" : m.roles[0],
+      roles: m.roles,
+      academyType: m.academy.academyType,
+      apiKey: m.roles.includes("owner") ? m.academy.apiKey : undefined,
       createdAt: m.academy.createdAt,
     }))
   );
@@ -45,9 +47,11 @@ export async function POST(req: Request) {
   const plan = user?.plan ?? UserPlan.FREE;
   const limits = PLAN_LIMITS[plan];
 
-  const currentCount = await ds.getRepository(AcademyMember).count({
-    where: { userId: session.user.id, role: AcademyRole.OWNER as never },
-  });
+  const currentCount = await ds.getRepository(AcademyMember)
+    .createQueryBuilder("m")
+    .where("m.userId = :userId", { userId: session.user.id })
+    .andWhere("m.roles @> :roles", { roles: JSON.stringify(["owner"]) })
+    .getCount();
 
   if (currentCount >= limits.maxAcademies) {
     return NextResponse.json(
@@ -57,7 +61,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { name } = body;
+  const { name, academyType } = body;
 
   if (!name) {
     return NextResponse.json({ error: "name is required" }, { status: 400 });
@@ -70,6 +74,7 @@ export async function POST(req: Request) {
   academy.name = name;
   academy.slug = `${slug}-${crypto.randomBytes(4).toString("hex")}`;
   academy.apiKey = apiKey;
+  academy.academyType = academyType || "academy";
 
   const saved = await ds.getRepository(Academy).save(academy);
 
@@ -77,7 +82,7 @@ export async function POST(req: Request) {
   const member = new AcademyMember();
   member.userId = session.user.id;
   member.academyId = saved.id;
-  member.role = AcademyRole.OWNER;
+  member.roles = ["owner"];
   await ds.getRepository(AcademyMember).save(member);
 
   return NextResponse.json(
@@ -86,7 +91,9 @@ export async function POST(req: Request) {
       name: saved.name,
       slug: saved.slug,
       apiKey: saved.apiKey,
-      role: AcademyRole.OWNER,
+      role: "owner",
+      roles: ["owner"],
+      academyType: saved.academyType,
       createdAt: saved.createdAt,
     },
     { status: 201 }

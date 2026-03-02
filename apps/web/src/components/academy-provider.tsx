@@ -14,6 +14,8 @@ export interface AcademyData {
   name: string;
   slug: string;
   role: string;
+  roles: string[];
+  academyType: string;
   apiKey?: string;
   createdAt: string;
 }
