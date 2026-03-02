@@ -1,27 +1,35 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import {
-  Academy,
   User,
-  Classroom,
-  ClassroomEnrollment,
-  Session,
+  Academy,
+  AcademyMember,
+  Student,
+  Room,
+  RoomParticipant,
+  RoomNotes,
+  ChatMessage,
   Transcription,
   ClassReport,
-  LearningProfile,
-  ProgressReport,
+  ExerciseTemplate,
+  Exercise,
+  UsageRecord,
 } from "@/entities";
 
 const entities = [
-  Academy,
   User,
-  Classroom,
-  ClassroomEnrollment,
-  Session,
+  Academy,
+  AcademyMember,
+  Student,
+  Room,
+  RoomParticipant,
+  RoomNotes,
+  ChatMessage,
   Transcription,
   ClassReport,
-  LearningProfile,
-  ProgressReport,
+  ExerciseTemplate,
+  Exercise,
+  UsageRecord,
 ];
 
 let dataSource: DataSource | null = null;

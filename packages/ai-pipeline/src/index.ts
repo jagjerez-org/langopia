@@ -117,6 +117,75 @@ export async function transcribeAudio(
   };
 }
 
+// ─── Speaker Diarization (Phase 6) ────────────────────────
+
+export async function diarizeSpeakers(
+  segments: TranscriptionSegment[],
+  context: { teacherName: string; studentNames: string[] }
+): Promise<TranscriptionSegment[]> {
+  if (segments.length === 0) return segments;
+
+  const transcript = segments
+    .map((s, i) => `[${i}] ${s.text}`)
+    .join("\n");
+
+  const prompt = `You are analyzing a language class transcription to identify who is speaking in each segment.
+
+Context:
+- Teacher: ${context.teacherName}
+- Students: ${context.studentNames.join(", ") || "Unknown"}
+
+For each segment, determine if the speaker is the "teacher" or "student" based on:
+- Teachers typically: give instructions, explain grammar, ask questions to test knowledge, correct errors, provide feedback
+- Students typically: answer questions, attempt exercises, make errors, ask for clarification, practice vocabulary
+
+Return a JSON object:
+{
+  "speakers": ["teacher" | "student", ...]
+}
+
+The array must have exactly ${segments.length} elements, one per segment.
+
+Transcript:
+${transcript}
+
+Return ONLY valid JSON.`;
+
+  try {
+    const response = await getOpenAI().chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+    });
+
+    const content = response.choices[0]?.message?.content ?? "{}";
+    const parsed = JSON.parse(content);
+    const speakers: string[] = parsed.speakers ?? [];
+
+    return segments.map((seg, i) => ({
+      ...seg,
+      speaker: (speakers[i] === "student" ? "student" : "teacher") as "teacher" | "student",
+    }));
+  } catch {
+    // Fallback: return segments unchanged
+    return segments;
+  }
+}
+
+// ─── Live Transcription (Phase 6) ─────────────────────────
+
+export async function transcribeChunk(
+  audioBlob: File
+): Promise<string> {
+  const transcription = await getOpenAI().audio.transcriptions.create({
+    model: "whisper-1",
+    file: audioBlob,
+    response_format: "text",
+  });
+  return typeof transcription === "string" ? transcription : "";
+}
+
 // ─── Session Analysis (Phase 4) ──────────────────────────
 
 function computeSpeakingMetrics(
@@ -263,6 +332,215 @@ export interface ProgressReportInput {
   }[];
   currentCefrEstimate: string | null;
 }
+
+// ─── Exercise Generation (Phase 6) ────────────────────────
+
+export interface ExerciseGenerationInput {
+  studentName: string;
+  language: string;
+  cefrLevel: string | null;
+  vocabularyBank: { word: string; cefrLevel: string; context: string }[];
+  grammarPatterns: { rule: string; example: string; correction: string }[];
+  recentSuggestions: string[];
+  sourceContent?: string;
+}
+
+export interface ExerciseGenerationResult {
+  exercises: GeneratedExercise[];
+  tokensUsed: number;
+}
+
+export interface GeneratedExercise {
+  type: "fill_in_blank" | "multiple_choice" | "sentence_reorder" | "error_correction" | "free_response";
+  instruction: string;
+  content: string;
+  options?: string[];
+  correctAnswer: string;
+  explanation: string;
+  cefrLevel: string;
+  targetSkill: "vocabulary" | "grammar" | "reading" | "writing";
+}
+
+export async function generateExercises(
+  input: ExerciseGenerationInput
+): Promise<ExerciseGenerationResult> {
+  const vocabSample = input.vocabularyBank.slice(-20).map((v) => `${v.word} (${v.cefrLevel}): "${v.context}"`).join("\n");
+  const grammarSample = input.grammarPatterns.slice(-10).map((g) => `Rule: ${g.rule} | Error: "${g.example}" → "${g.correction}"`).join("\n");
+
+  const sourceSection = input.sourceContent?.trim()
+    ? `\nSource material (use this as the basis for generating exercises):\n${input.sourceContent.slice(0, 8000)}\n`
+    : "";
+
+  const prompt = `You are a language exercise generator for ${input.language} learners. Generate 6 exercises based on the student's learning profile.
+
+Return a JSON object:
+{
+  "exercises": [
+    {
+      "type": "fill_in_blank" | "multiple_choice" | "sentence_reorder" | "error_correction" | "free_response",
+      "instruction": "Clear instruction for the student",
+      "content": "The exercise content (sentence with ___ for fill-in, etc.)",
+      "options": ["option1", "option2", "option3", "option4"],
+      "correctAnswer": "The correct answer",
+      "explanation": "Why this is correct, referencing the grammar rule or vocabulary",
+      "cefrLevel": "A1|A2|B1|B2|C1|C2",
+      "targetSkill": "vocabulary" | "grammar" | "reading" | "writing"
+    }
+  ]
+}
+
+Student: ${input.studentName}
+CEFR Level: ${input.cefrLevel ?? "Unknown"}
+
+Recent vocabulary:
+${vocabSample || "No vocabulary data yet"}
+
+Grammar patterns to practice:
+${grammarSample || "No grammar data yet"}
+
+Teacher suggestions:
+${input.recentSuggestions.join("\n") || "None"}
+${sourceSection}
+Rules:
+- Generate exactly 6 exercises: 2 vocabulary, 2 grammar, 1 reading, 1 writing
+- Match difficulty to the student's CEFR level (${input.cefrLevel ?? "B1"})
+- For multiple_choice, always provide exactly 4 options
+- For fill_in_blank, use ___ in the content to mark the blank
+- Make exercises contextual and relevant to the student's recent learning
+- Return ONLY valid JSON`;
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.7,
+    response_format: { type: "json_object" },
+  });
+
+  const content = response.choices[0]?.message?.content ?? "{}";
+  const parsed = JSON.parse(content);
+  const tokensUsed = response.usage?.total_tokens ?? 0;
+
+  const exercises = (parsed.exercises ?? []).map((e: Record<string, unknown>) => ({
+    type: String(e.type ?? "multiple_choice"),
+    instruction: String(e.instruction ?? ""),
+    content: String(e.content ?? ""),
+    options: Array.isArray(e.options) ? e.options.map(String) : undefined,
+    correctAnswer: String(e.correctAnswer ?? ""),
+    explanation: String(e.explanation ?? ""),
+    cefrLevel: String(e.cefrLevel ?? input.cefrLevel ?? "B1"),
+    targetSkill: String(e.targetSkill ?? "vocabulary"),
+  }));
+
+  return { exercises, tokensUsed };
+}
+
+// ─── Template-based Exercise Generation ──────────────────
+
+export interface TemplateExerciseRequest {
+  templateSlug: string;
+  promptTemplate: string;
+  count: number;
+}
+
+export interface TemplateGenerationInput {
+  requests: TemplateExerciseRequest[];
+  language: string;
+  cefrLevel: string;
+  topic: string;
+  sourceContent?: string;
+}
+
+export interface TemplateGenerationResult {
+  exercises: (GeneratedExercise & { templateSlug: string })[];
+  tokensUsed: number;
+}
+
+/**
+ * Replaces {{key}} placeholders and handles {{#key}}...{{/key}} conditional blocks.
+ */
+export function interpolateTemplate(
+  template: string,
+  vars: Record<string, string | undefined>
+): string {
+  let result = template;
+
+  // Handle conditional blocks: {{#key}}...{{/key}}
+  result = result.replace(
+    /\{\{#(\w+)\}\}([\s\S]*?)\{\{\/\1\}\}/g,
+    (_, key, content) => {
+      return vars[key]?.trim() ? content.replace(/\{\{(\w+)\}\}/g, (_m: string, k: string) => vars[k] ?? "") : "";
+    }
+  );
+
+  // Replace simple placeholders
+  result = result.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
+
+  return result;
+}
+
+export async function generateExercisesFromTemplates(
+  input: TemplateGenerationInput
+): Promise<TemplateGenerationResult> {
+  const allExercises: (GeneratedExercise & { templateSlug: string })[] = [];
+  let totalTokens = 0;
+
+  const vars: Record<string, string | undefined> = {
+    topic: input.topic,
+    language: input.language,
+    cefrLevel: input.cefrLevel,
+    sourceContent: input.sourceContent,
+  };
+
+  for (const req of input.requests) {
+    if (req.count <= 0) continue;
+
+    vars.count = String(req.count);
+    const interpolated = interpolateTemplate(req.promptTemplate, vars);
+
+    const systemPrompt = `You are a language exercise generator. ${interpolated}
+
+Generate exactly ${req.count} exercise(s). Return ONLY valid JSON with this structure:
+{ "exercises": [{ "instruction": "...", "content": "...", "options": [...] or null, "correctAnswer": "...", "explanation": "...", "cefrLevel": "${input.cefrLevel}", "targetSkill": "..." }] }`;
+
+    try {
+      const response = await getOpenAI().chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: systemPrompt }],
+        temperature: 0.7,
+        response_format: { type: "json_object" },
+      });
+
+      const content = response.choices[0]?.message?.content ?? "{}";
+      const parsed = JSON.parse(content);
+      totalTokens += response.usage?.total_tokens ?? 0;
+
+      const exercises = (parsed.exercises ?? []).map(
+        (e: Record<string, unknown>) => ({
+          type: req.templateSlug,
+          instruction: String(e.instruction ?? ""),
+          content: String(e.content ?? ""),
+          options: Array.isArray(e.options) ? e.options.map(String) : undefined,
+          correctAnswer: String(e.correctAnswer ?? ""),
+          explanation: String(e.explanation ?? ""),
+          cefrLevel: String(e.cefrLevel ?? input.cefrLevel),
+          targetSkill: String(e.targetSkill ?? "vocabulary"),
+          templateSlug: req.templateSlug,
+        })
+      );
+
+      allExercises.push(...exercises);
+    } catch (err) {
+      console.error(
+        `Failed to generate exercises for template ${req.templateSlug}:`,
+        err
+      );
+    }
+  }
+
+  return { exercises: allExercises, tokensUsed: totalTokens };
+}
+
+// ─── Progress Report Generation (Phase 4) ────────────────
 
 export async function generateProgressReport(
   input: ProgressReportInput

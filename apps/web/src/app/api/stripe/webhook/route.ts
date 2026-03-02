@@ -1,81 +1,98 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getStripe, PLAN_PRICE_MAP } from "@/lib/stripe";
 import { getDataSource } from "@/lib/database";
-import { Academy } from "@/entities";
-import { AcademyPlan } from "@langopia/shared/types";
-import type Stripe from "stripe";
+import { User } from "@/entities";
+import { UserPlan } from "@langopia/shared/types";
+import { getStripe } from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const signature = req.headers.get("stripe-signature");
 
-  if (!signature) {
+  if (!signature || !process.env.STRIPE_WEBHOOK_SECRET) {
     return NextResponse.json({ error: "Missing signature" }, { status: 400 });
   }
 
-  let event: Stripe.Event;
+  const stripe = getStripe();
+  let event;
+
   try {
-    event = getStripe().webhooks.constructEvent(
+    event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET
     );
-  } catch {
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   const ds = await getDataSource();
-  const academyRepo = ds.getRepository(Academy);
 
   switch (event.type) {
     case "checkout.session.completed": {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const academyId = session.metadata?.academyId;
-      if (academyId && session.subscription) {
-        const academy = await academyRepo.findOne({ where: { id: academyId } });
-        if (academy) {
-          academy.stripeSubscriptionId = session.subscription as string;
-          await academyRepo.save(academy);
+      const session = event.data.object;
+      const userId = session.metadata?.userId;
+      const plan = session.metadata?.plan;
+
+      if (userId && plan) {
+        const user = await ds.getRepository(User).findOne({
+          where: { id: userId },
+        });
+        if (user) {
+          user.plan = plan as UserPlan;
+          user.stripeSubscriptionId =
+            typeof session.subscription === "string"
+              ? session.subscription
+              : null;
+          await ds.getRepository(User).save(user);
         }
       }
       break;
     }
 
     case "customer.subscription.updated": {
-      const subscription = event.data.object as Stripe.Subscription;
+      const subscription = event.data.object;
       const customerId =
         typeof subscription.customer === "string"
           ? subscription.customer
-          : subscription.customer.id;
-      const academy = await academyRepo.findOne({
-        where: { stripeCustomerId: customerId },
-      });
-      if (academy) {
-        // Determine plan from the price
-        const priceId = subscription.items.data[0]?.price?.lookup_key;
-        const plan = priceId ? PLAN_PRICE_MAP[priceId] : null;
-        if (plan) {
-          academy.plan = plan;
+          : subscription.customer?.toString();
+
+      if (customerId) {
+        const user = await ds.getRepository(User).findOne({
+          where: { stripeCustomerId: customerId },
+        });
+        if (user) {
+          user.stripeSubscriptionId = subscription.id;
+          if (subscription.status === "active") {
+            // Plan is managed by checkout metadata
+          } else if (
+            subscription.status === "canceled" ||
+            subscription.status === "unpaid"
+          ) {
+            user.plan = UserPlan.FREE;
+          }
+          await ds.getRepository(User).save(user);
         }
-        academy.stripeSubscriptionId = subscription.id;
-        await academyRepo.save(academy);
       }
       break;
     }
 
     case "customer.subscription.deleted": {
-      const subscription = event.data.object as Stripe.Subscription;
+      const subscription = event.data.object;
       const customerId =
         typeof subscription.customer === "string"
           ? subscription.customer
-          : subscription.customer.id;
-      const academy = await academyRepo.findOne({
-        where: { stripeCustomerId: customerId },
-      });
-      if (academy) {
-        academy.plan = AcademyPlan.FREE;
-        academy.stripeSubscriptionId = null;
-        await academyRepo.save(academy);
+          : subscription.customer?.toString();
+
+      if (customerId) {
+        const user = await ds.getRepository(User).findOne({
+          where: { stripeCustomerId: customerId },
+        });
+        if (user) {
+          user.plan = UserPlan.FREE;
+          user.stripeSubscriptionId = null;
+          await ds.getRepository(User).save(user);
+        }
       }
       break;
     }

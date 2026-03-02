@@ -1,57 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getDataSource } from "@/lib/database";
-import { Academy } from "@/entities";
-import { UserRole } from "@langopia/shared/types";
-import { getStripe } from "@/lib/stripe";
+import { User } from "@/entities";
+import { getStripe, PLAN_PRICE_IDS } from "@/lib/stripe";
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const role = session.user.role as UserRole;
-  if (role !== UserRole.ADMIN) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const body = await req.json();
+  const { plan } = body;
 
-  const { priceId } = await req.json();
+  const priceId = PLAN_PRICE_IDS[plan];
   if (!priceId) {
-    return NextResponse.json({ error: "priceId is required" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
 
   const ds = await getDataSource();
-  const academy = await ds.getRepository(Academy).findOne({
-    where: { id: session.user.academyId! },
+  const user = await ds.getRepository(User).findOne({
+    where: { id: session.user.id },
   });
 
-  if (!academy) {
-    return NextResponse.json({ error: "Academy not found" }, { status: 404 });
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+
+  const stripe = getStripe();
 
   // Create or reuse Stripe customer
-  let customerId = academy.stripeCustomerId;
+  let customerId = user.stripeCustomerId;
   if (!customerId) {
-    const customer = await getStripe().customers.create({
-      email: session.user.email,
-      name: academy.name,
-      metadata: { academyId: academy.id },
+    const customer = await stripe.customers.create({
+      email: user.email,
+      name: user.name,
+      metadata: { userId: user.id },
     });
     customerId = customer.id;
-    academy.stripeCustomerId = customerId;
-    await ds.getRepository(Academy).save(academy);
+    user.stripeCustomerId = customerId;
+    await ds.getRepository(User).save(user);
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
-  const checkoutSession = await getStripe().checkout.sessions.create({
+  const checkoutSession = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/settings?billing=success`,
-    cancel_url: `${appUrl}/settings?billing=cancelled`,
-    metadata: { academyId: academy.id },
+    success_url: `${APP_URL}/dashboard/billing?success=true`,
+    cancel_url: `${APP_URL}/dashboard/billing?canceled=true`,
+    metadata: { userId: user.id, plan },
   });
 
   return NextResponse.json({ url: checkoutSession.url });

@@ -1,128 +1,149 @@
-export enum UserRole {
-  ADMIN = "admin",
-  TEACHER = "teacher",
-  STUDENT = "student",
-}
+// ─── User & Auth ─────────────────────────────────────────
 
-export enum ClassroomType {
-  ONE_TO_ONE = "one_to_one",
-  GROUP = "group",
-}
-
-export enum SessionStatus {
-  SCHEDULED = "scheduled",
-  IN_PROGRESS = "in_progress",
-  COMPLETED = "completed",
-  CANCELLED = "cancelled",
-}
-
-export enum Speaker {
-  TEACHER = "teacher",
-  STUDENT = "student",
-}
-
-export enum AcademyPlan {
+export enum UserPlan {
   FREE = "free",
   STARTER = "starter",
   PROFESSIONAL = "professional",
   ENTERPRISE = "enterprise",
 }
 
-export interface IAcademy {
-  id: string;
-  name: string;
-  slug: string;
-  plan: AcademyPlan;
-  settings: Record<string, unknown>;
-  timezone: string;
-  createdAt: Date;
-  updatedAt: Date;
+export enum AcademyRole {
+  OWNER = "owner",
+  ADMIN = "admin",
+  TEACHER = "teacher",
 }
 
-export interface IUser {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  academyId: string;
-  profileImageUrl?: string;
-  isActive: boolean;
-  lastLoginAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+// ─── Room ────────────────────────────────────────────────
+
+export enum RoomStatus {
+  WAITING = "waiting",
+  ACTIVE = "active",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled",
 }
 
-export interface IClassroom {
-  id: string;
-  academyId: string;
-  teacherId: string;
-  name: string;
-  description?: string;
-  type: ClassroomType;
-  languageTarget: string;
-  maxStudents: number;
-  createdAt: Date;
-  updatedAt: Date;
+export enum ParticipantRole {
+  TEACHER = "teacher",
+  STUDENT = "student",
 }
 
-export interface ISession {
-  id: string;
-  academyId: string;
-  classroomId: string;
-  scheduledAt: Date;
-  startedAt?: Date;
-  endedAt?: Date;
-  status: SessionStatus;
-  livekitRoomId?: string;
-  recordingUrl?: string;
-  createdAt: Date;
-  updatedAt: Date;
+// ─── Reports & AI ────────────────────────────────────────
+
+export enum ReportStatus {
+  PROCESSING = "processing",
+  COMPLETED = "completed",
+  FAILED = "failed",
 }
 
-export interface ITranscription {
-  id: string;
-  academyId: string;
-  sessionId: string;
-  speaker: Speaker;
-  text: string;
-  timestampStart: number;
-  timestampEnd: number;
-  wordTimestamps: Record<string, unknown>[];
-  languageDetected?: string;
-  createdAt: Date;
+export enum ExerciseType {
+  FILL_IN_BLANK = "fill_in_blank",
+  MULTIPLE_CHOICE = "multiple_choice",
+  SENTENCE_REORDER = "sentence_reorder",
+  ERROR_CORRECTION = "error_correction",
+  FREE_RESPONSE = "free_response",
+  LISTENING = "listening",
 }
 
-export interface IClassReport {
-  id: string;
-  academyId: string;
-  sessionId: string;
-  summary: string;
-  vocabulary: Record<string, unknown>[];
-  grammarErrors: Record<string, unknown>[];
-  speakingMetrics: Record<string, unknown>;
-  suggestions: string[];
-  createdAt: Date;
-  updatedAt: Date;
+export enum ExerciseSource {
+  AI_LIVE = "ai_live",
+  AI_REPORT = "ai_report",
+  MANUAL = "manual",
 }
 
-export interface ILearningProfile {
-  id: string;
-  academyId: string;
-  studentId: string;
-  vocabularyBank: Record<string, unknown>[];
-  grammarPatterns: Record<string, unknown>[];
-  cefrLevelEstimate?: string;
-  updatedAt: Date;
+export enum TargetSkill {
+  VOCABULARY = "vocabulary",
+  GRAMMAR = "grammar",
+  READING = "reading",
+  WRITING = "writing",
+  LISTENING = "listening",
 }
 
-export interface IProgressReport {
-  id: string;
-  academyId: string;
-  studentId: string;
-  classroomId: string;
-  periodStart: Date;
-  periodEnd: Date;
-  scores: Record<string, unknown>;
-  teacherComments?: string;
-  createdAt: Date;
+// ─── Lesson ─────────────────────────────────────────
+
+export enum LessonStatus {
+  DRAFT = "draft",
+  READY = "ready",
+  COMPLETED = "completed",
 }
+
+// ─── CEFR & Languages ───────────────────────────────
+
+export const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+export type CefrLevel = (typeof CEFR_LEVELS)[number];
+
+export const EXERCISE_LANGUAGES = [
+  { code: "en", name: "English" },
+  { code: "es", name: "Spanish" },
+  { code: "fr", name: "French" },
+  { code: "de", name: "German" },
+  { code: "it", name: "Italian" },
+  { code: "pt", name: "Portuguese" },
+  { code: "zh", name: "Chinese" },
+  { code: "ja", name: "Japanese" },
+  { code: "ko", name: "Korean" },
+  { code: "ar", name: "Arabic" },
+  { code: "ru", name: "Russian" },
+] as const;
+
+export function isBuiltInExerciseType(type: string): type is ExerciseType {
+  return Object.values(ExerciseType).includes(type as ExerciseType);
+}
+
+// ─── Usage ───────────────────────────────────────────────
+
+export enum UsageMetric {
+  ROOMS_CREATED = "rooms_created",
+  CLASS_MINUTES = "class_minutes",
+  AI_REPORTS = "ai_reports",
+  AI_TOKENS = "ai_tokens",
+  STORAGE_BYTES = "storage_bytes",
+}
+
+// ─── Plan Limits ─────────────────────────────────────────
+
+export const PLAN_LIMITS: Record<UserPlan, {
+  maxAcademies: number;
+  maxRoomsPerMonth: number;
+  maxClassHoursPerMonth: number;
+  maxReportsPerMonth: number;
+  maxStudentsPerRoom: number;
+  maxStorageBytes: number;
+  maxAiTokensPerMonth: number;
+}> = {
+  [UserPlan.FREE]: {
+    maxAcademies: 1,
+    maxRoomsPerMonth: 10,
+    maxClassHoursPerMonth: 5,
+    maxReportsPerMonth: 5,
+    maxStudentsPerRoom: 2,
+    maxStorageBytes: 1_073_741_824, // 1GB
+    maxAiTokensPerMonth: 50_000,
+  },
+  [UserPlan.STARTER]: {
+    maxAcademies: 3,
+    maxRoomsPerMonth: 50,
+    maxClassHoursPerMonth: 25,
+    maxReportsPerMonth: 50,
+    maxStudentsPerRoom: 8,
+    maxStorageBytes: 10_737_418_240, // 10GB
+    maxAiTokensPerMonth: 500_000,
+  },
+  [UserPlan.PROFESSIONAL]: {
+    maxAcademies: 10,
+    maxRoomsPerMonth: 200,
+    maxClassHoursPerMonth: 100,
+    maxReportsPerMonth: 200,
+    maxStudentsPerRoom: 25,
+    maxStorageBytes: 53_687_091_200, // 50GB
+    maxAiTokensPerMonth: 2_000_000,
+  },
+  [UserPlan.ENTERPRISE]: {
+    maxAcademies: 999,
+    maxRoomsPerMonth: 999999,
+    maxClassHoursPerMonth: 999999,
+    maxReportsPerMonth: 999999,
+    maxStudentsPerRoom: 50,
+    maxStorageBytes: 536_870_912_000, // 500GB
+    maxAiTokensPerMonth: 999_999_999,
+  },
+};

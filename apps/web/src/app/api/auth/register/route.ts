@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 // @ts-ignore
 import { Client } from "pg";
+import crypto from "crypto";
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,11 +40,37 @@ export async function POST(req: NextRequest) {
 
       const passwordHash = await bcrypt.hash(password, 12);
 
-      await client.query(
-        `INSERT INTO users (id, email, "passwordHash", name, role, "isActive", "createdAt", "updatedAt")
-         VALUES (gen_random_uuid(), $1, $2, $3, 'admin', true, NOW(), NOW())`,
+      // Create user + first academy + membership in a transaction
+      await client.query('BEGIN');
+
+      // Create user
+      const userResult = await client.query(
+        `INSERT INTO users (id, email, "passwordHash", name, plan, "isActive", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, 'free', true, NOW(), NOW())
+         RETURNING id`,
         [email, passwordHash, name]
       );
+      const userId = userResult.rows[0].id;
+
+      // Create first academy
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now();
+      const apiKey = 'ak_' + crypto.randomBytes(32).toString('hex');
+      const academyResult = await client.query(
+        `INSERT INTO academies (id, name, slug, "apiKey", settings, "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, '{}', NOW(), NOW())
+         RETURNING id`,
+        [`${name}'s Academy`, slug, apiKey]
+      );
+      const academyId = academyResult.rows[0].id;
+
+      // Create membership (owner)
+      await client.query(
+        `INSERT INTO academy_members (id, "userId", "academyId", role, "joinedAt")
+         VALUES (gen_random_uuid(), $1, $2, 'owner', NOW())`,
+        [userId, academyId]
+      );
+
+      await client.query('COMMIT');
 
       return NextResponse.json(
         { message: "Account created successfully" },

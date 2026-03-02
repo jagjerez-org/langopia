@@ -4,16 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -65,77 +58,105 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">Create an account</CardTitle>
-        <CardDescription>Get started with Langopia</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="Your name"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="At least 8 characters"
-              required
-              minLength={8}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              placeholder="Confirm your password"
-              required
-            />
-          </div>
-
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account..." : "Create account"}
-          </Button>
-        </form>
-      </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline">
-            Sign in
-          </Link>
+    <div className="glass animate-fade-in-up rounded-2xl p-8">
+      <div className="mb-6 text-center">
+        <h1 className="text-2xl font-bold tracking-tight">
+          Create an account
+        </h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Get started with Langopia
         </p>
-      </CardFooter>
-    </Card>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <div className="rounded-xl bg-red-500/10 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="name" className="text-sm font-medium">
+            Name
+          </Label>
+          <Input
+            id="name"
+            name="name"
+            type="text"
+            placeholder="Your name"
+            required
+            className="rounded-xl border-zinc-200/60 bg-white/50 py-5 backdrop-blur-sm transition-all focus:bg-white/80 dark:border-zinc-700/60 dark:bg-zinc-800/50 dark:focus:bg-zinc-800/80"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="email" className="text-sm font-medium">
+            Email
+          </Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="you@example.com"
+            required
+            className="rounded-xl border-zinc-200/60 bg-white/50 py-5 backdrop-blur-sm transition-all focus:bg-white/80 dark:border-zinc-700/60 dark:bg-zinc-800/50 dark:focus:bg-zinc-800/80"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-sm font-medium">
+            Password
+          </Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="At least 8 characters"
+            required
+            minLength={8}
+            className="rounded-xl border-zinc-200/60 bg-white/50 py-5 backdrop-blur-sm transition-all focus:bg-white/80 dark:border-zinc-700/60 dark:bg-zinc-800/50 dark:focus:bg-zinc-800/80"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword" className="text-sm font-medium">
+            Confirm Password
+          </Label>
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            placeholder="Confirm your password"
+            required
+            className="rounded-xl border-zinc-200/60 bg-white/50 py-5 backdrop-blur-sm transition-all focus:bg-white/80 dark:border-zinc-700/60 dark:bg-zinc-800/50 dark:focus:bg-zinc-800/80"
+          />
+        </div>
+
+        <Button
+          type="submit"
+          className="bg-gradient-accent w-full rounded-xl py-5 font-semibold text-white shadow-md transition-all hover:shadow-lg hover:brightness-110"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating account...
+            </>
+          ) : (
+            "Create account"
+          )}
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Already have an account?{" "}
+        <Link
+          href="/login"
+          className="text-gradient font-semibold hover:underline"
+        >
+          Sign in
+        </Link>
+      </p>
+    </div>
   );
 }

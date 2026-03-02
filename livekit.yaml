@@ -4,7 +4,7 @@ rtc:
   port_range_end: 7892
   use_external_ip: false
 redis:
-  address: localhost:6379
+  address: redis:6379
 keys:
   devkey: secret
 logging:

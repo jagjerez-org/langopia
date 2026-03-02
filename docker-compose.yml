@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: langopia
       POSTGRES_DB: langopia
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -17,7 +17,7 @@ services:
     container_name: langopia-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redisdata:/data
 
@@ -44,8 +44,8 @@ services:
       MINIO_ROOT_USER: langopia
       MINIO_ROOT_PASSWORD: langopia123
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9002:9000"
+      - "9003:9001"
     volumes:
       - miniodata:/data
 
@@ -68,17 +68,9 @@ services:
     container_name: langopia-egress
     restart: unless-stopped
     environment:
-      EGRESS_CONFIG_STRING: |
-        api_key: devkey
-        api_secret: secret
-        ws_url: ws://livekit:7880
-        s3:
-          access_key: langopia
-          secret: langopia123
-          region: us-east-1
-          endpoint: http://minio:9000
-          bucket: langopia-recordings
-          force_path_style: true
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./egress.yaml:/etc/egress.yaml:ro
     depends_on:
       - livekit
       - minio

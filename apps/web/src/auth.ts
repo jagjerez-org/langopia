@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import type { UserRole } from "@langopia/shared/types";
+import type { UserPlan } from "@langopia/shared/types";
 
 declare module "next-auth" {
   interface Session {
@@ -9,15 +9,13 @@ declare module "next-auth" {
       id: string;
       email: string;
       name: string;
-      role: UserRole;
-      academyId: string | null;
+      plan: UserPlan;
       image?: string | null;
     };
   }
 
   interface User {
-    role: UserRole;
-    academyId: string | null;
+    plan: UserPlan;
   }
 }
 
@@ -49,7 +47,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         try {
           const result = await client.query(
-            'SELECT id, email, name, role, "passwordHash", "academyId" FROM users WHERE email = $1',
+            'SELECT id, email, name, plan, "passwordHash" FROM users WHERE email = $1',
             [credentials.email as string]
           );
 
@@ -71,8 +69,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             id: user.id,
             email: user.email,
             name: user.name,
-            role: user.role,
-            academyId: user.academyId,
+            plan: user.plan,
           };
         } finally {
           await client.end();
@@ -91,15 +88,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
-        token.role = (user as { role: UserRole }).role;
-        token.academyId = (user as { academyId: string | null }).academyId;
+        token.plan = (user as { plan: UserPlan }).plan;
       }
       return token;
     },
     async session({ session, token }) {
       session.user.id = token.id as string;
-      session.user.role = token.role as UserRole;
-      session.user.academyId = token.academyId as string | null;
+      session.user.plan = token.plan as UserPlan;
       return session;
     },
   },

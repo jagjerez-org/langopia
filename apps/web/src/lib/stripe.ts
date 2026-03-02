@@ -1,21 +1,21 @@
 import Stripe from "stripe";
-import { AcademyPlan } from "@langopia/shared/types";
 
-let stripeClient: Stripe | null = null;
+let stripeInstance: Stripe | null = null;
 
 export function getStripe(): Stripe {
-  if (!stripeClient) {
-    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-      typescript: true,
+  if (!stripeInstance) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error("STRIPE_SECRET_KEY is not set");
+    }
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-01-27.acacia" as Stripe.LatestApiVersion,
     });
   }
-  return stripeClient;
+  return stripeInstance;
 }
 
-// Map Stripe price lookup keys to academy plans.
-// Configure these in your Stripe dashboard using lookup_key on prices.
-export const PLAN_PRICE_MAP: Record<string, AcademyPlan> = {
-  starter: AcademyPlan.STARTER,
-  professional: AcademyPlan.PROFESSIONAL,
-  enterprise: AcademyPlan.ENTERPRISE,
+// Plan to Stripe Price ID mapping
+export const PLAN_PRICE_IDS: Record<string, string> = {
+  starter: process.env.STRIPE_STARTER_PRICE_ID ?? "price_starter",
+  professional: process.env.STRIPE_PROFESSIONAL_PRICE_ID ?? "price_professional",
 };

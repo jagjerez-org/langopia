@@ -10,55 +10,18 @@ import {
   OneToOne,
   JoinColumn,
   Unique,
+  Index,
 } from "typeorm";
 import {
-  AcademyPlan,
-  UserRole,
-  ClassroomType,
-  SessionStatus,
-  Speaker,
+  UserPlan,
+  AcademyRole,
+  RoomStatus,
+  ParticipantRole,
+  ReportStatus,
+  ExerciseSource,
+  LessonStatus,
+  UsageMetric,
 } from "@langopia/shared/types";
-
-// ─── Academy ──────────────────────────────────────────────
-
-@Entity("academies")
-export class Academy {
-  @PrimaryGeneratedColumn("uuid")
-  id!: string;
-
-  @Column({ type: "varchar", length: 255 })
-  name!: string;
-
-  @Column({ type: "varchar", length: 255, unique: true })
-  slug!: string;
-
-  @Column({ type: "enum", enum: AcademyPlan, default: AcademyPlan.FREE })
-  plan!: AcademyPlan;
-
-  @Column({ type: "jsonb", default: {} })
-  settings!: Record<string, unknown>;
-
-  @Column({ type: "varchar", length: 100, default: "UTC" })
-  timezone!: string;
-
-  @Column({ type: "varchar", length: 255, nullable: true })
-  stripeCustomerId!: string | null;
-
-  @Column({ type: "varchar", length: 255, nullable: true })
-  stripeSubscriptionId!: string | null;
-
-  @OneToMany(() => User, (user) => user.academy)
-  users!: User[];
-
-  @OneToMany(() => Classroom, (classroom) => classroom.academy)
-  classrooms!: Classroom[];
-
-  @CreateDateColumn({ type: "timestamptz" })
-  createdAt!: Date;
-
-  @UpdateDateColumn({ type: "timestamptz" })
-  updatedAt!: Date;
-}
 
 // ─── User ─────────────────────────────────────────────────
 
@@ -76,14 +39,17 @@ export class User {
   @Column({ type: "varchar", length: 255 })
   name!: string;
 
-  @Column({ type: "enum", enum: UserRole, default: UserRole.STUDENT })
-  role!: UserRole;
-
-  @Column({ type: "uuid", nullable: true })
-  academyId!: string | null;
-
   @Column({ type: "varchar", length: 500, nullable: true })
   profileImageUrl!: string | null;
+
+  @Column({ type: "enum", enum: UserPlan, default: UserPlan.FREE })
+  plan!: UserPlan;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  stripeCustomerId!: string | null;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  stripeSubscriptionId!: string | null;
 
   @Column({ type: "boolean", default: true })
   isActive!: boolean;
@@ -91,15 +57,8 @@ export class User {
   @Column({ type: "timestamptz", nullable: true })
   lastLoginAt!: Date | null;
 
-  @ManyToOne(() => Academy, (academy) => academy.users, { nullable: true })
-  @JoinColumn({ name: "academyId" })
-  academy!: Academy | null;
-
-  @OneToMany(() => Classroom, (classroom) => classroom.teacher)
-  classrooms!: Classroom[];
-
-  @OneToMany(() => ClassroomEnrollment, (enrollment) => enrollment.student)
-  enrollments!: ClassroomEnrollment[];
+  @OneToMany(() => AcademyMember, (m) => m.user)
+  academyMemberships!: AcademyMember[];
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
@@ -108,51 +67,33 @@ export class User {
   updatedAt!: Date;
 }
 
-// ─── Classroom ────────────────────────────────────────────
+// ─── Academy ──────────────────────────────────────────────
 
-@Entity("classrooms")
-export class Classroom {
+@Entity("academies")
+export class Academy {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
-
-  @Column({ type: "uuid" })
-  academyId!: string;
-
-  @Column({ type: "uuid" })
-  teacherId!: string;
 
   @Column({ type: "varchar", length: 255 })
   name!: string;
 
-  @Column({ type: "text", nullable: true })
-  description!: string | null;
+  @Column({ type: "varchar", length: 255, unique: true })
+  slug!: string;
 
-  @Column({
-    type: "enum",
-    enum: ClassroomType,
-    default: ClassroomType.ONE_TO_ONE,
-  })
-  type!: ClassroomType;
+  @Column({ type: "varchar", length: 255, unique: true })
+  apiKey!: string;
 
-  @Column({ type: "varchar", length: 100 })
-  languageTarget!: string;
+  @Column({ type: "jsonb", default: {} })
+  settings!: Record<string, unknown>;
 
-  @Column({ type: "int", default: 1 })
-  maxStudents!: number;
+  @OneToMany(() => AcademyMember, (m) => m.academy)
+  members!: AcademyMember[];
 
-  @ManyToOne(() => Academy, (academy) => academy.classrooms)
-  @JoinColumn({ name: "academyId" })
-  academy!: Academy;
+  @OneToMany(() => Student, (s) => s.academy)
+  students!: Student[];
 
-  @ManyToOne(() => User, (user) => user.classrooms)
-  @JoinColumn({ name: "teacherId" })
-  teacher!: User;
-
-  @OneToMany(() => Session, (session) => session.classroom)
-  sessions!: Session[];
-
-  @OneToMany(() => ClassroomEnrollment, (enrollment) => enrollment.classroom)
-  enrollments!: ClassroomEnrollment[];
+  @OneToMany(() => Room, (r) => r.academy)
+  rooms!: Room[];
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
@@ -161,36 +102,79 @@ export class Classroom {
   updatedAt!: Date;
 }
 
-// ─── ClassroomEnrollment ──────────────────────────────────
+// ─── AcademyMember (User ↔ Academy many-to-many) ─────────
 
-@Entity("classroom_enrollments")
-@Unique(["classroomId", "studentId"])
-export class ClassroomEnrollment {
+@Entity("academy_members")
+@Unique(["userId", "academyId"])
+export class AcademyMember {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
   @Column({ type: "uuid" })
-  classroomId!: string;
+  userId!: string;
 
   @Column({ type: "uuid" })
-  studentId!: string;
+  academyId!: string;
 
-  @ManyToOne(() => Classroom, (classroom) => classroom.enrollments)
-  @JoinColumn({ name: "classroomId" })
-  classroom!: Classroom;
+  @Column({ type: "enum", enum: AcademyRole, default: AcademyRole.TEACHER })
+  role!: AcademyRole;
 
-  @ManyToOne(() => User, (user) => user.enrollments)
-  @JoinColumn({ name: "studentId" })
-  student!: User;
+  @ManyToOne(() => User, (u) => u.academyMemberships)
+  @JoinColumn({ name: "userId" })
+  user!: User;
+
+  @ManyToOne(() => Academy, (a) => a.members)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
 
   @CreateDateColumn({ type: "timestamptz" })
-  enrolledAt!: Date;
+  joinedAt!: Date;
 }
 
-// ─── Session ──────────────────────────────────────────────
+// ─── Student (email-based, no account) ───────────────────
 
-@Entity("sessions")
-export class Session {
+@Entity("students")
+@Unique(["academyId", "email"])
+export class Student {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  email!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  name!: string;
+
+  @Column({ type: "int", default: 0 })
+  totalRooms!: number;
+
+  @Column({ type: "int", default: 0 })
+  totalMinutes!: number;
+
+  @Column({ type: "varchar", length: 10, nullable: true })
+  cefrEstimate!: string | null;
+
+  @ManyToOne(() => Academy, (a) => a.students)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
+
+  @OneToMany(() => RoomParticipant, (p) => p.student)
+  participations!: RoomParticipant[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  firstSeenAt!: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  lastSeenAt!: Date;
+}
+
+// ─── Room ─────────────────────────────────────────────────
+
+@Entity("rooms")
+export class Room {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
@@ -198,10 +182,36 @@ export class Session {
   academyId!: string;
 
   @Column({ type: "uuid" })
-  classroomId!: string;
+  createdByUserId!: string;
 
-  @Column({ type: "timestamptz" })
-  scheduledAt!: Date;
+  @Column({ type: "varchar", length: 255 })
+  title!: string;
+
+  @Column({ type: "varchar", length: 100, default: "en" })
+  language!: string;
+
+  @Column({ type: "int", default: 1 })
+  maxStudents!: number;
+
+  @Index({ unique: true })
+  @Column({ type: "varchar", length: 255, unique: true })
+  teacherToken!: string;
+
+  @Index({ unique: true })
+  @Column({ type: "varchar", length: 255, unique: true })
+  studentToken!: string;
+
+  @Column({ type: "jsonb", default: [] })
+  slides!: string[];
+
+  @Column({ type: "enum", enum: RoomStatus, default: RoomStatus.WAITING })
+  status!: RoomStatus;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  livekitRoomId!: string | null;
+
+  @Column({ type: "timestamptz", nullable: true })
+  scheduledAt!: Date | null;
 
   @Column({ type: "timestamptz", nullable: true })
   startedAt!: Date | null;
@@ -209,35 +219,44 @@ export class Session {
   @Column({ type: "timestamptz", nullable: true })
   endedAt!: Date | null;
 
-  @Column({
-    type: "enum",
-    enum: SessionStatus,
-    default: SessionStatus.SCHEDULED,
-  })
-  status!: SessionStatus;
-
-  @Column({ type: "varchar", length: 255, nullable: true })
-  livekitRoomId!: string | null;
-
   @Column({ type: "varchar", length: 500, nullable: true })
   recordingUrl!: string | null;
 
   @Column({ type: "varchar", length: 255, nullable: true })
   egressId!: string | null;
 
-  @ManyToOne(() => Academy)
+  @Column({ type: "uuid", nullable: true })
+  lessonId!: string | null;
+
+  @Column({ type: "jsonb", nullable: true })
+  whiteboardData!: Record<string, unknown> | null;
+
+  @ManyToOne(() => Academy, (a) => a.rooms)
   @JoinColumn({ name: "academyId" })
   academy!: Academy;
 
-  @ManyToOne(() => Classroom, (classroom) => classroom.sessions)
-  @JoinColumn({ name: "classroomId" })
-  classroom!: Classroom;
+  @ManyToOne(() => Lesson, { nullable: true })
+  @JoinColumn({ name: "lessonId" })
+  lesson!: Lesson | null;
 
-  @OneToMany(() => Transcription, (transcription) => transcription.session)
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "createdByUserId" })
+  createdBy!: User;
+
+  @OneToMany(() => RoomParticipant, (p) => p.room)
+  participants!: RoomParticipant[];
+
+  @OneToMany(() => ChatMessage, (m) => m.room)
+  chatMessages!: ChatMessage[];
+
+  @OneToOne(() => RoomNotes, (n) => n.room)
+  notes!: RoomNotes | null;
+
+  @OneToMany(() => Transcription, (t) => t.room)
   transcriptions!: Transcription[];
 
-  @OneToOne(() => ClassReport, (report) => report.session)
-  classReport!: ClassReport | null;
+  @OneToOne(() => ClassReport, (r) => r.room)
+  report!: ClassReport | null;
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
@@ -246,7 +265,108 @@ export class Session {
   updatedAt!: Date;
 }
 
-// ─── Transcription ────────────────────────────────────────
+// ─── RoomParticipant ─────────────────────────────────────
+
+@Entity("room_participants")
+export class RoomParticipant {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  roomId!: string;
+
+  @Column({ type: "uuid", nullable: true })
+  studentId!: string | null;
+
+  @Column({ type: "uuid", nullable: true })
+  userId!: string | null;
+
+  @Column({ type: "varchar", length: 255 })
+  name!: string;
+
+  @Column({ type: "enum", enum: ParticipantRole })
+  role!: ParticipantRole;
+
+  @Column({ type: "int", default: 0 })
+  speakingTimeSeconds!: number;
+
+  @Column({ type: "timestamptz", nullable: true })
+  leftAt!: Date | null;
+
+  @ManyToOne(() => Room, (r) => r.participants)
+  @JoinColumn({ name: "roomId" })
+  room!: Room;
+
+  @ManyToOne(() => Student, (s) => s.participations, { nullable: true })
+  @JoinColumn({ name: "studentId" })
+  student!: Student | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: "userId" })
+  user!: User | null;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  joinedAt!: Date;
+}
+
+// ─── RoomNotes ───────────────────────────────────────────
+
+@Entity("room_notes")
+export class RoomNotes {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid", unique: true })
+  roomId!: string;
+
+  @Column({ type: "jsonb", default: [] })
+  vocabulary!: { word: string; definition: string; example: string }[];
+
+  @Column({ type: "jsonb", default: [] })
+  corrections!: { error: string; correction: string; context: string }[];
+
+  @Column({ type: "text", default: "" })
+  homework!: string;
+
+  @Column({ type: "text", default: "" })
+  objectives!: string;
+
+  @OneToOne(() => Room, (r) => r.notes)
+  @JoinColumn({ name: "roomId" })
+  room!: Room;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
+}
+
+// ─── ChatMessage ─────────────────────────────────────────
+
+@Entity("chat_messages")
+export class ChatMessage {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  roomId!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  senderName!: string;
+
+  @Column({ type: "enum", enum: ParticipantRole })
+  senderRole!: ParticipantRole;
+
+  @Column({ type: "text" })
+  message!: string;
+
+  @ManyToOne(() => Room, (r) => r.chatMessages)
+  @JoinColumn({ name: "roomId" })
+  room!: Room;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+}
+
+// ─── Transcription ───────────────────────────────────────
 
 @Entity("transcriptions")
 export class Transcription {
@@ -254,13 +374,13 @@ export class Transcription {
   id!: string;
 
   @Column({ type: "uuid" })
-  academyId!: string;
+  roomId!: string;
 
-  @Column({ type: "uuid" })
-  sessionId!: string;
+  @Column({ type: "varchar", length: 255 })
+  speakerName!: string;
 
-  @Column({ type: "enum", enum: Speaker })
-  speaker!: Speaker;
+  @Column({ type: "enum", enum: ParticipantRole })
+  speakerRole!: ParticipantRole;
 
   @Column({ type: "text" })
   text!: string;
@@ -277,135 +397,317 @@ export class Transcription {
   @Column({ type: "varchar", length: 10, nullable: true })
   languageDetected!: string | null;
 
-  @ManyToOne(() => Academy)
-  @JoinColumn({ name: "academyId" })
-  academy!: Academy;
-
-  @ManyToOne(() => Session, (session) => session.transcriptions)
-  @JoinColumn({ name: "sessionId" })
-  session!: Session;
+  @ManyToOne(() => Room, (r) => r.transcriptions)
+  @JoinColumn({ name: "roomId" })
+  room!: Room;
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
 }
 
-// ─── ClassReport ──────────────────────────────────────────
+// ─── ClassReport ─────────────────────────────────────────
 
 @Entity("class_reports")
 export class ClassReport {
   @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column({ type: "uuid" })
-  academyId!: string;
-
   @Column({ type: "uuid", unique: true })
-  sessionId!: string;
+  roomId!: string;
 
-  @Column({ type: "text" })
-  summary!: string;
-
-  @Column({ type: "jsonb", default: [] })
-  vocabulary!: Record<string, unknown>[];
-
-  @Column({ type: "jsonb", default: [] })
-  grammarErrors!: Record<string, unknown>[];
-
-  @Column({ type: "jsonb", default: {} })
-  speakingMetrics!: Record<string, unknown>;
-
-  @Column({ type: "jsonb", default: [] })
-  suggestions!: string[];
-
-  @ManyToOne(() => Academy)
-  @JoinColumn({ name: "academyId" })
-  academy!: Academy;
-
-  @OneToOne(() => Session, (session) => session.classReport)
-  @JoinColumn({ name: "sessionId" })
-  session!: Session;
-
-  @CreateDateColumn({ type: "timestamptz" })
-  createdAt!: Date;
-
-  @UpdateDateColumn({ type: "timestamptz" })
-  updatedAt!: Date;
-}
-
-// ─── LearningProfile ─────────────────────────────────────
-
-@Entity("learning_profiles")
-export class LearningProfile {
-  @PrimaryGeneratedColumn("uuid")
-  id!: string;
-
-  @Column({ type: "uuid" })
-  academyId!: string;
-
-  @Column({ type: "uuid", unique: true })
-  studentId!: string;
-
-  @Column({ type: "jsonb", default: [] })
-  vocabularyBank!: Record<string, unknown>[];
-
-  @Column({ type: "jsonb", default: [] })
-  grammarPatterns!: Record<string, unknown>[];
-
-  @Column({ type: "varchar", length: 10, nullable: true })
-  cefrLevelEstimate!: string | null;
-
-  @ManyToOne(() => Academy)
-  @JoinColumn({ name: "academyId" })
-  academy!: Academy;
-
-  @ManyToOne(() => User)
-  @JoinColumn({ name: "studentId" })
-  student!: User;
-
-  @UpdateDateColumn({ type: "timestamptz" })
-  updatedAt!: Date;
-}
-
-// ─── ProgressReport ──────────────────────────────────────
-
-@Entity("progress_reports")
-export class ProgressReport {
-  @PrimaryGeneratedColumn("uuid")
-  id!: string;
-
-  @Column({ type: "uuid" })
-  academyId!: string;
-
-  @Column({ type: "uuid" })
-  studentId!: string;
-
-  @Column({ type: "uuid" })
-  classroomId!: string;
-
-  @Column({ type: "date" })
-  periodStart!: Date;
-
-  @Column({ type: "date" })
-  periodEnd!: Date;
-
-  @Column({ type: "jsonb", default: {} })
-  scores!: Record<string, unknown>;
+  @Column({ type: "enum", enum: ReportStatus, default: ReportStatus.PROCESSING })
+  status!: ReportStatus;
 
   @Column({ type: "text", nullable: true })
-  teacherComments!: string | null;
+  summary!: string | null;
+
+  @Column({ type: "int", default: 0 })
+  classDuration!: number;
+
+  @Column({ type: "int", default: 0 })
+  tokensUsed!: number;
+
+  @Column({ type: "jsonb", nullable: true })
+  teacher!: { name: string; speakingTime: number; speakingRatio: number } | null;
+
+  @Column({ type: "jsonb", default: [] })
+  studentReports!: {
+    studentId: string;
+    name: string;
+    email: string;
+    speakingTime: number;
+    speakingRatio: number;
+    fillerWords: number;
+    vocabulary: { word: string; cefrLevel: string; context: string }[];
+    grammarErrors: { text: string; correction: string; rule: string; explanation: string }[];
+    exercises: Record<string, unknown>[];
+    homeworkSuggestions: string[];
+  }[];
+
+  @OneToOne(() => Room, (r) => r.report)
+  @JoinColumn({ name: "roomId" })
+  room!: Room;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
+}
+
+// ─── ExerciseTemplate ────────────────────────────────────
+
+@Entity("exercise_templates")
+@Index(["academyId", "slug"], { unique: true })
+export class ExerciseTemplate {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "varchar", length: 50 })
+  slug!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  name!: string;
+
+  @Column({ type: "text" })
+  promptTemplate!: string;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  targetSkill!: string | null;
+
+  @Column({ type: "boolean", default: false })
+  isSystem!: boolean;
+
+  @Column({ type: "boolean", default: true })
+  isActive!: boolean;
+
+  @Column({ type: "int", default: 0 })
+  sortOrder!: number;
 
   @ManyToOne(() => Academy)
   @JoinColumn({ name: "academyId" })
   academy!: Academy;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: "studentId" })
-  student!: User;
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
 
-  @ManyToOne(() => Classroom)
-  @JoinColumn({ name: "classroomId" })
-  classroom!: Classroom;
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
+}
+
+// ─── Exercise (Bank Item) ────────────────────────────
+
+@Entity("exercises")
+export class Exercise {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "uuid", nullable: true })
+  templateId!: string | null;
+
+  @Column({ type: "varchar", length: 100 })
+  type!: string;
+
+  @Column({ type: "varchar", length: 100 })
+  targetSkill!: string;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  topic!: string | null;
+
+  @Column({ type: "varchar", length: 10, default: "en" })
+  language!: string;
+
+  @Column({ type: "text" })
+  instruction!: string;
+
+  @Column({ type: "text" })
+  content!: string;
+
+  @Column({ type: "jsonb", nullable: true })
+  options!: string[] | null;
+
+  @Column({ type: "text" })
+  correctAnswer!: string;
+
+  @Column({ type: "text" })
+  explanation!: string;
+
+  @Column({ type: "varchar", length: 10 })
+  cefrLevel!: string;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  audioUrl!: string | null;
+
+  @Column({ type: "enum", enum: ExerciseSource, default: ExerciseSource.AI_LIVE })
+  source!: ExerciseSource;
+
+  @ManyToOne(() => Academy)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
+
+  @ManyToOne(() => ExerciseTemplate, { nullable: true })
+  @JoinColumn({ name: "templateId" })
+  template!: ExerciseTemplate | null;
+
+  @OneToMany(() => LessonExercise, (le) => le.exercise)
+  lessonExercises!: LessonExercise[];
+
+  @OneToMany(() => ReportExercise, (re) => re.exercise)
+  reportExercises!: ReportExercise[];
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
+}
+
+// ─── Lesson ─────────────────────────────────────────
+
+@Entity("lessons")
+export class Lesson {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  title!: string;
+
+  @Column({ type: "text", nullable: true })
+  description!: string | null;
+
+  @Column({ type: "varchar", length: 10, default: "en" })
+  language!: string;
+
+  @Column({ type: "varchar", length: 10 })
+  cefrLevel!: string;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  topic!: string | null;
+
+  @Column({ type: "enum", enum: LessonStatus, default: LessonStatus.DRAFT })
+  status!: LessonStatus;
+
+  @ManyToOne(() => Academy)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
+
+  @OneToMany(() => LessonExercise, (le) => le.lesson)
+  lessonExercises!: LessonExercise[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
+}
+
+// ─── LessonExercise (Lesson ↔ Exercise join) ────────
+
+@Entity("lesson_exercises")
+@Unique(["lessonId", "exerciseId"])
+export class LessonExercise {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  lessonId!: string;
+
+  @Column({ type: "uuid" })
+  exerciseId!: string;
+
+  @Column({ type: "int", default: 0 })
+  sortOrder!: number;
+
+  @ManyToOne(() => Lesson, (l) => l.lessonExercises, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "lessonId" })
+  lesson!: Lesson;
+
+  @ManyToOne(() => Exercise, (e) => e.lessonExercises, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "exerciseId" })
+  exercise!: Exercise;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+}
+
+// ─── ReportExercise (Report ↔ Student ↔ Exercise) ───
+
+@Entity("report_exercises")
+export class ReportExercise {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  reportId!: string;
+
+  @Column({ type: "uuid" })
+  studentId!: string;
+
+  @Column({ type: "uuid" })
+  exerciseId!: string;
+
+  @Column({ type: "boolean", default: false })
+  isCompleted!: boolean;
+
+  @Column({ type: "boolean", nullable: true })
+  isCorrect!: boolean | null;
+
+  @Column({ type: "text", nullable: true })
+  studentAnswer!: string | null;
+
+  @ManyToOne(() => ClassReport, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "reportId" })
+  report!: ClassReport;
+
+  @ManyToOne(() => Student)
+  @JoinColumn({ name: "studentId" })
+  student!: Student;
+
+  @ManyToOne(() => Exercise, (e) => e.reportExercises, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "exerciseId" })
+  exercise!: Exercise;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+}
+
+// ─── UsageRecord ─────────────────────────────────────────
+
+@Entity("usage_records")
+@Unique(["userId", "academyId", "period", "metric"])
+export class UsageRecord {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  userId!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "varchar", length: 7 })
+  period!: string; // "YYYY-MM"
+
+  @Column({ type: "enum", enum: UsageMetric })
+  metric!: UsageMetric;
+
+  @Column({ type: "bigint", default: 0 })
+  value!: number;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "userId" })
+  user!: User;
+
+  @ManyToOne(() => Academy)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
 }

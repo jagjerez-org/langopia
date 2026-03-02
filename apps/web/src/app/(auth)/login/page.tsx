@@ -5,16 +5,9 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   return (
@@ -27,7 +20,7 @@ export default function LoginPage() {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -55,18 +48,21 @@ function LoginForm() {
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-        <CardDescription>Sign in to your Langopia account</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="glass animate-fade-in-up rounded-2xl p-8">
+      <div className="mb-6 text-center">
+        <h1 className="text-2xl font-bold tracking-tight">Welcome back</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Sign in to your Langopia account
+        </p>
+      </div>
+
+      <div className="space-y-4">
         <Button
           variant="outline"
-          className="w-full"
+          className="w-full rounded-xl border-zinc-200/60 bg-white/50 py-5 font-medium backdrop-blur-sm transition-all hover:bg-white/80 dark:border-zinc-700/60 dark:bg-zinc-800/50 dark:hover:bg-zinc-800/80"
           onClick={() => signIn("google", { callbackUrl })}
         >
-          <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+          <svg className="mr-2.5 h-4 w-4" viewBox="0 0 24 24">
             <path
               d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
               fill="#4285F4"
@@ -89,10 +85,10 @@ function LoginForm() {
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
+            <span className="w-full border-t border-zinc-200/60 dark:border-zinc-700/60" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">
+            <span className="bg-transparent px-3 text-muted-foreground backdrop-blur-sm">
               Or continue with
             </span>
           </div>
@@ -100,46 +96,65 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+            <div className="rounded-xl bg-red-500/10 px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400">
               {error}
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-sm font-medium">
+              Email
+            </Label>
             <Input
               id="email"
               name="email"
               type="email"
               placeholder="you@example.com"
               required
+              className="rounded-xl border-zinc-200/60 bg-white/50 py-5 backdrop-blur-sm transition-all focus:bg-white/80 dark:border-zinc-700/60 dark:bg-zinc-800/50 dark:focus:bg-zinc-800/80"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-sm font-medium">
+              Password
+            </Label>
             <Input
               id="password"
               name="password"
               type="password"
               placeholder="Enter your password"
               required
+              className="rounded-xl border-zinc-200/60 bg-white/50 py-5 backdrop-blur-sm transition-all focus:bg-white/80 dark:border-zinc-700/60 dark:bg-zinc-800/50 dark:focus:bg-zinc-800/80"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Signing in..." : "Sign in"}
+          <Button
+            type="submit"
+            className="bg-gradient-accent w-full rounded-xl py-5 font-semibold text-white shadow-md transition-all hover:shadow-lg hover:brightness-110"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
           </Button>
         </form>
-      </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline">
-            Sign up
-          </Link>
-        </p>
-      </CardFooter>
-    </Card>
+      </div>
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        Don&apos;t have an account?{" "}
+        <Link
+          href="/register"
+          className="text-gradient font-semibold hover:underline"
+        >
+          Sign up
+        </Link>
+      </p>
+    </div>
   );
 }
