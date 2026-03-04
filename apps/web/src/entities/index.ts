@@ -25,6 +25,7 @@ import {
   ExerciseSource,
   LearningPathStatus,
   LessonStatus,
+  MediaStatus,
   UsageMetric,
 } from "@langopia/shared/types";
 
@@ -704,49 +705,6 @@ export class ClassReport {
   updatedAt!: Date;
 }
 
-// ─── ExerciseTemplate ────────────────────────────────────
-
-@Entity("exercise_templates")
-@Index(["academyId", "slug"], { unique: true })
-export class ExerciseTemplate {
-  @PrimaryGeneratedColumn("uuid")
-  id!: string;
-
-  @Column({ type: "uuid" })
-  academyId!: string;
-
-  @Column({ type: "varchar", length: 50 })
-  slug!: string;
-
-  @Column({ type: "varchar", length: 255 })
-  name!: string;
-
-  @Column({ type: "text" })
-  promptTemplate!: string;
-
-  @Column({ type: "varchar", length: 100, nullable: true })
-  targetSkill!: string | null;
-
-  @Column({ type: "boolean", default: false })
-  isSystem!: boolean;
-
-  @Column({ type: "boolean", default: true })
-  isActive!: boolean;
-
-  @Column({ type: "int", default: 0 })
-  sortOrder!: number;
-
-  @ManyToOne(() => Academy)
-  @JoinColumn({ name: "academyId" })
-  academy!: Academy;
-
-  @CreateDateColumn({ type: "timestamptz" })
-  createdAt!: Date;
-
-  @UpdateDateColumn({ type: "timestamptz" })
-  updatedAt!: Date;
-}
-
 // ─── Exercise (Bank Item) ────────────────────────────
 
 @Entity("exercises")
@@ -756,9 +714,6 @@ export class Exercise {
 
   @Column({ type: "uuid" })
   academyId!: string;
-
-  @Column({ type: "uuid", nullable: true })
-  templateId!: string | null;
 
   @Column({ type: "varchar", length: 100 })
   type!: string;
@@ -790,8 +745,23 @@ export class Exercise {
   @Column({ type: "varchar", length: 10 })
   cefrLevel!: string;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  title!: string | null;
+
   @Column({ type: "varchar", length: 500, nullable: true })
   audioUrl!: string | null;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  videoUrl!: string | null;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  imageUrl!: string | null;
+
+  @Column({ type: "vector", length: 1536, nullable: true })
+  embedding!: string | null;
+
+  @Column({ type: "vector", length: 1536, nullable: true })
+  topicEmbedding!: string | null;
 
   @Column({ type: "enum", enum: ExerciseSource, default: ExerciseSource.AI_LIVE })
   source!: ExerciseSource;
@@ -799,10 +769,6 @@ export class Exercise {
   @ManyToOne(() => Academy)
   @JoinColumn({ name: "academyId" })
   academy!: Academy;
-
-  @ManyToOne(() => ExerciseTemplate, { nullable: true })
-  @JoinColumn({ name: "templateId" })
-  template!: ExerciseTemplate | null;
 
   @OneToMany(() => LessonExercise, (le) => le.exercise)
   lessonExercises!: LessonExercise[];
@@ -917,4 +883,127 @@ export class UsageRecord {
   @ManyToOne(() => Academy)
   @JoinColumn({ name: "academyId" })
   academy!: Academy;
+}
+
+// ─── MediaItem ──────────────────────────────────────
+
+@Entity("media_items")
+@Unique(["academyId", "contentHash"])
+export class MediaItem {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "uuid" })
+  uploadedByUserId!: string;
+
+  @Column({ type: "varchar", length: 500 })
+  filename!: string;
+
+  @Column({ type: "varchar", length: 100 })
+  mimeType!: string;
+
+  @Column({ type: "int" })
+  fileSize!: number;
+
+  @Column({ type: "varchar", length: 64 })
+  contentHash!: string;
+
+  @Column({ type: "varchar", length: 500 })
+  storageKey!: string;
+
+  @Column({ type: "varchar", length: 500 })
+  storageUrl!: string;
+
+  // Processing
+  @Column({ type: "varchar", length: 20, default: "pending" })
+  status!: string;
+
+  @Column({ type: "int", default: 0 })
+  totalPages!: number;
+
+  @Column({ type: "int", default: 0 })
+  processedPages!: number;
+
+  // AI analysis
+  @Column({ type: "varchar", length: 255, nullable: true })
+  detectedTopic!: string | null;
+
+  @Column({ type: "varchar", length: 10, nullable: true })
+  detectedLanguage!: string | null;
+
+  @Column({ type: "varchar", length: 10, nullable: true })
+  detectedCefrLevel!: string | null;
+
+  @Column({ type: "text", nullable: true })
+  summary!: string | null;
+
+  @Column({ type: "jsonb", default: [] })
+  tags!: string[];
+
+  @Column({ type: "vector", length: 1536, nullable: true })
+  embedding!: string | null;
+
+  // Video future
+  @Column({ type: "varchar", length: 255, nullable: true })
+  videoStreamId!: string | null;
+
+  @Column({ type: "float", nullable: true })
+  videoDuration!: number | null;
+
+  // Cached
+  @Column({ type: "int", default: 0 })
+  similarExerciseCount!: number;
+
+  // Relations
+  @ManyToOne(() => Academy)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "uploadedByUserId" })
+  uploadedBy!: User;
+
+  @OneToMany(() => MediaPage, (p) => p.mediaItem)
+  pages!: MediaPage[];
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
+}
+
+// ─── MediaPage ──────────────────────────────────────
+
+@Entity("media_pages")
+@Unique(["mediaItemId", "pageNumber"])
+export class MediaPage {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  mediaItemId!: string;
+
+  @Column({ type: "int" })
+  pageNumber!: number;
+
+  @Column({ type: "text" })
+  extractedText!: string;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  imageUrl!: string | null;
+
+  @Column({ type: "vector", length: 1536, nullable: true })
+  embedding!: string | null;
+
+  // Relations
+  @ManyToOne(() => MediaItem, (m) => m.pages, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "mediaItemId" })
+  mediaItem!: MediaItem;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
 }

@@ -16,7 +16,11 @@
       "Bash(docker ps:*)",
       "Bash(docker exec:*)",
       "Bash(find C:\\\\Users\\\\jagod\\\\repositories\\\\langopia\\\\apps\\\\web\\\\src\\\\app\\\\\\(dashboard\\)\\\\dashboard:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(wc:*)",
+      "Bash(cat:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(node:*)"
     ]
   }
 }

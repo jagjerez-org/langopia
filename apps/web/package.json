@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 2500",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -11,7 +11,8 @@
     "db:sync": "npx tsx --env-file=.env scripts/db-sync.ts",
     "db:generate": "typeorm migration:generate -d src/lib/database.ts",
     "db:migrate": "typeorm migration:run -d src/lib/database.ts",
-    "db:revert": "typeorm migration:revert -d src/lib/database.ts"
+    "db:revert": "typeorm migration:revert -d src/lib/database.ts",
+    "db:embed": "npx tsx --env-file=.env scripts/backfill-embeddings.ts"
   },
   "dependencies": {
     "@auth/typeorm-adapter": "^2.11.1",
@@ -38,9 +39,11 @@
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
     "next-auth": "5.0.0-beta.30",
+    "officeparser": "^5.1.1",
     "openai": "^4",
     "pdf-parse": "^2.4.5",
     "pg": "^8.19.0",
+    "pgvector": "^0.2.1",
     "posthog-js": "^1.356.1",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",

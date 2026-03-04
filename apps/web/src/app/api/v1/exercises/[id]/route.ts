@@ -1,10 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDataSource } from "@/lib/database";
-import { Exercise } from "@/entities";
-import { authenticateApiKey, incrementUsage } from "@/lib/api-auth";
-import { ExerciseSource, UsageMetric } from "@langopia/shared/types";
+import { Exercise, User } from "@/entities";
+import { authenticateApiKey, checkPlanLimit, incrementUsage } from "@/lib/api-auth";
+import { ExerciseSource, EXERCISE_TYPE_CONFIG, ExerciseType, UsageMetric, UserPlan } from "@langopia/shared/types";
 
 type Params = { params: Promise<{ id: string }> };
+
+function serializeExercise(e: Exercise) {
+  return {
+    id: e.id,
+    type: e.type,
+    title: e.title,
+    targetSkill: e.targetSkill,
+    topic: e.topic,
+    language: e.language,
+    instruction: e.instruction,
+    content: e.content,
+    options: e.options,
+    correctAnswer: e.correctAnswer,
+    explanation: e.explanation,
+    cefrLevel: e.cefrLevel,
+    source: e.source,
+    audioUrl: e.audioUrl,
+    videoUrl: e.videoUrl,
+    imageUrl: e.imageUrl,
+    createdAt: e.createdAt,
+  };
+}
 
 // GET /api/v1/exercises/:id - Get exercise details
 export async function GET(req: NextRequest, { params }: Params) {
@@ -23,23 +45,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    id: exercise.id,
-    type: exercise.type,
-    targetSkill: exercise.targetSkill,
-    topic: exercise.topic,
-    language: exercise.language,
-    instruction: exercise.instruction,
-    content: exercise.content,
-    options: exercise.options,
-    correctAnswer: exercise.correctAnswer,
-    explanation: exercise.explanation,
-    cefrLevel: exercise.cefrLevel,
-    source: exercise.source,
-    templateId: exercise.templateId,
-    audioUrl: exercise.audioUrl,
-    createdAt: exercise.createdAt,
-  });
+  return NextResponse.json(serializeExercise(exercise));
 }
 
 // DELETE /api/v1/exercises/:id - Delete exercise
@@ -64,12 +70,12 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   return NextResponse.json({ deleted: true });
 }
 
-// PATCH /api/v1/exercises/:id - Submit answer for exercise
+// PATCH /api/v1/exercises/:id - Edit exercise fields
 export async function PATCH(req: NextRequest, { params }: Params) {
   const authResult = await authenticateApiKey(req);
   if (authResult instanceof NextResponse) return authResult;
 
-  const { academy } = authResult;
+  const { academy, ownerId } = authResult;
   const { id } = await params;
   const ds = await getDataSource();
 
@@ -83,11 +89,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   const body = await req.json();
 
-  // ── Content editing (instruction, content, options, etc.) ──
-  const editableFields = ["instruction", "content", "options", "correctAnswer", "explanation", "cefrLevel", "targetSkill", "topic"] as const;
+  const editableFields = ["title", "instruction", "content", "options", "correctAnswer", "explanation", "cefrLevel", "targetSkill", "topic", "videoUrl", "imageUrl"] as const;
   const isContentEdit = editableFields.some((f) => body[f] !== undefined);
 
   if (isContentEdit) {
+    if (body.title !== undefined) exercise.title = body.title;
     if (body.instruction !== undefined) exercise.instruction = body.instruction;
     if (body.content !== undefined) exercise.content = body.content;
     if (body.options !== undefined) exercise.options = body.options;
@@ -96,32 +102,28 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     if (body.cefrLevel !== undefined) exercise.cefrLevel = body.cefrLevel;
     if (body.targetSkill !== undefined) exercise.targetSkill = body.targetSkill;
     if (body.topic !== undefined) exercise.topic = body.topic;
+    if (body.videoUrl !== undefined) exercise.videoUrl = body.videoUrl;
+    if (body.imageUrl !== undefined) exercise.imageUrl = body.imageUrl;
 
     await ds.getRepository(Exercise).save(exercise);
 
-    return NextResponse.json({
-      id: exercise.id,
-      type: exercise.type,
-      targetSkill: exercise.targetSkill,
-      topic: exercise.topic,
-      language: exercise.language,
-      instruction: exercise.instruction,
-      content: exercise.content,
-      options: exercise.options,
-      correctAnswer: exercise.correctAnswer,
-      explanation: exercise.explanation,
-      cefrLevel: exercise.cefrLevel,
-      source: exercise.source,
-      templateId: exercise.templateId,
-      audioUrl: exercise.audioUrl,
-      createdAt: exercise.createdAt,
-    });
+    // Re-embed if semantic fields changed
+    const embeddingFields = ["title", "instruction", "content", "topic", "targetSkill", "cefrLevel"] as const;
+    if (embeddingFields.some((f) => body[f] !== undefined)) {
+      import("@/lib/embeddings").then(({ embedExercise }) => {
+        embedExercise(exercise.id)
+          .then((tokens) => { if (tokens > 0) incrementUsage(ownerId, academy.id, UsageMetric.AI_TOKENS, tokens); })
+          .catch((err) => console.error("Embedding re-generation failed:", err));
+      });
+    }
+
+    return NextResponse.json(serializeExercise(exercise));
   }
 
   return NextResponse.json({ error: "No editable fields provided" }, { status: 400 });
 }
 
-// PUT /api/v1/exercises/:id - Regenerate exercise (delete old, create new)
+// PUT /api/v1/exercises/:id - Regenerate exercise with optional custom prompt
 export async function PUT(req: NextRequest, { params }: Params) {
   const authResult = await authenticateApiKey(req);
   if (authResult instanceof NextResponse) return authResult;
@@ -138,82 +140,86 @@ export async function PUT(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Exercise not found" }, { status: 404 });
   }
 
-  const { type: originalType, topic, targetSkill, cefrLevel, language: originalLanguage } = existing;
+  // Parse optional body
+  let customPrompt: string | undefined;
+  try {
+    const body = await req.json();
+    if (body.customPrompt && typeof body.customPrompt === "string") {
+      customPrompt = body.customPrompt.trim();
+    }
+  } catch {
+    // No body or invalid JSON — that's fine
+  }
 
   try {
-    const { generateExercises } = await import("@langopia/ai-pipeline");
+    const { generateExercisesByType } = await import("@langopia/ai-pipeline");
 
-    const result = await generateExercises({
-      studentName: "Student",
-      language: "en",
-      cefrLevel,
-      vocabularyBank: [],
-      grammarPatterns: [],
-      recentSuggestions: [
-        `Generate a ${originalType.replace(/_/g, " ")} exercise about ${targetSkill}: ${topic ?? "general"}`,
-      ],
+    const result = await generateExercisesByType({
+      requests: [{ type: existing.type, count: 1 }],
+      language: existing.language,
+      cefrLevel: existing.cefrLevel,
+      topic: existing.topic ?? "general",
+      customPrompt,
     });
 
-    if (!result.exercises.length) {
+    if (result.exercises.length === 0) {
       return NextResponse.json({ error: "AI failed to generate exercise" }, { status: 500 });
     }
+
+    const generatedEx = result.exercises[0];
 
     // Track AI token usage
     if (result.tokensUsed > 0) {
       await incrementUsage(ownerId, academy.id, UsageMetric.AI_TOKENS, result.tokensUsed);
     }
 
-    // Delete old exercise
-    await ds.getRepository(Exercise).remove(existing);
+    // Update existing exercise in-place (preserves ID + lesson links)
+    existing.title = generatedEx.title ?? existing.title;
+    existing.instruction = generatedEx.instruction;
+    existing.content = generatedEx.content;
+    existing.options = generatedEx.options ?? null;
+    existing.correctAnswer = generatedEx.correctAnswer;
+    existing.explanation = generatedEx.explanation;
+    existing.source = ExerciseSource.AI_LIVE;
+    existing.audioUrl = null; // reset — will regenerate below if needed
 
-    // Save new exercise — preserve the original type and targetSkill
-    const ex = result.exercises[0];
-
-    const exercise = new Exercise();
-    exercise.academyId = academy.id;
-    exercise.type = originalType;
-    exercise.targetSkill = targetSkill;
-    exercise.topic = topic;
-    exercise.instruction = ex.instruction;
-    exercise.content = ex.content;
-    exercise.options = ex.options ?? null;
-    exercise.correctAnswer = ex.correctAnswer;
-    exercise.explanation = ex.explanation;
-    exercise.language = originalLanguage;
-    exercise.cefrLevel = cefrLevel;
-    exercise.source = ExerciseSource.AI_LIVE;
-
-    const saved = await ds.getRepository(Exercise).save(exercise);
+    const saved = await ds.getRepository(Exercise).save(existing);
 
     // Generate TTS audio
-    if (process.env.ELEVENLABS_API_KEY) {
-      try {
-        const { generateExerciseAudio } = await import("@/lib/tts");
-        const audioText = `${saved.instruction}. ${saved.content}`;
-        saved.audioUrl = await generateExerciseAudio(audioText, saved.id);
-        await ds.getRepository(Exercise).save(saved);
-      } catch (audioErr) {
-        console.error(`TTS generation failed for exercise ${saved.id}:`, audioErr);
+    const config = EXERCISE_TYPE_CONFIG[saved.type as ExerciseType];
+    const AUDIO_KEYWORDS = /\b(listen|audio|dictation|pronunciat|spoken|oral|dialogue|hear)\b/i;
+    const needsAudio = config?.needsAudio ||
+      generatedEx.needsAudio ||
+      AUDIO_KEYWORDS.test(saved.type) ||
+      AUDIO_KEYWORDS.test(saved.targetSkill) ||
+      AUDIO_KEYWORDS.test(saved.instruction);
+
+    if (needsAudio) {
+      const { isTTSAvailable, generateExerciseAudio } = await import("@/lib/tts");
+      if (isTTSAvailable()) {
+        const user = await ds.getRepository(User).findOne({ where: { id: ownerId } });
+        const ttsLimit = await checkPlanLimit(ownerId, (user?.plan as UserPlan) ?? UserPlan.FREE, UsageMetric.TTS_CHARACTERS);
+        if (ttsLimit.allowed) {
+          try {
+            const audioText = saved.content;
+            saved.audioUrl = await generateExerciseAudio(audioText, saved.id, saved.language);
+            await ds.getRepository(Exercise).save(saved);
+            await incrementUsage(ownerId, academy.id, UsageMetric.TTS_CHARACTERS, audioText.length);
+          } catch (audioErr) {
+            console.error(`TTS generation failed for exercise ${saved.id}:`, audioErr);
+          }
+        }
       }
     }
 
-    return NextResponse.json({
-      id: saved.id,
-      type: saved.type,
-      targetSkill: saved.targetSkill,
-      topic: saved.topic,
-      language: saved.language,
-      instruction: saved.instruction,
-      content: saved.content,
-      options: saved.options,
-      correctAnswer: saved.correctAnswer,
-      explanation: saved.explanation,
-      cefrLevel: saved.cefrLevel,
-      source: saved.source,
-      templateId: saved.templateId,
-      audioUrl: saved.audioUrl,
-      createdAt: saved.createdAt,
+    // Fire-and-forget: generate embedding
+    import("@/lib/embeddings").then(({ embedExercise }) => {
+      embedExercise(saved.id)
+        .then((tokens) => { if (tokens > 0) incrementUsage(ownerId, academy.id, UsageMetric.AI_TOKENS, tokens); })
+        .catch((err) => console.error("Embedding generation failed:", err));
     });
+
+    return NextResponse.json(serializeExercise(saved));
   } catch (err) {
     console.error("Failed to regenerate exercise:", err);
     return NextResponse.json({ error: "Failed to regenerate exercise" }, { status: 500 });

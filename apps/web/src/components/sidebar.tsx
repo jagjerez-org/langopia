@@ -22,6 +22,7 @@ import {
   Route,
   Dumbbell,
   GraduationCap,
+  FolderOpen,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -50,6 +51,7 @@ const academyNavItems = [
   { href: "/dashboard/learning-paths", label: "Learning Paths", icon: Route },
   { href: "/dashboard/lessons", label: "Lessons", icon: BookOpen },
   { href: "/dashboard/exercises", label: "Exercise Bank", icon: Dumbbell },
+  { href: "/dashboard/media", label: "Media Library", icon: FolderOpen },
   { href: "/dashboard/students", label: "Students", icon: Users },
   { href: "/dashboard/reports", label: "Reports", icon: FileText },
   { href: "/dashboard/api-keys", label: "API Keys", icon: Key },

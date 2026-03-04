@@ -333,125 +333,39 @@ export interface ProgressReportInput {
   currentCefrEstimate: string | null;
 }
 
-// ─── Exercise Generation (Phase 6) ────────────────────────
-
-export interface ExerciseGenerationInput {
-  studentName: string;
-  language: string;
-  cefrLevel: string | null;
-  vocabularyBank: { word: string; cefrLevel: string; context: string }[];
-  grammarPatterns: { rule: string; example: string; correction: string }[];
-  recentSuggestions: string[];
-  sourceContent?: string;
-}
-
-export interface ExerciseGenerationResult {
-  exercises: GeneratedExercise[];
-  tokensUsed: number;
-}
+// ─── Exercise Generation (Type-based) ────────────────────
 
 export interface GeneratedExercise {
-  type: "fill_in_blank" | "multiple_choice" | "sentence_reorder" | "error_correction" | "free_response";
+  type: string;
+  title?: string;
   instruction: string;
   content: string;
   options?: string[];
   correctAnswer: string;
   explanation: string;
   cefrLevel: string;
-  targetSkill: "vocabulary" | "grammar" | "reading" | "writing";
+  targetSkill: string;
+  needsAudio?: boolean;
 }
 
-export async function generateExercises(
-  input: ExerciseGenerationInput
-): Promise<ExerciseGenerationResult> {
-  const vocabSample = input.vocabularyBank.slice(-20).map((v) => `${v.word} (${v.cefrLevel}): "${v.context}"`).join("\n");
-  const grammarSample = input.grammarPatterns.slice(-10).map((g) => `Rule: ${g.rule} | Error: "${g.example}" → "${g.correction}"`).join("\n");
-
-  const sourceSection = input.sourceContent?.trim()
-    ? `\nSource material (use this as the basis for generating exercises):\n${input.sourceContent.slice(0, 8000)}\n`
-    : "";
-
-  const prompt = `You are a language exercise generator for ${input.language} learners. Generate 6 exercises based on the student's learning profile.
-
-Return a JSON object:
-{
-  "exercises": [
-    {
-      "type": "fill_in_blank" | "multiple_choice" | "sentence_reorder" | "error_correction" | "free_response",
-      "instruction": "Clear instruction for the student",
-      "content": "The exercise content (sentence with ___ for fill-in, etc.)",
-      "options": ["option1", "option2", "option3", "option4"],
-      "correctAnswer": "The correct answer",
-      "explanation": "Why this is correct, referencing the grammar rule or vocabulary",
-      "cefrLevel": "A1|A2|B1|B2|C1|C2",
-      "targetSkill": "vocabulary" | "grammar" | "reading" | "writing"
-    }
-  ]
-}
-
-Student: ${input.studentName}
-CEFR Level: ${input.cefrLevel ?? "Unknown"}
-
-Recent vocabulary:
-${vocabSample || "No vocabulary data yet"}
-
-Grammar patterns to practice:
-${grammarSample || "No grammar data yet"}
-
-Teacher suggestions:
-${input.recentSuggestions.join("\n") || "None"}
-${sourceSection}
-Rules:
-- Generate exactly 6 exercises: 2 vocabulary, 2 grammar, 1 reading, 1 writing
-- Match difficulty to the student's CEFR level (${input.cefrLevel ?? "B1"})
-- For multiple_choice, always provide exactly 4 options
-- For fill_in_blank, use ___ in the content to mark the blank
-- Make exercises contextual and relevant to the student's recent learning
-- Return ONLY valid JSON`;
-
-  const response = await getOpenAI().chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-    temperature: 0.7,
-    response_format: { type: "json_object" },
-  });
-
-  const content = response.choices[0]?.message?.content ?? "{}";
-  const parsed = JSON.parse(content);
-  const tokensUsed = response.usage?.total_tokens ?? 0;
-
-  const exercises = (parsed.exercises ?? []).map((e: Record<string, unknown>) => ({
-    type: String(e.type ?? "multiple_choice"),
-    instruction: String(e.instruction ?? ""),
-    content: String(e.content ?? ""),
-    options: Array.isArray(e.options) ? e.options.map(String) : undefined,
-    correctAnswer: String(e.correctAnswer ?? ""),
-    explanation: String(e.explanation ?? ""),
-    cefrLevel: String(e.cefrLevel ?? input.cefrLevel ?? "B1"),
-    targetSkill: String(e.targetSkill ?? "vocabulary"),
-  }));
-
-  return { exercises, tokensUsed };
-}
-
-// ─── Template-based Exercise Generation ──────────────────
-
-export interface TemplateExerciseRequest {
-  templateSlug: string;
-  promptTemplate: string;
+export interface TypeExerciseRequest {
+  type: string;
   count: number;
 }
 
-export interface TemplateGenerationInput {
-  requests: TemplateExerciseRequest[];
+export interface TypeGenerationInput {
+  requests: TypeExerciseRequest[];
   language: string;
   cefrLevel: string;
   topic: string;
   sourceContent?: string;
+  customPrompt?: string;
+  existingSummaries?: string[];
+  searchCallback?: (query: string) => Promise<{ results: string; tokensUsed: number }>;
 }
 
-export interface TemplateGenerationResult {
-  exercises: (GeneratedExercise & { templateSlug: string })[];
+export interface TypeGenerationResult {
+  exercises: GeneratedExercise[];
   tokensUsed: number;
 }
 
@@ -478,66 +392,643 @@ export function interpolateTemplate(
   return result;
 }
 
-export async function generateExercisesFromTemplates(
-  input: TemplateGenerationInput
-): Promise<TemplateGenerationResult> {
-  const allExercises: (GeneratedExercise & { templateSlug: string })[] = [];
-  let totalTokens = 0;
+// ─── Hardcoded Exercise Prompts (one per type) ───────────
 
-  const vars: Record<string, string | undefined> = {
-    topic: input.topic,
-    language: input.language,
-    cefrLevel: input.cefrLevel,
-    sourceContent: input.sourceContent,
-  };
+const EXERCISE_PROMPTS: Record<string, string> = {
+  warm_up: `Generate {{count}} "Warm Up" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+A warm-up exercise presents a text passage (or scenario) and asks the student for a free-text response — reflection, opinion, short answer, etc.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Short display title",
+    "instruction": "Read the text and write your response",
+    "content": "The text passage or scenario",
+    "options": null,
+    "correctAnswer": "A model answer the student can compare against",
+    "explanation": "What makes a good answer",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "writing",
+    "needsAudio": false
+  }]
+}`,
+
+  intro: `Generate {{count}} "Introduction" screen(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+An introduction is a read-only presentation card that introduces the topic structure and key concepts. No interaction required from the student.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Topic title (e.g. Present Simple)",
+    "instruction": "Brief description of what to review",
+    "content": "Structured topic explanation with key points",
+    "options": null,
+    "correctAnswer": "",
+    "explanation": "",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "reading",
+    "needsAudio": false
+  }]
+}`,
+
+  card: `Generate {{count}} "Concept Card" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+A concept card is a read-only grammar/vocabulary card with structure, rules, and examples. Like a flashcard but richer.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Concept name (e.g. Irregular Verbs)",
+    "instruction": "Short description of the concept",
+    "content": "Explanation with structure, rules, and examples",
+    "options": null,
+    "correctAnswer": "",
+    "explanation": "",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "grammar",
+    "needsAudio": false
+  }]
+}`,
+
+  tap_to_complete: `Generate {{count}} "Tap to Complete" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+Each exercise has a sentence with one or more blanks (___) and a set of tappable word options. The student taps the correct option to fill each blank.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Short title (optional)",
+    "instruction": "Tap the correct option to complete the sentence",
+    "content": "She ___ to school every day.",
+    "options": ["goes", "go", "going", "gone"],
+    "correctAnswer": "goes",
+    "explanation": "Third person singular requires 'goes' in present simple",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "grammar",
+    "needsAudio": false
+  }]
+}
+
+RULES:
+- Always use ___ (three underscores) for blanks in content
+- Provide 3-4 plausible options including the correct answer
+- Distractors should be common mistakes for the CEFR level`,
+
+  tap_to_order: `Generate {{count}} "Tap to Order" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+Each exercise provides shuffled words that the student taps in order to form a correct sentence.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Short title (optional)",
+    "instruction": "Put the words in the correct order",
+    "content": "The correct sentence (hidden from student, used as reference)",
+    "options": ["go", "I", "school", "to"],
+    "correctAnswer": "I go to school",
+    "explanation": "Subject + verb + prepositional phrase word order",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "grammar",
+    "needsAudio": false
+  }]
+}
+
+RULES:
+- options must be the words shuffled (NOT in correct order)
+- correctAnswer is the full correct sentence
+- Keep sentences appropriate for the CEFR level`,
+
+  listen_match: `Generate {{count}} "Listen & Match" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+The student listens to audio and matches items together (word-definition pairs, etc.).
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Short title (optional)",
+    "instruction": "Listen and match the items",
+    "content": "Description of matching pairs as text. Format: word1 = definition1 | word2 = definition2 | word3 = definition3",
+    "options": ["word1", "word2", "word3"],
+    "correctAnswer": "word1=definition1, word2=definition2, word3=definition3",
+    "explanation": "Why these matches are correct",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "listening",
+    "needsAudio": true
+  }]
+}`,
+
+  listen_repeat: `Generate {{count}} "Listen & Repeat" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+The student listens to a phrase/sentence and records themselves repeating it.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Short title (optional)",
+    "instruction": "Listen and repeat the phrase",
+    "content": "The phrase or sentence to be repeated",
+    "options": null,
+    "correctAnswer": "The exact text (same as content)",
+    "explanation": "Pronunciation tips or key sounds to focus on",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "listening",
+    "needsAudio": true
+  }]
+}`,
+
+  watch_reflect: `Generate {{count}} "Watch & Reflect" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+The student watches a video and writes a reflection or answers a question about it.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Short title (optional)",
+    "instruction": "Watch the video and answer the question",
+    "content": "The reflection question or prompt",
+    "options": null,
+    "correctAnswer": "A model answer",
+    "explanation": "What makes a good reflection",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "writing",
+    "needsAudio": false
+  }]
+}`,
+
+  complete_chat: `Generate {{count}} "Complete Chat" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+A chat conversation with blanks (___) in some messages. The student taps options to fill each blank.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Short title (optional)",
+    "instruction": "Complete the conversation by selecting the correct responses",
+    "content": "A: Hi, how are you?\\nB: ___\\nA: Great! What are you doing today?\\nB: ___",
+    "options": ["I'm fine, thanks!", "I'm going shopping", "Not much", "See you later"],
+    "correctAnswer": "I'm fine, thanks!|I'm going shopping",
+    "explanation": "Natural conversational responses",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "vocabulary",
+    "needsAudio": false
+  }]
+}
+
+RULES:
+- Use A: and B: prefixes for speakers
+- Use ___ for blanks in B's lines
+- correctAnswer uses | to separate multiple answers
+- options should include correct answers plus plausible distractors`,
+
+  write_complete: `Generate {{count}} "Write to Complete" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+Text with blanks (___) where the student types the missing words/phrases. No options — free typing.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Short title (optional)",
+    "instruction": "Write the missing words to complete the text",
+    "content": "Yesterday I ___ to the store and ___ some groceries.",
+    "options": null,
+    "correctAnswer": "went|bought",
+    "explanation": "Past simple of 'go' is 'went'; past simple of 'buy' is 'bought'",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "grammar",
+    "needsAudio": false
+  }]
+}
+
+RULES:
+- Use ___ for each blank
+- correctAnswer uses | to separate multiple answers in order
+- Each blank should test a specific grammar point or vocabulary word`,
+
+  listen_complete: `Generate {{count}} "Listen & Complete" exercise(s) in {{language}} at CEFR {{cefrLevel}} about "{{topic}}".
+
+The student listens to audio of a conversation and completes blanks by selecting from options.
+
+{{#sourceContent}}Source material:
+{{sourceContent}}{{/sourceContent}}
+
+{{#existingExercises}}EXISTING EXERCISES (pre-fetched via RAG):
+Similarity levels: VERY_HIGH = near-duplicate, HIGH = very similar, MEDIUM = same topic area.
+You MUST NOT duplicate VERY_HIGH or HIGH exercises. For MEDIUM, vary the specific content significantly.
+If unsure whether your exercise duplicates an existing one, use the search_exercises tool to check.
+---
+{{existingExercises}}
+---{{/existingExercises}}
+
+{{#customPrompt}}ADDITIONAL INSTRUCTIONS FROM TEACHER:
+{{customPrompt}}{{/customPrompt}}
+
+Return JSON:
+{
+  "exercises": [{
+    "title": "Short title (optional)",
+    "instruction": "Listen and complete the conversation",
+    "content": "A: Can I help you?\\nB: Yes, I'd like to ___ a table for two.\\nA: Of course. What ___ would you prefer?",
+    "options": ["book", "reserve", "time", "day", "order", "place"],
+    "correctAnswer": "book|time",
+    "explanation": "To 'book a table' is a common collocation; 'time' completes the question about preference",
+    "cefrLevel": "{{cefrLevel}}",
+    "targetSkill": "listening",
+    "needsAudio": true
+  }]
+}
+
+RULES:
+- Use A: and B: prefixes for speakers
+- Use ___ for blanks
+- correctAnswer uses | to separate multiple answers
+- Provide more options than blanks (distractors)`,
+};
+
+// OpenAI function calling tool for RAG search
+const EXERCISE_SEARCH_TOOL: OpenAI.Chat.Completions.ChatCompletionTool = {
+  type: "function",
+  function: {
+    name: "search_exercises",
+    description: "Search the exercise database for exercises similar to a query. Use this to check if an exercise you're about to create already exists.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Describe the exercise you want to check for duplicates (e.g. 'fill in blanks about past tense irregular verbs')",
+        },
+      },
+      required: ["query"],
+    },
+  },
+};
+
+const MAX_TOOL_CALLS = 3;
+
+export async function generateExercisesByType(
+  input: TypeGenerationInput
+): Promise<TypeGenerationResult> {
+  const allExercises: GeneratedExercise[] = [];
+  let totalTokens = 0;
 
   for (const req of input.requests) {
     if (req.count <= 0) continue;
 
-    vars.count = String(req.count);
-    const interpolated = interpolateTemplate(req.promptTemplate, vars);
+    const promptTemplate = EXERCISE_PROMPTS[req.type];
+    if (!promptTemplate) {
+      console.error(`No prompt found for exercise type: ${req.type}`);
+      continue;
+    }
+
+    const vars: Record<string, string | undefined> = {
+      count: String(req.count),
+      topic: input.topic,
+      language: input.language,
+      cefrLevel: input.cefrLevel,
+      sourceContent: input.sourceContent,
+      customPrompt: input.customPrompt,
+      existingExercises: input.existingSummaries?.length
+        ? input.existingSummaries.join("\n")
+        : undefined,
+    };
+
+    const interpolated = interpolateTemplate(promptTemplate, vars);
+
+    const toolInstruction = input.searchCallback
+      ? `\nYou have access to a search_exercises tool. Use it to verify if an exercise you're creating already exists in the database. Only search when you're uncertain — the pre-fetched list above covers the most similar exercises already.`
+      : "";
 
     const systemPrompt = `You are a language exercise generator. ${interpolated}
-
-Generate exactly ${req.count} exercise(s). Return ONLY valid JSON with this structure:
-{ "exercises": [{ "instruction": "...", "content": "...", "options": [...] or null, "correctAnswer": "...", "explanation": "...", "cefrLevel": "${input.cefrLevel}", "targetSkill": "..." }] }`;
+${toolInstruction}
+IMPORTANT RULES:
+- Generate EXACTLY ${req.count} exercise(s), no more, no less
+- "title" should be a short display title for the exercise
+- "correctAnswer" is MANDATORY for every exercise (provide model answer for open-ended)
+- "explanation" is MANDATORY (explain grammar rule, vocabulary usage, or reasoning)
+- "instruction" must be a complete sentence explaining what to do
+- "needsAudio": set to true only if the exercise type requires audio
+- Return ONLY valid JSON with an "exercises" array, no markdown fences`;
 
     try {
-      const response = await getOpenAI().chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: systemPrompt }],
-        temperature: 0.7,
-        response_format: { type: "json_object" },
-      });
+      const useTools = !!input.searchCallback;
+      const tools = useTools ? [EXERCISE_SEARCH_TOOL] : undefined;
 
-      const content = response.choices[0]?.message?.content ?? "{}";
-      const parsed = JSON.parse(content);
-      totalTokens += response.usage?.total_tokens ?? 0;
+      const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+        { role: "user", content: systemPrompt },
+      ];
 
-      const exercises = (parsed.exercises ?? []).map(
-        (e: Record<string, unknown>) => ({
-          type: req.templateSlug,
-          instruction: String(e.instruction ?? ""),
-          content: String(e.content ?? ""),
-          options: Array.isArray(e.options) ? e.options.map(String) : undefined,
-          correctAnswer: String(e.correctAnswer ?? ""),
-          explanation: String(e.explanation ?? ""),
-          cefrLevel: String(e.cefrLevel ?? input.cefrLevel),
-          targetSkill: String(e.targetSkill ?? "vocabulary"),
-          templateSlug: req.templateSlug,
-        })
-      );
+      let parsed: Record<string, unknown> | null = null;
+
+      for (let turn = 0; turn < MAX_TOOL_CALLS + 1; turn++) {
+        const response = await getOpenAI().chat.completions.create({
+          model: "gpt-4o-mini",
+          messages,
+          temperature: 0.7,
+          // Can't use response_format with tools on the first call
+          ...(tools && turn === 0 ? {} : { response_format: { type: "json_object" as const } }),
+          ...(tools ? { tools, tool_choice: "auto" as const } : {}),
+        });
+
+        const choice = response.choices[0];
+        totalTokens += response.usage?.total_tokens ?? 0;
+
+        if (choice.finish_reason === "tool_calls" && choice.message.tool_calls?.length) {
+          // GPT wants to search — process tool calls
+          messages.push(choice.message);
+          for (const tc of choice.message.tool_calls) {
+            try {
+              const args = JSON.parse(tc.function.arguments);
+              const { results, tokensUsed } = await input.searchCallback!(args.query);
+              totalTokens += tokensUsed;
+              messages.push({ role: "tool", tool_call_id: tc.id, content: results });
+            } catch (toolErr) {
+              messages.push({ role: "tool", tool_call_id: tc.id, content: "Search failed. Continue generating exercises." });
+              console.error("Tool call search failed:", toolErr);
+            }
+          }
+          continue; // Next iteration with tool results
+        }
+
+        // GPT returned exercises content
+        const content = choice.message.content ?? "{}";
+        try {
+          parsed = JSON.parse(content);
+        } catch {
+          // Try to extract JSON from the response
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            parsed = JSON.parse(jsonMatch[0]);
+          }
+        }
+        break;
+      }
+
+      if (!parsed) continue;
+
+      const exercises = (
+        (parsed.exercises as Record<string, unknown>[]) ?? []
+      ).map((e: Record<string, unknown>) => ({
+        type: req.type,
+        title: e.title ? String(e.title) : undefined,
+        instruction: String(e.instruction ?? ""),
+        content: String(e.content ?? ""),
+        options: Array.isArray(e.options) ? e.options.map(String) : undefined,
+        correctAnswer: String(e.correctAnswer ?? ""),
+        explanation: String(e.explanation ?? ""),
+        cefrLevel: String(e.cefrLevel ?? input.cefrLevel),
+        targetSkill: String(e.targetSkill ?? "vocabulary"),
+        needsAudio: Boolean(e.needsAudio ?? false),
+      }));
 
       allExercises.push(...exercises);
     } catch (err) {
-      console.error(
-        `Failed to generate exercises for template ${req.templateSlug}:`,
-        err
-      );
+      console.error(`Failed to generate exercises for type ${req.type}:`, err);
     }
   }
 
   return { exercises: allExercises, tokensUsed: totalTokens };
+}
+
+// ─── Exercise Material Analysis ──────────────────────────
+
+const EXERCISE_TYPE_DESCRIPTIONS = [
+  "warm_up — Warm Up: Free text exercise from text, audio, or video",
+  "intro — Introduction: Presentation screen for topic/structure overview (read-only)",
+  "card — Concept Card: Grammar/concept card with structure and examples (read-only)",
+  "tap_to_complete — Tap to Complete: Complete a sentence by tapping the correct option",
+  "tap_to_order — Tap to Order: Reorder shuffled words to form a correct sentence",
+  "listen_match — Listen & Match: Listen to audio and match items together",
+  "listen_repeat — Listen & Repeat: Listen to audio and record yourself repeating it",
+  "watch_reflect — Watch & Reflect: Watch a video and write a reflection",
+  "complete_chat — Complete Chat: Fill in blanks within a chat conversation",
+  "write_complete — Write to Complete: Type words/phrases to fill blanks in text",
+  "listen_complete — Listen & Complete: Listen to audio and complete a conversation with blanks",
+].join("\n");
+
+export interface ExerciseAnalysisInput {
+  materialText?: string;
+  topic?: string;
+  language: string;
+  cefrLevel: string;
+}
+
+export interface ExerciseAnalysisResult {
+  detectedTopic: string;
+  suggestions: {
+    type: string;
+    count: number;
+    reason: string;
+  }[];
+  materialSummary: string;
+  tokensUsed: number;
+}
+
+export async function analyzeExerciseMaterial(
+  input: ExerciseAnalysisInput
+): Promise<ExerciseAnalysisResult> {
+  const materialSection = input.materialText?.trim()
+    ? `\nUploaded material:\n${input.materialText.slice(0, 12000)}\n`
+    : "";
+
+  const topicSection = input.topic?.trim()
+    ? `\nUser-specified topic: ${input.topic}\n`
+    : "";
+
+  const prompt = `You are an expert language teaching exercise designer. Analyze the provided material and suggest an exercise generation plan.
+
+Language: ${input.language}
+CEFR Level: ${input.cefrLevel}
+${topicSection}${materialSection}
+Available exercise types:
+${EXERCISE_TYPE_DESCRIPTIONS}
+
+Return a JSON object with this exact structure:
+{
+  "detectedTopic": "The main topic detected from the material or user input",
+  "materialSummary": "A 1-2 sentence summary of the uploaded content (empty string if no material)",
+  "suggestions": [
+    {
+      "type": "exercise_type_slug",
+      "count": 2,
+      "reason": "Why this exercise type fits the material"
+    }
+  ]
+}
+
+Rules:
+- suggestions: Pick from the available exercise types above. Use the exact slug values.
+- Suggest 3-6 types with counts totaling 6-12 exercises.
+- Include a mix of interactive and passive exercise types.
+- If no material is provided, base suggestions on the topic and level alone.
+- Return ONLY valid JSON.`;
+
+  const response = await getOpenAI().chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+    temperature: 0.4,
+    response_format: { type: "json_object" },
+  });
+
+  const content = response.choices[0]?.message?.content ?? "{}";
+  const parsed = JSON.parse(content);
+  const tokensUsed = response.usage?.total_tokens ?? 0;
+
+  const validTypes = new Set(Object.keys(EXERCISE_PROMPTS));
+
+  return {
+    detectedTopic: String(parsed.detectedTopic ?? input.topic ?? ""),
+    materialSummary: String(parsed.materialSummary ?? ""),
+    suggestions: (parsed.suggestions ?? [])
+      .filter((s: Record<string, unknown>) => validTypes.has(String(s.type ?? "")))
+      .map((s: Record<string, unknown>) => ({
+        type: String(s.type ?? ""),
+        count: Number(s.count ?? 1),
+        reason: String(s.reason ?? ""),
+      })),
+    tokensUsed,
+  };
 }
 
 // ─── Progress Report Generation (Phase 4) ────────────────

@@ -68,12 +68,17 @@ export enum ReportStatus {
 }
 
 export enum ExerciseType {
-  FILL_IN_BLANK = "fill_in_blank",
-  MULTIPLE_CHOICE = "multiple_choice",
-  SENTENCE_REORDER = "sentence_reorder",
-  ERROR_CORRECTION = "error_correction",
-  FREE_RESPONSE = "free_response",
-  LISTENING = "listening",
+  WARM_UP = "warm_up",
+  INTRO = "intro",
+  CARD = "card",
+  TAP_TO_COMPLETE = "tap_to_complete",
+  TAP_TO_ORDER = "tap_to_order",
+  LISTEN_MATCH = "listen_match",
+  LISTEN_REPEAT = "listen_repeat",
+  WATCH_REFLECT = "watch_reflect",
+  COMPLETE_CHAT = "complete_chat",
+  WRITE_COMPLETE = "write_complete",
+  LISTEN_COMPLETE = "listen_complete",
 }
 
 export enum ExerciseSource {
@@ -106,6 +111,15 @@ export enum LessonStatus {
   COMPLETED = "completed",
 }
 
+// ─── Media ─────────────────────────────────────────
+
+export enum MediaStatus {
+  PENDING = "pending",
+  PROCESSING = "processing",
+  READY = "ready",
+  FAILED = "failed",
+}
+
 // ─── CEFR & Languages ───────────────────────────────
 
 export const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
@@ -125,9 +139,103 @@ export const EXERCISE_LANGUAGES = [
   { code: "ru", name: "Russian" },
 ] as const;
 
-export function isBuiltInExerciseType(type: string): type is ExerciseType {
-  return Object.values(ExerciseType).includes(type as ExerciseType);
-}
+export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
+  label: string;
+  description: string;
+  icon: string;
+  needsAudio: boolean;
+  needsVideo: boolean;
+  isInteractive: boolean;
+}> = {
+  [ExerciseType.WARM_UP]: {
+    label: "Warm Up",
+    description: "Free text exercise from text, audio, or video",
+    icon: "Flame",
+    needsAudio: false,
+    needsVideo: false,
+    isInteractive: true,
+  },
+  [ExerciseType.INTRO]: {
+    label: "Introduction",
+    description: "Presentation screen for topic/structure overview",
+    icon: "BookOpen",
+    needsAudio: false,
+    needsVideo: false,
+    isInteractive: false,
+  },
+  [ExerciseType.CARD]: {
+    label: "Concept Card",
+    description: "Grammar/concept card with structure and examples",
+    icon: "CreditCard",
+    needsAudio: false,
+    needsVideo: false,
+    isInteractive: false,
+  },
+  [ExerciseType.TAP_TO_COMPLETE]: {
+    label: "Tap to Complete",
+    description: "Complete a sentence by tapping the correct option",
+    icon: "MousePointerClick",
+    needsAudio: false,
+    needsVideo: false,
+    isInteractive: true,
+  },
+  [ExerciseType.TAP_TO_ORDER]: {
+    label: "Tap to Order",
+    description: "Reorder shuffled words to form a correct sentence",
+    icon: "ArrowUpDown",
+    needsAudio: false,
+    needsVideo: false,
+    isInteractive: true,
+  },
+  [ExerciseType.LISTEN_MATCH]: {
+    label: "Listen & Match",
+    description: "Listen to audio and match items together",
+    icon: "AudioLines",
+    needsAudio: true,
+    needsVideo: false,
+    isInteractive: true,
+  },
+  [ExerciseType.LISTEN_REPEAT]: {
+    label: "Listen & Repeat",
+    description: "Listen to audio and record yourself repeating it",
+    icon: "Mic",
+    needsAudio: true,
+    needsVideo: false,
+    isInteractive: true,
+  },
+  [ExerciseType.WATCH_REFLECT]: {
+    label: "Watch & Reflect",
+    description: "Watch a video and write a reflection",
+    icon: "Video",
+    needsAudio: false,
+    needsVideo: true,
+    isInteractive: true,
+  },
+  [ExerciseType.COMPLETE_CHAT]: {
+    label: "Complete Chat",
+    description: "Fill in blanks within a chat conversation",
+    icon: "MessageSquare",
+    needsAudio: false,
+    needsVideo: false,
+    isInteractive: true,
+  },
+  [ExerciseType.WRITE_COMPLETE]: {
+    label: "Write to Complete",
+    description: "Type words/phrases to fill blanks in text",
+    icon: "PenLine",
+    needsAudio: false,
+    needsVideo: false,
+    isInteractive: true,
+  },
+  [ExerciseType.LISTEN_COMPLETE]: {
+    label: "Listen & Complete",
+    description: "Listen to audio and complete a conversation with blanks",
+    icon: "Headphones",
+    needsAudio: true,
+    needsVideo: false,
+    isInteractive: true,
+  },
+};
 
 // ─── Usage ───────────────────────────────────────────────
 
@@ -136,6 +244,7 @@ export enum UsageMetric {
   CLASS_MINUTES = "class_minutes",
   AI_REPORTS = "ai_reports",
   AI_TOKENS = "ai_tokens",
+  TTS_CHARACTERS = "tts_characters",
   STORAGE_BYTES = "storage_bytes",
 }
 
@@ -149,6 +258,7 @@ export const PLAN_LIMITS: Record<UserPlan, {
   maxStudentsPerRoom: number;
   maxStorageBytes: number;
   maxAiTokensPerMonth: number;
+  maxTtsCharactersPerMonth: number;
 }> = {
   [UserPlan.FREE]: {
     maxAcademies: 1,
@@ -158,6 +268,7 @@ export const PLAN_LIMITS: Record<UserPlan, {
     maxStudentsPerRoom: 2,
     maxStorageBytes: 1_073_741_824, // 1GB
     maxAiTokensPerMonth: 50_000,
+    maxTtsCharactersPerMonth: 10_000,
   },
   [UserPlan.STARTER]: {
     maxAcademies: 3,
@@ -167,6 +278,7 @@ export const PLAN_LIMITS: Record<UserPlan, {
     maxStudentsPerRoom: 8,
     maxStorageBytes: 10_737_418_240, // 10GB
     maxAiTokensPerMonth: 500_000,
+    maxTtsCharactersPerMonth: 100_000,
   },
   [UserPlan.PROFESSIONAL]: {
     maxAcademies: 10,
@@ -176,6 +288,7 @@ export const PLAN_LIMITS: Record<UserPlan, {
     maxStudentsPerRoom: 25,
     maxStorageBytes: 53_687_091_200, // 50GB
     maxAiTokensPerMonth: 2_000_000,
+    maxTtsCharactersPerMonth: 500_000,
   },
   [UserPlan.ENTERPRISE]: {
     maxAcademies: 999,
@@ -185,5 +298,6 @@ export const PLAN_LIMITS: Record<UserPlan, {
     maxStudentsPerRoom: 50,
     maxStorageBytes: 536_870_912_000, // 500GB
     maxAiTokensPerMonth: 999_999_999,
+    maxTtsCharactersPerMonth: 999_999_999,
   },
 };

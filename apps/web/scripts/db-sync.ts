@@ -16,11 +16,13 @@ import {
   ChatMessage,
   Transcription,
   ClassReport,
-  ExerciseTemplate,
+
   Exercise,
   LessonExercise,
   ReportExercise,
   UsageRecord,
+  MediaItem,
+  MediaPage,
 } from "../src/entities";
 
 async function main() {
@@ -34,6 +36,9 @@ async function main() {
   });
 
   await preDs.initialize();
+
+  // Enable pgvector extension
+  await preDs.query('CREATE EXTENSION IF NOT EXISTS vector');
 
   // Pre-migration: convert exercises enum columns to varchar if they exist as enums
   try {
@@ -105,6 +110,32 @@ async function main() {
     console.warn("Pre-migration warning (academy_members, non-fatal):", err);
   }
 
+  // Pre-migration: clean slate exercise types redesign
+  try {
+    const hasTemplateIdCol = await preDs.query(
+      `SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'exercises' AND column_name = 'templateId'`
+    );
+    if (hasTemplateIdCol.length > 0) {
+      console.log("Exercise types redesign: cleaning slate...");
+      await preDs.query(`DELETE FROM "report_exercises"`);
+      await preDs.query(`DELETE FROM "lesson_exercises"`);
+      await preDs.query(`DELETE FROM "exercises"`);
+      await preDs.query(`ALTER TABLE "exercises" DROP COLUMN "templateId"`);
+      console.log("  dropped templateId column from exercises.");
+
+      const hasTemplatesTable = await preDs.query(
+        `SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'exercise_templates' LIMIT 1`
+      );
+      if (hasTemplatesTable.length > 0) {
+        await preDs.query(`DROP TABLE "exercise_templates"`);
+        console.log("  dropped exercise_templates table.");
+      }
+      console.log("  done.");
+    }
+  } catch (err) {
+    console.warn("Pre-migration warning (exercise redesign, non-fatal):", err);
+  }
+
   // Pre-migration: drop lessons.topic column (merged with title)
   try {
     const hasTopicCol = await preDs.query(
@@ -141,11 +172,13 @@ async function main() {
       ChatMessage,
       Transcription,
       ClassReport,
-      ExerciseTemplate,
+    
       Exercise,
       LessonExercise,
       ReportExercise,
       UsageRecord,
+      MediaItem,
+      MediaPage,
     ],
     synchronize: true,
     logging: true,
@@ -153,6 +186,33 @@ async function main() {
 
   await ds.initialize();
   console.log("Database synchronized successfully!");
+
+  // Create HNSW indexes for vector similarity search
+  await ds.query(`
+    CREATE INDEX IF NOT EXISTS idx_exercises_embedding_hnsw
+    ON exercises USING hnsw ("embedding" vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64)
+  `);
+
+  await ds.query(`
+    CREATE INDEX IF NOT EXISTS idx_exercises_topic_embedding_hnsw
+    ON exercises USING hnsw ("topicEmbedding" vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64)
+  `);
+
+  await ds.query(`
+    CREATE INDEX IF NOT EXISTS idx_media_items_embedding_hnsw
+    ON media_items USING hnsw ("embedding" vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64)
+  `);
+
+  await ds.query(`
+    CREATE INDEX IF NOT EXISTS idx_media_pages_embedding_hnsw
+    ON media_pages USING hnsw ("embedding" vector_cosine_ops)
+    WITH (m = 16, ef_construction = 64)
+  `);
+  console.log("HNSW indexes created/verified.");
+
   await ds.destroy();
 }
 

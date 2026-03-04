@@ -16,11 +16,13 @@ import {
   ChatMessage,
   Transcription,
   ClassReport,
-  ExerciseTemplate,
+
   Exercise,
   LessonExercise,
   ReportExercise,
   UsageRecord,
+  MediaItem,
+  MediaPage,
 } from "@/entities";
 
 const entities = [
@@ -39,11 +41,13 @@ const entities = [
   ChatMessage,
   Transcription,
   ClassReport,
-  ExerciseTemplate,
+
   Exercise,
   LessonExercise,
   ReportExercise,
   UsageRecord,
+  MediaItem,
+  MediaPage,
 ];
 
 let dataSource: DataSource | null = null;

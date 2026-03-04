@@ -142,6 +142,9 @@ export async function checkPlanLimit(
     case UsageMetric.AI_TOKENS:
       limit = limits.maxAiTokensPerMonth;
       break;
+    case UsageMetric.TTS_CHARACTERS:
+      limit = limits.maxTtsCharactersPerMonth;
+      break;
     case UsageMetric.STORAGE_BYTES:
       limit = limits.maxStorageBytes;
       break;

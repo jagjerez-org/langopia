@@ -1,8 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDataSource } from "@/lib/database";
-import { Exercise, ExerciseTemplate, User } from "@/entities";
+import { Exercise, LessonExercise, Lesson, User } from "@/entities";
 import { authenticateApiKey, checkPlanLimit, incrementUsage } from "@/lib/api-auth";
-import { ExerciseSource, ExerciseType, TargetSkill, UsageMetric, UserPlan } from "@langopia/shared/types";
+import { ExerciseSource, EXERCISE_TYPE_CONFIG, ExerciseType, UsageMetric, UserPlan } from "@langopia/shared/types";
+
+function serializeExercise(e: Exercise) {
+  return {
+    id: e.id,
+    type: e.type,
+    title: e.title,
+    targetSkill: e.targetSkill,
+    topic: e.topic,
+    language: e.language,
+    instruction: e.instruction,
+    content: e.content,
+    options: e.options,
+    correctAnswer: e.correctAnswer,
+    explanation: e.explanation,
+    cefrLevel: e.cefrLevel,
+    source: e.source,
+    audioUrl: e.audioUrl,
+    videoUrl: e.videoUrl,
+    imageUrl: e.imageUrl,
+    createdAt: e.createdAt,
+  };
+}
 
 // GET /api/v1/exercises - List exercises for the academy
 export async function GET(req: NextRequest) {
@@ -32,21 +54,7 @@ export async function GET(req: NextRequest) {
   const [exercises, total] = await qb.getManyAndCount();
 
   return NextResponse.json({
-    data: exercises.map((e) => ({
-      id: e.id,
-      type: e.type,
-      targetSkill: e.targetSkill,
-      topic: e.topic,
-      language: e.language,
-      instruction: e.instruction,
-      content: e.content,
-      options: e.options,
-      cefrLevel: e.cefrLevel,
-      source: e.source,
-      templateId: e.templateId,
-      audioUrl: e.audioUrl,
-      createdAt: e.createdAt,
-    })),
+    data: exercises.map(serializeExercise),
     total,
     limit,
     offset,
@@ -60,81 +68,42 @@ export async function POST(req: NextRequest) {
 
   const { academy, ownerId } = authResult;
 
-  // Support both JSON and multipart/form-data
-  let topic: string | undefined;
-  let language: string | undefined;
-  let cefrLevel: string | undefined;
-  let sourceContent: string | undefined;
-  // New template-based params
-  let templates: { templateId: string; count: number }[] | undefined;
-  // Legacy params
-  let targetSkill: string | undefined;
-  let count: number | undefined;
-
-  const contentType = req.headers.get("content-type") ?? "";
-
-  const MAX_FILE_SIZE = 10 * 1024 * 1024;  // 10 MB per file
-  const MAX_TOTAL_SIZE = 30 * 1024 * 1024; // 30 MB total
-
-  if (contentType.includes("multipart/form-data")) {
-    const formData = await req.formData();
-    topic = formData.get("topic") as string | undefined;
-    language = (formData.get("language") as string) || "en";
-    cefrLevel = formData.get("cefrLevel") as string | undefined;
-    targetSkill = formData.get("targetSkill") as string | undefined;
-    count = formData.get("count") ? Number(formData.get("count")) : undefined;
-
-    const templatesJson = formData.get("templates") as string | null;
-    if (templatesJson) {
-      try { templates = JSON.parse(templatesJson); } catch { /* ignore */ }
-    }
-
-    // Handle multiple file attachments
-    const files = formData.getAll("file") as File[];
-    if (files.length > 0) {
-      let totalSize = 0;
-      const validFiles: File[] = [];
-
-      for (const file of files) {
-        if (!file || file.size === 0) continue;
-        if (file.size > MAX_FILE_SIZE) {
-          return NextResponse.json(
-            { error: `File "${file.name}" exceeds the 10 MB per-file limit (${(file.size / 1024 / 1024).toFixed(1)} MB).` },
-            { status: 400 }
-          );
-        }
-        totalSize += file.size;
-        if (totalSize > MAX_TOTAL_SIZE) {
-          return NextResponse.json(
-            { error: `Total file size exceeds the 30 MB limit.` },
-            { status: 400 }
-          );
-        }
-        validFiles.push(file);
-      }
-
-      if (validFiles.length > 0) {
-        const { extractTextFromFile } = await import("@/lib/file-extract");
-        const parts: string[] = [];
-        for (const file of validFiles) {
-          const text = await extractTextFromFile(file);
-          if (text.trim()) parts.push(`--- ${file.name} ---\n${text}`);
-        }
-        sourceContent = parts.join("\n\n");
-      }
-    }
-  } else {
-    const body = await req.json();
-    topic = body.topic;
-    language = body.language || "en";
-    cefrLevel = body.cefrLevel;
-    templates = body.templates;
-    targetSkill = body.targetSkill;
-    count = body.count;
-  }
+  const body = await req.json();
+  const {
+    topic,
+    language = "en",
+    cefrLevel = "B1",
+    materialContext,
+    lessonId,
+    exercises: exercisePlan,
+  } = body as {
+    topic?: string;
+    language?: string;
+    cefrLevel?: string;
+    materialContext?: string;
+    lessonId?: string;
+    exercises?: { type: string; count: number }[];
+  };
 
   if (!topic) {
     return NextResponse.json({ error: "topic is required" }, { status: 400 });
+  }
+
+  if (!exercisePlan || exercisePlan.length === 0) {
+    return NextResponse.json(
+      { error: "exercises array is required (e.g. [{type: 'tap_to_complete', count: 2}])" },
+      { status: 400 }
+    );
+  }
+
+  // Validate types against config
+  const validTypes = new Set(Object.values(ExerciseType) as string[]);
+  const invalidTypes = exercisePlan.filter((e) => !validTypes.has(e.type));
+  if (invalidTypes.length > 0) {
+    return NextResponse.json(
+      { error: `Invalid exercise types: ${invalidTypes.map((e) => e.type).join(", ")}` },
+      { status: 400 }
+    );
   }
 
   // Check AI token plan limit before generating
@@ -149,139 +118,134 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Helper: link exercise to lesson
+  async function linkToLesson(exerciseId: string) {
+    if (!lessonId) return;
+    const lesson = await ds.getRepository(Lesson).findOne({
+      where: { id: lessonId, academyId: academy.id },
+    });
+    if (!lesson) return;
+
+    const existing = await ds.getRepository(LessonExercise).findOne({
+      where: { lessonId, exerciseId },
+    });
+    if (existing) return;
+
+    const maxSort = await ds.getRepository(LessonExercise)
+      .createQueryBuilder("le")
+      .select("COALESCE(MAX(le.sortOrder), -1)", "maxSort")
+      .where("le.lessonId = :lessonId", { lessonId })
+      .getRawOne();
+
+    const link = new LessonExercise();
+    link.lessonId = lessonId;
+    link.exerciseId = exerciseId;
+    link.sortOrder = (maxSort?.maxSort ?? -1) + 1;
+    await ds.getRepository(LessonExercise).save(link);
+  }
+
+  // Helper: generate TTS audio for exercises that need it
+  const AUDIO_KEYWORDS = /\b(listen|audio|dictation|pronunciat|spoken|oral|dialogue|hear)\b/i;
+
+  async function generateTTS(exercises: Exercise[], needsAudioMap?: Map<string, boolean>) {
+    const audioExercises = exercises.filter((e) => {
+      // 1. Check config needsAudio
+      const config = EXERCISE_TYPE_CONFIG[e.type as ExerciseType];
+      if (config?.needsAudio) return true;
+      // 2. Check AI flag
+      if (needsAudioMap?.has(e.id)) return needsAudioMap.get(e.id);
+      // 3. Keyword heuristic
+      return (
+        AUDIO_KEYWORDS.test(e.type) ||
+        AUDIO_KEYWORDS.test(e.targetSkill) ||
+        AUDIO_KEYWORDS.test(e.instruction)
+      );
+    });
+    if (audioExercises.length === 0) return;
+    const { isTTSAvailable, generateExerciseAudio } = await import("@/lib/tts");
+    if (!isTTSAvailable()) return;
+    const ttsLimit = await checkPlanLimit(ownerId, plan, UsageMetric.TTS_CHARACTERS);
+    if (!ttsLimit.allowed) return;
+    for (const exercise of audioExercises) {
+      try {
+        const audioText = exercise.content;
+        exercise.audioUrl = await generateExerciseAudio(audioText, exercise.id, exercise.language);
+        await ds.getRepository(Exercise).save(exercise);
+        await incrementUsage(ownerId, academy.id, UsageMetric.TTS_CHARACTERS, audioText.length);
+      } catch (audioErr) {
+        console.error(`TTS generation failed for exercise ${exercise.id}:`, audioErr);
+      }
+    }
+  }
+
   try {
-    // ── New template-based generation ──
-    if (templates && templates.length > 0) {
-      const templateIds = templates.map((t) => t.templateId);
-      const templateEntities = await ds.getRepository(ExerciseTemplate).find({
-        where: templateIds.map((id) => ({ id, academyId: academy.id })),
-      });
-      const templateMap = new Map(templateEntities.map((t) => [t.id, t]));
-
-      const requests = templates
-        .filter((t) => t.count > 0 && templateMap.has(t.templateId))
-        .map((t) => ({
-          templateSlug: templateMap.get(t.templateId)!.slug,
-          promptTemplate: templateMap.get(t.templateId)!.promptTemplate,
-          count: t.count,
-        }));
-
-      if (requests.length === 0) {
-        return NextResponse.json(
-          { error: "No valid templates with count > 0" },
-          { status: 400 }
-        );
-      }
-
-      const { generateExercisesFromTemplates } = await import("@langopia/ai-pipeline");
-
-      const result = await generateExercisesFromTemplates({
-        requests,
-        language: language || "en",
-        cefrLevel: cefrLevel || "B1",
+    // Hybrid RAG dedup: find similar exercises via dual embeddings
+    let existingSummaries: string[] | undefined;
+    let searchCallback: ((query: string) => Promise<{ results: string; tokensUsed: number }>) | undefined;
+    try {
+      const { findDedupCandidates, searchExercisesForRAG, DISTANCE_THRESHOLD_DEDUP, DISTANCE_THRESHOLD_TOPIC } = await import("@/lib/embeddings");
+      const { candidates, tokensUsed: dedupTokens } = await findDedupCandidates({
         topic,
-        sourceContent,
+        materialContext,
+        academyId: academy.id,
+        language: language || undefined,
+        cefrLevel: cefrLevel || undefined,
       });
-
-      const saved: Exercise[] = [];
-      for (const ex of result.exercises) {
-        const matchedTemplate = templateEntities.find(
-          (t) => t.slug === ex.templateSlug
-        );
-        const exercise = new Exercise();
-        exercise.academyId = academy.id;
-        exercise.templateId = matchedTemplate?.id ?? null;
-        exercise.type = ex.templateSlug;
-        exercise.targetSkill = ex.targetSkill || matchedTemplate?.targetSkill || "vocabulary";
-        exercise.topic = topic;
-        exercise.language = language || "en";
-        exercise.instruction = ex.instruction;
-        exercise.content = ex.content;
-        exercise.options = ex.options ?? null;
-        exercise.correctAnswer = ex.correctAnswer;
-        exercise.explanation = ex.explanation;
-        exercise.cefrLevel = cefrLevel || "B1";
-        exercise.source = ExerciseSource.AI_LIVE;
-        saved.push(await ds.getRepository(Exercise).save(exercise));
+      if (dedupTokens > 0) {
+        await incrementUsage(ownerId, academy.id, UsageMetric.AI_TOKENS, dedupTokens);
+      }
+      if (candidates.length > 0) {
+        existingSummaries = candidates.map((e) => {
+          const similarity = e.distance < DISTANCE_THRESHOLD_DEDUP
+            ? "VERY_HIGH"
+            : e.distance < DISTANCE_THRESHOLD_TOPIC
+              ? "HIGH"
+              : "MEDIUM";
+          return `- [${similarity}] [${e.type}] "${e.title || "Untitled"}" | Skill: ${e.targetSkill} | Instruction: ${e.instruction} | Content: ${e.content.slice(0, 300)}${e.options ? ` | Options: ${e.options.join(", ")}` : ""}${e.correctAnswer ? ` | Answer: ${e.correctAnswer}` : ""}`;
+        });
       }
 
-      if (result.tokensUsed > 0) {
-        await incrementUsage(ownerId, academy.id, UsageMetric.AI_TOKENS, result.tokensUsed);
-      }
-
-      // Generate TTS audio
-      if (process.env.ELEVENLABS_API_KEY) {
-        const { generateExerciseAudio } = await import("@/lib/tts");
-        for (const exercise of saved) {
-          try {
-            const audioText = `${exercise.instruction}. ${exercise.content}`;
-            exercise.audioUrl = await generateExerciseAudio(audioText, exercise.id);
-            await ds.getRepository(Exercise).save(exercise);
-          } catch (audioErr) {
-            console.error(`TTS generation failed for exercise ${exercise.id}:`, audioErr);
-          }
-        }
-      }
-
-      return NextResponse.json(
-        {
-          data: saved.map((e) => ({
-            id: e.id,
-            type: e.type,
-            targetSkill: e.targetSkill,
-            topic: e.topic,
-            language: e.language,
-            instruction: e.instruction,
-            content: e.content,
-            options: e.options,
-            cefrLevel: e.cefrLevel,
-            source: e.source,
-            templateId: e.templateId,
-            audioUrl: e.audioUrl,
-            createdAt: e.createdAt,
-          })),
-        },
-        { status: 201 }
-      );
+      // Create searchCallback for GPT tool calling
+      searchCallback = async (query: string) => {
+        return searchExercisesForRAG({
+          query,
+          academyId: academy.id,
+          language: language || undefined,
+          cefrLevel: cefrLevel || undefined,
+          limit: 5,
+        });
+      };
+    } catch (embedErr) {
+      console.warn("Embedding search failed (continuing without dedup):", embedErr);
     }
 
-    // ── Legacy generation (backward compat) ──
-    if (!targetSkill || !cefrLevel) {
-      return NextResponse.json(
-        { error: "Either templates array or targetSkill + cefrLevel are required" },
-        { status: 400 }
-      );
-    }
+    // Generate exercises by type
+    const { generateExercisesByType } = await import("@langopia/ai-pipeline");
 
-    const { generateExercises } = await import("@langopia/ai-pipeline");
+    const requests = exercisePlan
+      .filter((e) => e.count > 0)
+      .map((e) => ({ type: e.type, count: e.count }));
 
-    const result = await generateExercises({
-      studentName: "Student",
+    const result = await generateExercisesByType({
+      requests,
       language: language || "en",
-      cefrLevel,
-      vocabularyBank: [],
-      grammarPatterns: [],
-      recentSuggestions: [
-        `Focus on ${targetSkill} exercises about: ${topic}`,
-      ],
-      sourceContent,
+      cefrLevel: cefrLevel || "B1",
+      topic,
+      sourceContent: materialContext,
+      existingSummaries,
+      searchCallback,
     });
 
+    // Save exercises
     const saved: Exercise[] = [];
-
-    const validTypes = new Set(Object.values(ExerciseType));
-    const validSkills = new Set(Object.values(TargetSkill));
+    const needsAudioMap = new Map<string, boolean>();
 
     for (const ex of result.exercises) {
       const exercise = new Exercise();
       exercise.academyId = academy.id;
-      exercise.templateId = null;
-      exercise.type = validTypes.has(ex.type as ExerciseType)
-        ? (ex.type as ExerciseType)
-        : ExerciseType.MULTIPLE_CHOICE;
-      exercise.targetSkill = validSkills.has(ex.targetSkill as TargetSkill)
-        ? (ex.targetSkill as TargetSkill)
-        : (targetSkill as TargetSkill);
+      exercise.type = ex.type;
+      exercise.title = ex.title ?? null;
+      exercise.targetSkill = ex.targetSkill || "vocabulary";
       exercise.topic = topic;
       exercise.language = language || "en";
       exercise.instruction = ex.instruction;
@@ -289,47 +253,36 @@ export async function POST(req: NextRequest) {
       exercise.options = ex.options ?? null;
       exercise.correctAnswer = ex.correctAnswer;
       exercise.explanation = ex.explanation;
-      exercise.cefrLevel = cefrLevel;
+      exercise.cefrLevel = cefrLevel || "B1";
       exercise.source = ExerciseSource.AI_LIVE;
-      saved.push(await ds.getRepository(Exercise).save(exercise));
+      exercise.videoUrl = null;
+      exercise.imageUrl = null;
+      const savedEx = await ds.getRepository(Exercise).save(exercise);
+      if (ex.needsAudio) needsAudioMap.set(savedEx.id, true);
+      saved.push(savedEx);
     }
 
-    // Track AI token usage
     if (result.tokensUsed > 0) {
       await incrementUsage(ownerId, academy.id, UsageMetric.AI_TOKENS, result.tokensUsed);
     }
 
-    // Generate TTS audio for each exercise
-    if (process.env.ELEVENLABS_API_KEY) {
-      const { generateExerciseAudio } = await import("@/lib/tts");
-      for (const exercise of saved) {
-        try {
-          const audioText = `${exercise.instruction}. ${exercise.content}`;
-          exercise.audioUrl = await generateExerciseAudio(audioText, exercise.id);
-          await ds.getRepository(Exercise).save(exercise);
-        } catch (audioErr) {
-          console.error(`TTS generation failed for exercise ${exercise.id}:`, audioErr);
-        }
-      }
+    // Link to lesson
+    for (const ex of saved) {
+      await linkToLesson(ex.id);
     }
 
+    // TTS
+    await generateTTS(saved, needsAudioMap);
+
+    // Fire-and-forget: generate embeddings
+    import("@/lib/embeddings").then(({ embedExercises }) => {
+      embedExercises(saved.map((e) => e.id))
+        .then((tokens) => { if (tokens > 0) incrementUsage(ownerId, academy.id, UsageMetric.AI_TOKENS, tokens); })
+        .catch((err) => console.error("Embedding generation failed:", err));
+    });
+
     return NextResponse.json(
-      {
-        data: saved.map((e) => ({
-          id: e.id,
-          type: e.type,
-          targetSkill: e.targetSkill,
-          topic: e.topic,
-          language: e.language,
-          instruction: e.instruction,
-          content: e.content,
-          options: e.options,
-          cefrLevel: e.cefrLevel,
-          source: e.source,
-          audioUrl: e.audioUrl,
-          createdAt: e.createdAt,
-        })),
-      },
+      { data: saved.map(serializeExercise) },
       { status: 201 }
     );
   } catch (err) {
