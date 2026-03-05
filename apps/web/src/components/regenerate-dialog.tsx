@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 import {
   Dialog,
   DialogContent,
@@ -15,7 +16,6 @@ interface RegenerateDialogProps {
   exerciseType: string;
   exerciseTargetSkill: string;
   exerciseInstruction: string;
-  apiKey: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRegenerated: (newExercise: Record<string, unknown>) => void;
@@ -26,11 +26,11 @@ export function RegenerateDialog({
   exerciseType,
   exerciseTargetSkill,
   exerciseInstruction,
-  apiKey,
   open,
   onOpenChange,
   onRegenerated,
 }: RegenerateDialogProps) {
+  const api = useApiKeyClient();
   const [customPrompt, setCustomPrompt] = useState("");
   const [regenerating, setRegenerating] = useState(false);
 
@@ -45,26 +45,11 @@ export function RegenerateDialog({
   async function handleRegenerate() {
     setRegenerating(true);
     try {
-      const res = await fetch(`/api/v1/exercises/${exerciseId}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          customPrompt: customPrompt.trim() || undefined,
-        }),
+      const newExercise = await api.exercises.regenerate(exerciseId, {
+        customPrompt: customPrompt.trim() || undefined,
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        toast.error(data.error || "Failed to regenerate exercise");
-        return;
-      }
-
-      const newExercise = await res.json();
       toast.success("Exercise regenerated");
-      onRegenerated(newExercise);
+      onRegenerated(newExercise as unknown as Record<string, unknown>);
       handleOpenChange(false);
     } catch {
       toast.error("Failed to regenerate exercise");

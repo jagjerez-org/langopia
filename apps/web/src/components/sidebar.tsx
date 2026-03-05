@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiClient } from "@/hooks/use-api-client";
 import {
   LayoutDashboard,
   Key,
@@ -80,6 +81,7 @@ export function Sidebar() {
     loading,
     refetchAcademies,
   } = useAcademy();
+  const api = useApiClient();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -91,22 +93,15 @@ export function Sidebar() {
     setCreating(true);
 
     try {
-      const res = await fetch("/api/academies", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newName.trim() }),
-      });
-
-      if (res.ok) {
-        const created = await res.json();
-        setNewName("");
-        setCreateOpen(false);
-        await refetchAcademies();
-        setSelectedAcademy(created.id);
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to create academy");
-      }
+      const created = await api.academies.create({ name: newName.trim() });
+      setNewName("");
+      setCreateOpen(false);
+      await refetchAcademies();
+      setSelectedAcademy(created.id);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Failed to create academy";
+      toast.error(message);
     } finally {
       setCreating(false);
     }

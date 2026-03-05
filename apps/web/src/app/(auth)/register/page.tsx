@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
+import { createPublicClient } from "@/hooks/use-api-client";
+import { ApiError } from "@langopia/api-client";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -37,22 +39,11 @@ export default function RegisterPage() {
     }
 
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Registration failed");
-        setLoading(false);
-        return;
-      }
-
+      const api = createPublicClient();
+      await api.auth.register({ name, email, password });
       router.push("/login?registered=true");
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
       setLoading(false);
     }
   }

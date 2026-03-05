@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 import { CEFR_LEVELS, EXERCISE_LANGUAGES } from "@langopia/shared/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ export default function MediaDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { selectedAcademyData, loading: academyLoading } = useAcademy();
-  const apiKey = selectedAcademyData?.apiKey;
+  const api = useApiKeyClient();
 
   const [item, setItem] = useState<MediaItemDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,28 +71,23 @@ export default function MediaDetailPage() {
   const [expandedPage, setExpandedPage] = useState<number | null>(null);
 
   const fetchItem = useCallback(async () => {
-    if (!apiKey || !id) return;
+    if (!selectedAcademyData?.apiKey || !id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/media/${id}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const m = data.data as MediaItemDetail;
-        setItem(m);
-        setEditTopic(m.detectedTopic ?? "");
-        setEditLanguage(m.detectedLanguage ?? "en");
-        setEditCefrLevel(m.detectedCefrLevel ?? "B1");
-        setEditTags(m.tags ?? []);
-      } else {
-        toast.error("Media item not found");
-        router.push("/dashboard/media");
-      }
+      const result = await api.media.get(id) as unknown as { data: MediaItemDetail };
+      const m = result.data;
+      setItem(m);
+      setEditTopic(m.detectedTopic ?? "");
+      setEditLanguage(m.detectedLanguage ?? "en");
+      setEditCefrLevel(m.detectedCefrLevel ?? "B1");
+      setEditTags(m.tags ?? []);
+    } catch {
+      toast.error("Media item not found");
+      router.push("/dashboard/media");
     } finally {
       setLoading(false);
     }
-  }, [apiKey, id, router]);
+  }, [api, selectedAcademyData?.apiKey, id, router]);
 
   useEffect(() => {
     fetchItem();
@@ -105,42 +101,32 @@ export default function MediaDetailPage() {
   }, [item, fetchItem]);
 
   async function handleSave() {
-    if (!apiKey || !id) return;
+    if (!id) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/v1/media/${id}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          detectedTopic: editTopic || null,
-          detectedLanguage: editLanguage || null,
-          detectedCefrLevel: editCefrLevel || null,
-          tags: editTags,
-        }),
+      await api.media.update(id, {
+        detectedTopic: editTopic || undefined,
+        detectedLanguage: editLanguage || undefined,
+        detectedCefrLevel: editCefrLevel || undefined,
+        tags: editTags,
       });
-      if (res.ok) {
-        toast.success("Saved");
-        fetchItem();
-      } else {
-        toast.error("Failed to save");
-      }
+      toast.success("Saved");
+      fetchItem();
+    } catch {
+      toast.error("Failed to save");
     } finally {
       setSaving(false);
     }
   }
 
   async function handleRetry() {
-    if (!apiKey || !id) return;
-    const res = await fetch(`/api/v1/media/${id}/retry`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    if (!id) return;
+    try {
+      await api.media.retry(id);
       toast.success("Retrying analysis...");
       fetchItem();
+    } catch {
+      toast.error("Retry failed");
     }
   }
 

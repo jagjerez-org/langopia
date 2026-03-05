@@ -1,0 +1,49 @@
+{
+  "name": "@langopia/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@config-plugins/react-native-webrtc": "^13.0.0",
+    "@expo/vector-icons": "^14.0.0",
+    "@langopia/api-client": "workspace:*",
+    "@langopia/shared": "workspace:*",
+    "@livekit/components-react": "^2.9.20",
+    "@livekit/react-native": "^2.7.4",
+    "@livekit/react-native-expo-plugin": "^1.0.1",
+    "@livekit/react-native-webrtc": "^137.0.2",
+    "@react-native-firebase/app": "^23.8.6",
+    "@react-native-firebase/messaging": "^23.8.6",
+    "expo": "~53.0.0",
+    "expo-constants": "~17.1.8",
+    "expo-dev-client": "^55.0.11",
+    "expo-linking": "~7.1.7",
+    "expo-notifications": "^55.0.10",
+    "expo-router": "~5.1.11",
+    "expo-secure-store": "~14.2.4",
+    "expo-splash-screen": "~0.30.10",
+    "expo-status-bar": "~2.2.0",
+    "livekit-client": "^2.17.2",
+    "nativewind": "^4.1.23",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "react-native": "0.79.6",
+    "react-native-mmkv": "^4.2.0",
+    "react-native-reanimated": "~3.17.4",
+    "react-native-safe-area-context": "~5.4.0",
+    "react-native-screens": "~4.11.1",
+    "react-native-web": "~0.20.0"
+  },
+  "devDependencies": {
+    "@types/react": "~19.0.0",
+    "babel-preset-expo": "~13.0.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.8.3"
+  }
+}

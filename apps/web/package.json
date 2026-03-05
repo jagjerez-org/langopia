@@ -15,7 +15,6 @@
     "db:embed": "npx tsx --env-file=.env scripts/backfill-embeddings.ts"
   },
   "dependencies": {
-    "@auth/typeorm-adapter": "^2.11.1",
     "@aws-sdk/client-s3": "^3.1000.0",
     "@fullcalendar/core": "^6.1.20",
     "@fullcalendar/daygrid": "^6.1.20",
@@ -24,13 +23,13 @@
     "@fullcalendar/timegrid": "^6.1.20",
     "@hookform/resolvers": "^5.2.2",
     "@langopia/ai-pipeline": "workspace:*",
+    "@langopia/api-client": "workspace:*",
     "@langopia/shared": "workspace:*",
     "@livekit/components-react": "^2.9.20",
     "@livekit/components-styles": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@sentry/nextjs": "^10.40.0",
     "@tldraw/tldraw": "^4.4.0",
-    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "elevenlabs": "^1.59.0",
@@ -38,7 +37,6 @@
     "livekit-server-sdk": "^2.15.0",
     "lucide-react": "^0.575.0",
     "next": "16.1.6",
-    "next-auth": "5.0.0-beta.30",
     "officeparser": "^5.1.1",
     "openai": "^4",
     "pdf-parse": "^2.4.5",
@@ -60,7 +58,6 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20",
     "@types/pdf-parse": "^1.1.5",
     "@types/react": "^19",

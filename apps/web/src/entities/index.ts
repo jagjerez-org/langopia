@@ -63,6 +63,9 @@ export class User {
   @Column({ type: "timestamptz", nullable: true })
   lastLoginAt!: Date | null;
 
+  @Column({ type: "jsonb", default: [] })
+  fcmTokens!: { token: string; platform: string; createdAt: string }[];
+
   @OneToMany(() => AcademyMember, (m) => m.user)
   academyMemberships!: AcademyMember[];
 
@@ -1003,6 +1006,40 @@ export class MediaPage {
   @ManyToOne(() => MediaItem, (m) => m.pages, { onDelete: "CASCADE" })
   @JoinColumn({ name: "mediaItemId" })
   mediaItem!: MediaItem;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+}
+
+// ─── Notification ──────────────────────────────────
+
+@Entity("notifications")
+@Index(["userId"])
+export class Notification {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  userId!: string;
+
+  @Column({ type: "varchar", length: 50 })
+  type!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  title!: string;
+
+  @Column({ type: "text" })
+  body!: string;
+
+  @Column({ type: "jsonb", nullable: true })
+  data!: Record<string, string> | null;
+
+  @Column({ type: "boolean", default: false })
+  read!: boolean;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: "userId" })
+  user!: User;
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;

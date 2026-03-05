@@ -6,6 +6,7 @@ import { CEFR_LEVELS, EXERCISE_LANGUAGES } from "@langopia/shared/types";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useRouter } from "next/navigation";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 
 interface LearningPath {
   id: string;
@@ -28,8 +29,9 @@ const statusColors: Record<string, string> = {
 };
 
 export default function LearningPathsPage() {
-  const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
+  const { selectedAcademy, loading: academyLoading } = useAcademy();
   const router = useRouter();
+  const api = useApiKeyClient();
   const [paths, setPaths] = useState<LearningPath[]>([]);
   const [total, setTotal] = useState(0);
 
@@ -46,25 +48,20 @@ export default function LearningPathsPage() {
   const [filterCefr, setFilterCefr] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const apiKey = selectedAcademyData?.apiKey;
-
   const loadPaths = useCallback(async () => {
-    if (!apiKey) return;
-
-    const params = new URLSearchParams({ limit: "100" });
-    if (filterLanguage !== "all") params.set("language", filterLanguage);
-    if (filterCefr !== "all") params.set("cefrLevel", filterCefr);
-    if (filterStatus !== "all") params.set("status", filterStatus);
-
-    const res = await fetch(`/api/v1/learning-paths?${params}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setPaths(data.data ?? []);
+    try {
+      const data = await api.learningPaths.list({
+        language: filterLanguage !== "all" ? filterLanguage : undefined,
+        cefrLevel: filterCefr !== "all" ? filterCefr : undefined,
+        status: filterStatus !== "all" ? filterStatus : undefined,
+        limit: 100,
+      });
+      setPaths((data.data ?? []) as unknown as LearningPath[]);
       setTotal(data.total ?? 0);
+    } catch {
+      // ignore
     }
-  }, [apiKey, filterLanguage, filterCefr, filterStatus]);
+  }, [api, filterLanguage, filterCefr, filterStatus]);
 
   useEffect(() => {
     setPaths([]);
@@ -74,35 +71,24 @@ export default function LearningPathsPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!apiKey || !newTitle.trim()) return;
+    if (!newTitle.trim()) return;
 
     setSaving(true);
     try {
-      const res = await fetch("/api/v1/learning-paths", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: newTitle,
-          language: newLanguage,
-          cefrLevel: newCefrLevel,
-          description: newDescription || undefined,
-        }),
+      const lp = await api.learningPaths.create({
+        title: newTitle,
+        language: newLanguage,
+        cefrLevel: newCefrLevel,
+        description: newDescription || undefined,
       });
-
-      if (res.ok) {
-        const lp = await res.json();
-        setCreating(false);
-        setNewTitle("");
-        setNewDescription("");
-        toast.success("Learning path created");
-        router.push(`/dashboard/learning-paths/${lp.id}`);
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Failed to create learning path");
-      }
+      setCreating(false);
+      setNewTitle("");
+      setNewDescription("");
+      toast.success("Learning path created");
+      router.push(`/dashboard/learning-paths/${lp.id}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create learning path";
+      toast.error(message);
     } finally {
       setSaving(false);
     }

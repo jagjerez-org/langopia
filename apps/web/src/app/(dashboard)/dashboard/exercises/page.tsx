@@ -22,6 +22,8 @@ import { RegenerateDialog } from "@/components/regenerate-dialog";
 import { ExerciseRenderer } from "@/components/exercises/exercise-renderer";
 import { CEFR_LEVELS, EXERCISE_TYPE_CONFIG, ExerciseType } from "@langopia/shared/types";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiKeyClient } from "@/hooks/use-api-client";
+import type { UpdateExerciseRequest } from "@langopia/api-client";
 
 interface Exercise {
   id: string;
@@ -195,6 +197,7 @@ function InlineEditForm({
 // ─── Main Page ──────────────────────────────────────────────
 export default function ExercisesPage() {
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
+  const api = useApiKeyClient();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [total, setTotal] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -225,18 +228,13 @@ export default function ExercisesPage() {
   const loadTokenUsage = useCallback(async () => {
     if (!apiKey) return;
     try {
-      const res = await fetch("/api/v1/usage", {
-        headers: { Authorization: `Bearer ${apiKey}` },
+      const data = await api.usage.get();
+      setTokenUsage({
+        used: data.usage?.ai_tokens ?? 0,
+        limit: data.limits?.maxAiTokensPerMonth ?? 0,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setTokenUsage({
-          used: data.usage?.ai_tokens ?? 0,
-          limit: data.limits?.maxAiTokensPerMonth ?? 0,
-        });
-      }
     } catch { /* ignore */ }
-  }, [apiKey]);
+  }, [apiKey, api]);
 
   useEffect(() => {
     if (selectedAcademy) {
@@ -247,16 +245,12 @@ export default function ExercisesPage() {
   const loadExercises = useCallback(async () => {
     if (!apiKey) return;
 
-    const params = new URLSearchParams({ limit: "100" });
-    const res = await fetch(`/api/v1/exercises?${params}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setExercises(data.data ?? []);
+    try {
+      const data = await api.exercises.list({ limit: 100 });
+      setExercises((data.data ?? []) as unknown as Exercise[]);
       setTotal(data.total ?? 0);
-    }
-  }, [apiKey]);
+    } catch { /* ignore */ }
+  }, [apiKey, api]);
 
   useEffect(() => {
     setExercises([]);
@@ -268,14 +262,11 @@ export default function ExercisesPage() {
   async function handleDelete(id: string) {
     if (!apiKey) return;
 
-    const res = await fetch(`/api/v1/exercises/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.exercises.delete(id);
       setExercises((prev) => prev.filter((ex) => ex.id !== id));
       setTotal((t) => t - 1);
-    }
+    } catch { /* ignore */ }
   }
 
   function handleRegenerateClick(exercise: Exercise) {
@@ -289,30 +280,20 @@ export default function ExercisesPage() {
 
     setSavingEdits((prev) => new Set(prev).add(id));
     try {
-      const res = await fetch(`/api/v1/exercises/${id}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(draft),
+      const updated = await api.exercises.update(id, draft as unknown as UpdateExerciseRequest);
+      setExercises((prev) =>
+        prev.map((ex) => (ex.id === id ? { ...ex, ...(updated as unknown as Exercise) } : ex))
+      );
+      setEditingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setExercises((prev) =>
-          prev.map((ex) => (ex.id === id ? { ...ex, ...updated } : ex))
-        );
-        setEditingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-        setEditDrafts((prev) => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-      }
+      setEditDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
     } finally {
       setSavingEdits((prev) => {
         const next = new Set(prev);
@@ -715,7 +696,6 @@ export default function ExercisesPage() {
           exerciseType={regenerateExercise.type}
           exerciseTargetSkill={regenerateExercise.targetSkill}
           exerciseInstruction={regenerateExercise.instruction}
-          apiKey={apiKey}
           open={!!regenerateExercise}
           onOpenChange={(open) => { if (!open) setRegenerateExercise(null); }}
           onRegenerated={(newEx) => {

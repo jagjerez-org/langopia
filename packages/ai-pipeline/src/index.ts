@@ -72,7 +72,7 @@ export async function transcribeAudio(
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  const file = new File([arrayBuffer], "recording.mp4", {
+  const file = new File([new Uint8Array(arrayBuffer)], "recording.mp4", {
     type: "video/mp4",
   });
 

@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
 import { Settings, User, Save } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
+import { useApiClient } from "@/hooks/use-api-client";
 
 export default function SettingsPage() {
-  const { data: session, update } = useSession();
-  const [name, setName] = useState(session?.user?.name ?? "");
+  const { user, updateUser } = useAuth();
+  const api = useApiClient();
+  const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -16,16 +18,10 @@ export default function SettingsPage() {
 
     setSaving(true);
     try {
-      const res = await fetch("/api/user/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
-      });
-      if (res.ok) {
-        await update({ name: name.trim() });
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-      }
+      await api.userProfile.update({ name: name.trim() });
+      updateUser({ name: name.trim() });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
     }
@@ -45,7 +41,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <h3 className="font-semibold">Profile</h3>
-            <p className="text-xs text-zinc-500">{session?.user?.email}</p>
+            <p className="text-xs text-zinc-500">{user?.email}</p>
           </div>
         </div>
 
@@ -64,7 +60,7 @@ export default function SettingsPage() {
           <div>
             <label className="mb-1.5 block text-sm font-medium">Email</label>
             <input
-              value={session?.user?.email ?? ""}
+              value={user?.email ?? ""}
               disabled
               className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
             />
@@ -73,7 +69,7 @@ export default function SettingsPage() {
           <div>
             <label className="mb-1.5 block text-sm font-medium">Plan</label>
             <input
-              value={(session?.user?.plan ?? "free").charAt(0).toUpperCase() + (session?.user?.plan ?? "free").slice(1)}
+              value={(user?.plan ?? "free").charAt(0).toUpperCase() + (user?.plan ?? "free").slice(1)}
               disabled
               className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900"
             />

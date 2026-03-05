@@ -12,6 +12,7 @@ import {
   Check,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 import {
   Sheet,
   SheetContent,
@@ -60,7 +61,6 @@ export interface MediaSelection {
 interface MediaLibrarySidebarProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  apiKey: string;
   onSelect: (media: MediaSelection[]) => void;
 }
 
@@ -74,9 +74,9 @@ function getFileIcon(mimeType: string) {
 export function MediaLibrarySidebar({
   open,
   onOpenChange,
-  apiKey,
   onSelect,
 }: MediaLibrarySidebarProps) {
+  const api = useApiKeyClient();
   const [items, setItems] = useState<MediaItemBrowse[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
@@ -84,22 +84,16 @@ export function MediaLibrarySidebar({
   const [selecting, setSelecting] = useState(false);
 
   const fetchItems = useCallback(async () => {
-    if (!apiKey) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: "50" });
-      if (search) params.set("search", search);
-      const res = await fetch(`/api/v1/media?${params}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.data);
-      }
+      const result = await api.media.list({ search: search || undefined, limit: 50 });
+      setItems(result.data as unknown as MediaItemBrowse[]);
+    } catch {
+      /* ignore */
     } finally {
       setLoading(false);
     }
-  }, [apiKey, search]);
+  }, [api, search]);
 
   useEffect(() => {
     if (open) {
@@ -117,34 +111,30 @@ export function MediaLibrarySidebar({
   }, [items, fetchItems]);
 
   async function handleSelect() {
-    if (selectedIds.size === 0 || !apiKey) return;
+    if (selectedIds.size === 0) return;
     setSelecting(true);
     try {
       const selections: MediaSelection[] = [];
       for (const id of selectedIds) {
-        const res = await fetch(`/api/v1/media/${id}`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        });
-        if (!res.ok) {
+        try {
+          const item = await api.media.get(id) as unknown as MediaItemWithPages;
+
+          const extractedText = (item.pages ?? [])
+            .map((p) => p.extractedText)
+            .join("\n\n");
+
+          selections.push({
+            mediaItemId: item.id,
+            filename: item.filename,
+            extractedText,
+            detectedTopic: item.detectedTopic,
+            detectedLanguage: item.detectedLanguage,
+            detectedCefrLevel: item.detectedCefrLevel,
+            similarExerciseCount: item.similarExerciseCount,
+          });
+        } catch {
           toast.error("Failed to load a media item");
-          continue;
         }
-        const data = await res.json();
-        const item = data.data as MediaItemWithPages;
-
-        const extractedText = (item.pages ?? [])
-          .map((p) => p.extractedText)
-          .join("\n\n");
-
-        selections.push({
-          mediaItemId: item.id,
-          filename: item.filename,
-          extractedText,
-          detectedTopic: item.detectedTopic,
-          detectedLanguage: item.detectedLanguage,
-          detectedCefrLevel: item.detectedCefrLevel,
-          similarExerciseCount: item.similarExerciseCount,
-        });
       }
       if (selections.length > 0) {
         onSelect(selections);

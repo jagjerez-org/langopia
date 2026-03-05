@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { JoinForm } from "@/components/room/join-form";
 import { RoomView } from "@/components/room/room-view";
+import { createPublicClient } from "@/hooks/use-api-client";
+import { ApiError } from "@langopia/api-client";
 
 interface RoomSession {
   roomId: string;
@@ -35,22 +37,11 @@ export default function RoomPage() {
     setError(null);
 
     try {
-      const res = await fetch("/api/room/join", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, name, email }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setError(data.error || "Failed to join room");
-        return;
-      }
-
-      const data = await res.json();
-      setSession(data);
-    } catch {
-      setError("Failed to connect to the server");
+      const api = createPublicClient();
+      const data = await api.roomInternal.join({ token: token!, name, email });
+      setSession(data as unknown as RoomSession);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to connect to the server");
     } finally {
       setJoining(false);
     }

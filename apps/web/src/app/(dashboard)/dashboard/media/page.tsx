@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -81,7 +82,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function MediaLibraryPage() {
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
-  const apiKey = selectedAcademyData?.apiKey;
+  const api = useApiKeyClient();
   const router = useRouter();
 
   const [items, setItems] = useState<MediaItemData[]>([]);
@@ -105,26 +106,22 @@ export default function MediaLibraryPage() {
   const [deleting, setDeleting] = useState(false);
 
   const fetchItems = useCallback(async () => {
-    if (!apiKey) return;
+    if (!selectedAcademyData?.apiKey) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: "50", offset: "0" });
-      if (search) params.set("search", search);
-      if (statusFilter) params.set("status", statusFilter);
-      if (mimeFilter) params.set("mimeType", mimeFilter);
-
-      const res = await fetch(`/api/v1/media?${params}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
+      const result = await api.media.list({
+        search: search || undefined,
+        mimeType: mimeFilter || undefined,
+        status: statusFilter || undefined,
+        limit: 50,
+        offset: 0,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.data);
-        setTotal(data.total);
-      }
+      setItems(result.data as unknown as MediaItemData[]);
+      setTotal(result.total);
     } finally {
       setLoading(false);
     }
-  }, [apiKey, search, statusFilter, mimeFilter]);
+  }, [api, selectedAcademyData?.apiKey, search, statusFilter, mimeFilter]);
 
   useEffect(() => {
     fetchItems();
@@ -145,12 +142,11 @@ export default function MediaLibraryPage() {
   }
 
   function handleConfirmUpload() {
-    if (pendingFiles.length === 0 || !apiKey || !uploadCefrLevel) return;
+    if (pendingFiles.length === 0 || !selectedAcademyData?.apiKey || !uploadCefrLevel) return;
 
     // Capture values and close dialog immediately
     const filesToUpload = [...pendingFiles];
     const cefrLevel = uploadCefrLevel;
-    const key = apiKey;
 
     setUploadOpen(false);
     setPendingFiles([]);
@@ -166,29 +162,16 @@ export default function MediaLibraryPage() {
       let failed = 0;
       for (const file of filesToUpload) {
         try {
-          const formData = new FormData();
-          formData.append("file", file);
-          formData.append("cefrLevel", cefrLevel);
-          const res = await fetch("/api/v1/media", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${key}` },
-            body: formData,
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.duplicate) {
-              toast.info(`"${file.name}" already exists`);
-            } else {
-              uploaded++;
-            }
+          const data = await api.media.upload(file, cefrLevel) as unknown as { duplicate?: boolean };
+          if (data.duplicate) {
+            toast.info(`"${file.name}" already exists`);
           } else {
-            failed++;
-            const err = await res.json();
-            toast.error(err.error || `Failed to upload "${file.name}"`);
+            uploaded++;
           }
-        } catch {
+        } catch (err: unknown) {
           failed++;
-          toast.error(`Failed to upload "${file.name}"`);
+          const message = err instanceof Error ? err.message : `Failed to upload "${file.name}"`;
+          toast.error(message);
         }
       }
       if (uploaded > 0) {
@@ -200,35 +183,26 @@ export default function MediaLibraryPage() {
   }
 
   async function handleDelete() {
-    if (!deleteTarget || !apiKey) return;
+    if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/v1/media/${deleteTarget.id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        toast.success("Deleted");
-        setDeleteTarget(null);
-        fetchItems();
-      } else {
-        toast.error("Failed to delete");
-      }
+      await api.media.delete(deleteTarget.id);
+      toast.success("Deleted");
+      setDeleteTarget(null);
+      fetchItems();
+    } catch {
+      toast.error("Failed to delete");
     } finally {
       setDeleting(false);
     }
   }
 
   async function handleRetry(item: MediaItemData) {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/media/${item.id}/retry`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.media.retry(item.id);
       toast.success("Retrying analysis...");
       fetchItems();
-    } else {
+    } catch {
       toast.error("Retry failed");
     }
   }

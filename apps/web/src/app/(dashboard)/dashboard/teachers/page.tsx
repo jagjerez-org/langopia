@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { GraduationCap, Plus, Loader2, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,7 @@ interface Teacher {
 
 export default function TeachersPage() {
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
-  const apiKey = selectedAcademyData?.apiKey;
+  const api = useApiKeyClient();
 
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,50 +26,31 @@ export default function TeachersPage() {
   const [inviting, setInviting] = useState(false);
 
   const fetchTeachers = useCallback(async () => {
-    if (!apiKey) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/v1/teachers", {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTeachers(data.data);
-      }
+      const data = await api.teachers.list();
+      setTeachers(data as unknown as Teacher[]);
     } catch {
       /* ignore */
     } finally {
       setLoading(false);
     }
-  }, [apiKey]);
+  }, [api]);
 
   useEffect(() => {
-    if (apiKey) fetchTeachers();
-  }, [apiKey, fetchTeachers]);
+    if (selectedAcademyData?.apiKey) fetchTeachers();
+  }, [selectedAcademyData?.apiKey, fetchTeachers]);
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
-    if (!apiKey || !inviteEmail.trim()) return;
+    if (!inviteEmail.trim()) return;
 
     setInviting(true);
     try {
-      const res = await fetch("/api/v1/teachers", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: inviteEmail.trim() }),
-      });
-
-      if (res.ok) {
-        toast.success("Teacher invited!");
-        setInviteEmail("");
-        fetchTeachers();
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to invite teacher");
-      }
+      await api.teachers.invite({ email: inviteEmail.trim() });
+      toast.success("Teacher invited!");
+      setInviteEmail("");
+      fetchTeachers();
     } catch {
       toast.error("Failed to invite teacher");
     } finally {

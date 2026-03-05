@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Users, Search } from "lucide-react";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 
 interface Student {
   id: string;
@@ -17,6 +18,7 @@ interface Student {
 
 export default function StudentsPage() {
   const { selectedAcademy, selectedAcademyData, loading } = useAcademy();
+  const api = useApiKeyClient();
   const [students, setStudents] = useState<Student[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
@@ -26,16 +28,16 @@ export default function StudentsPage() {
     setTotal(0);
     if (!selectedAcademy || !selectedAcademyData?.apiKey) return;
 
-    const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
-    fetch(`/api/v1/students?limit=50${searchParam}`, {
-      headers: { Authorization: `Bearer ${selectedAcademyData.apiKey}` },
-    })
-      .then((r) => r.json())
+    api.students
+      .list({ search: search || undefined, limit: 50 })
       .then((data) => {
-        setStudents(data.data ?? []);
+        setStudents((data.data ?? []) as unknown as Student[]);
         setTotal(data.total ?? 0);
+      })
+      .catch(() => {
+        /* ignore */
       });
-  }, [selectedAcademy, selectedAcademyData, search]);
+  }, [selectedAcademy, selectedAcademyData, search, api]);
 
   if (loading) {
     return (

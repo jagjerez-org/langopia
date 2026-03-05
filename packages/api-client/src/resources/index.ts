@@ -1,0 +1,16 @@
+export { AuthResource } from "./auth";
+export { AcademiesResource } from "./academies";
+export { DashboardResource } from "./dashboard";
+export { UserProfileResource } from "./user-profile";
+export { StripeResource } from "./stripe";
+export { ClassesResource } from "./classes";
+export { StudentsResource } from "./students";
+export { TeachersResource } from "./teachers";
+export { UsageResource } from "./usage";
+export { ExercisesResource } from "./exercises";
+export { MediaResource } from "./media";
+export { LessonsResource } from "./lessons";
+export { LearningPathsResource } from "./learning-paths";
+export { RoomsResource } from "./rooms";
+export { RoomInternalResource } from "./room-internal";
+export { MeResource } from "./me";

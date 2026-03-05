@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useDataChannel } from "@livekit/components-react";
 import { Send } from "lucide-react";
+import { createPublicClient } from "@/hooks/use-api-client";
 
 interface ChatMessage {
   id: string;
@@ -24,6 +25,7 @@ export function RoomChat({ roomId, role }: RoomChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const api = useMemo(() => createPublicClient(), []);
 
   const onMessage = useCallback((msg: { payload: Uint8Array }) => {
     try {
@@ -38,13 +40,13 @@ export function RoomChat({ roomId, role }: RoomChatProps) {
 
   // Load existing messages
   useEffect(() => {
-    fetch(`/api/v1/rooms/${roomId}/chat`)
-      .then((r) => (r.ok ? r.json() : []))
+    api.rooms
+      .getChat(roomId)
       .then((data) => {
-        if (Array.isArray(data)) setMessages(data);
+        if (Array.isArray(data)) setMessages(data as unknown as ChatMessage[]);
       })
       .catch(() => {});
-  }, [roomId]);
+  }, [roomId, api]);
 
   // Auto-scroll
   useEffect(() => {
@@ -72,15 +74,13 @@ export function RoomChat({ roomId, role }: RoomChatProps) {
     send(payload, { reliable: true });
 
     // Persist to server
-    fetch(`/api/room/${roomId}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    api.roomInternal
+      .sendChat(roomId, {
         senderName: msg.senderName,
         senderRole: role,
         message: msg.message,
-      }),
-    }).catch(() => {});
+      })
+      .catch(() => {});
 
     setInput("");
   }

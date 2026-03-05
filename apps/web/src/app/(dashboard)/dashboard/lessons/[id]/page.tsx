@@ -21,6 +21,8 @@ import { EXERCISE_TYPE_CONFIG, ExerciseType } from "@langopia/shared/types";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useParams, useRouter } from "next/navigation";
+import { useApiKeyClient } from "@/hooks/use-api-client";
+import type { UpdateExerciseRequest, UpdateLessonRequest } from "@langopia/api-client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +91,7 @@ export default function LessonDetailPage() {
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const api = useApiKeyClient();
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -115,33 +118,27 @@ export default function LessonDetailPage() {
   const apiKey = selectedAcademyData?.apiKey;
 
   const loadLesson = useCallback(async () => {
-    if (!apiKey || !id) return;
+    if (!id) return;
     setLoadingLesson(true);
     try {
-      const res = await fetch(`/api/v1/lessons/${id}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        setLesson(await res.json());
-      } else {
-        toast.error("Lesson not found");
-        router.push("/dashboard/lessons");
-      }
+      setLesson(await api.lessons.get(id) as unknown as Lesson);
+    } catch {
+      toast.error("Lesson not found");
+      router.push("/dashboard/lessons");
     } finally {
       setLoadingLesson(false);
     }
-  }, [apiKey, id, router]);
+  }, [api, id, router]);
 
   const loadExercises = useCallback(async () => {
-    if (!apiKey || !id) return;
-    const res = await fetch(`/api/v1/lessons/${id}/exercises`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setExercises(data.data ?? []);
+    if (!id) return;
+    try {
+      const data = await api.lessons.listExercises(id);
+      setExercises((data.data ?? []) as unknown as Exercise[]);
+    } catch {
+      // ignore
     }
-  }, [apiKey, id]);
+  }, [api, id]);
 
   useEffect(() => {
     if (selectedAcademy) {
@@ -151,53 +148,44 @@ export default function LessonDetailPage() {
   }, [selectedAcademy, loadLesson, loadExercises]);
 
   async function handleUnlinkExercise(exerciseId: string) {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/lessons/${id}/exercises?exerciseId=${exerciseId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.lessons.unlinkExercise(id, exerciseId);
       setExercises((prev) => prev.filter((e) => e.id !== exerciseId));
       setDeleteExerciseId(null);
       toast.success("Exercise removed from lesson");
       loadLesson();
+    } catch {
+      toast.error("Failed to remove exercise");
     }
   }
 
   async function handleDeleteLesson() {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/lessons/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.lessons.delete(id);
       toast.success("Lesson deleted");
       router.push("/dashboard/lessons");
+    } catch {
+      toast.error("Failed to delete lesson");
     }
   }
 
   async function handleUpdateTitle() {
-    if (!apiKey || !titleDraft.trim()) return;
-    const res = await fetch(`/api/v1/lessons/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ title: titleDraft }),
-    });
-    if (res.ok) {
+    if (!titleDraft.trim()) return;
+    try {
+      await api.lessons.update(id, { title: titleDraft });
       setLesson((prev) => prev ? { ...prev, title: titleDraft } : prev);
       setEditingTitle(false);
+    } catch {
+      toast.error("Failed to update title");
     }
   }
 
   async function handleUpdateStatus(status: string) {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/lessons/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (res.ok) {
+    try {
+      await api.lessons.update(id, { status } as unknown as UpdateLessonRequest);
       setLesson((prev) => prev ? { ...prev, status } : prev);
+    } catch {
+      toast.error("Failed to update status");
     }
   }
 
@@ -206,22 +194,14 @@ export default function LessonDetailPage() {
   }
 
   async function handleSaveEdit(exerciseId: string) {
-    if (!apiKey) return;
     const draft = editDrafts[exerciseId];
     if (!draft) return;
     setSavingEdits((prev) => new Set(prev).add(exerciseId));
     try {
-      const res = await fetch(`/api/v1/exercises/${exerciseId}`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setExercises((prev) => prev.map((ex) => (ex.id === exerciseId ? { ...ex, ...updated } : ex)));
-        setEditingIds((prev) => { const next = new Set(prev); next.delete(exerciseId); return next; });
-        setEditDrafts((prev) => { const next = { ...prev }; delete next[exerciseId]; return next; });
-      }
+      const updated = await api.exercises.update(exerciseId, draft as unknown as UpdateExerciseRequest);
+      setExercises((prev) => prev.map((ex) => (ex.id === exerciseId ? { ...ex, ...(updated as unknown as Exercise) } : ex)));
+      setEditingIds((prev) => { const next = new Set(prev); next.delete(exerciseId); return next; });
+      setEditDrafts((prev) => { const next = { ...prev }; delete next[exerciseId]; return next; });
     } finally {
       setSavingEdits((prev) => { const next = new Set(prev); next.delete(exerciseId); return next; });
     }
@@ -561,7 +541,6 @@ export default function LessonDetailPage() {
           exerciseType={regenerateExercise.type}
           exerciseTargetSkill={regenerateExercise.targetSkill}
           exerciseInstruction={regenerateExercise.instruction}
-          apiKey={apiKey}
           open={!!regenerateExercise}
           onOpenChange={(open) => { if (!open) setRegenerateExercise(null); }}
           onRegenerated={(newEx) => {

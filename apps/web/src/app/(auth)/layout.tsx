@@ -1,19 +1,30 @@
-import { redirect } from "next/navigation";
-import { auth } from "@/auth";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Globe } from "lucide-react";
 import Link from "next/link";
 
-export default async function AuthLayout({
+const TOKEN_KEY = "langopia:accessToken";
+
+export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  const router = useRouter();
+  const [ready, setReady] = useState(false);
 
-  // Redirect logged-in users to dashboard
-  if (session) {
-    redirect("/dashboard");
-  }
+  useEffect(() => {
+    // Redirect logged-in users to dashboard
+    if (localStorage.getItem(TOKEN_KEY)) {
+      router.replace("/dashboard");
+    } else {
+      setReady(true);
+    }
+  }, [router]);
+
+  if (!ready) return null;
 
   return (
     <div className="bg-mesh relative flex min-h-screen items-center justify-center overflow-hidden p-4">

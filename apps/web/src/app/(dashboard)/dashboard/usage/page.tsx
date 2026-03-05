@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { useAcademy } from "@/components/academy-provider";
+import { LangopiaClient } from "@langopia/api-client";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:2501";
 
 interface UsageData {
   period: string;
@@ -32,13 +35,10 @@ export default function UsagePage() {
     }
 
     Promise.all(
-      withKeys.map((a) =>
-        fetch("/api/v1/usage", {
-          headers: { Authorization: `Bearer ${a.apiKey}` },
-        })
-          .then((r) => (r.ok ? r.json() : null))
-          .catch(() => null)
-      )
+      withKeys.map((a) => {
+        const client = new LangopiaClient({ baseUrl: API_URL, apiKey: a.apiKey });
+        return client.usage.get().catch(() => null);
+      })
     ).then((results) => {
       const valid = results.filter(Boolean) as UsageData[];
       if (valid.length === 0) {

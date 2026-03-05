@@ -17,7 +17,9 @@ import {
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { CEFR_LEVELS, EXERCISE_LANGUAGES, ExerciseType, EXERCISE_TYPE_CONFIG } from "@langopia/shared/types";
+import { ApiError } from "@langopia/api-client";
 import { toast } from "sonner";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 import {
   Dialog,
   DialogContent,
@@ -148,6 +150,7 @@ export function ExerciseWizard({
   lessonCefrLevel,
   onComplete,
 }: ExerciseWizardProps) {
+  const api = useApiKeyClient();
   const [step, setStep] = useState(0);
 
   // Step 1: Material
@@ -222,34 +225,13 @@ export function ExerciseWizard({
 
     setAnalyzing(true);
     try {
-      const res = await fetch("/api/v1/exercises/analyze", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          topic: topic.trim() || undefined,
-          language,
-          cefrLevel,
-          materialContext: materialContext || undefined,
-        }),
+      const data = await api.exercises.analyze(null, {
+        topic: topic.trim() || undefined,
+        language,
+        cefrLevel,
+        materialContext: materialContext || undefined,
       });
-
-      if (res.status === 403) {
-        const data = await res.json();
-        toast.error(data.error || "AI token limit exceeded.");
-        return;
-      }
-
-      if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "Analysis failed");
-        return;
-      }
-
-      const data: AnalysisResult = await res.json();
-      setAnalysis(data);
+      setAnalysis(data as unknown as AnalysisResult);
 
       if (data.existingExercises && data.existingExercises.length > 0) {
         setExistingExercises(data.existingExercises);
@@ -278,8 +260,14 @@ export function ExerciseWizard({
       setPlanCounts(counts);
 
       setStep(1);
-    } catch {
-      toast.error("Failed to analyze material");
+    } catch (err) {
+      if (err instanceof ApiError && err.isForbidden) {
+        toast.error(err.message || "AI token limit exceeded.");
+      } else if (err instanceof ApiError) {
+        toast.error(err.message || "Analysis failed");
+      } else {
+        toast.error("Failed to analyze material");
+      }
     } finally {
       setAnalyzing(false);
     }
@@ -291,22 +279,14 @@ export function ExerciseWizard({
     if (!lessonId || selectedExisting.size === 0) return;
     setAddingExisting(true);
     try {
-      const res = await fetch(`/api/v1/lessons/${lessonId}/exercises`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ exerciseIds: Array.from(selectedExisting) }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "Failed to link exercises");
-        return;
-      }
+      await api.lessons.linkExercises(lessonId, { exerciseIds: Array.from(selectedExisting) });
       toast.success(`Added ${selectedExisting.size} existing exercise${selectedExisting.size !== 1 ? "s" : ""} to lesson`);
-    } catch {
-      toast.error("Failed to add exercises to lesson");
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message || "Failed to link exercises");
+      } else {
+        toast.error("Failed to add exercises to lesson");
+      }
     } finally {
       setAddingExisting(false);
     }
@@ -326,44 +306,27 @@ export function ExerciseWizard({
 
     setGenerating(true);
     try {
-      const body: Record<string, unknown> = {
+      const result = await api.exercises.create({
         exercises: exercisePlan,
         topic: topic.trim() || analysis?.detectedTopic || "General",
         language,
         cefrLevel,
         materialContext: materialContext || undefined,
-      };
-      if (lessonId) body.lessonId = lessonId;
-      if (selectedExisting.size > 0) body.excludeIds = Array.from(selectedExisting);
-
-      const res = await fetch("/api/v1/exercises", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
+        lessonId: lessonId || undefined,
       });
 
-      if (res.status === 403) {
-        const data = await res.json();
-        toast.error(data.error || "AI token limit exceeded.");
-        return;
-      }
-
-      if (!res.ok) {
-        const data = await res.json();
-        toast.error(data.error || "Generation failed");
-        return;
-      }
-
-      const data = await res.json();
-      const generated: GeneratedExercise[] = data.data ?? [];
+      const generated: GeneratedExercise[] = (result.data ?? []) as unknown as GeneratedExercise[];
       setGeneratedExercises(generated);
       setSelectedGenerated(new Set(generated.map((e) => e.id)));
       setStep(2);
-    } catch {
-      toast.error("Failed to generate exercises");
+    } catch (err) {
+      if (err instanceof ApiError && err.isForbidden) {
+        toast.error(err.message || "AI token limit exceeded.");
+      } else if (err instanceof ApiError) {
+        toast.error(err.message || "Generation failed");
+      } else {
+        toast.error("Failed to generate exercises");
+      }
     } finally {
       setGenerating(false);
     }
@@ -378,15 +341,9 @@ export function ExerciseWizard({
       setSaving(true);
       try {
         for (const ex of deselected) {
-          await fetch(`/api/v1/exercises/${ex.id}`, {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${apiKey}` },
-          });
+          await api.exercises.delete(ex.id);
           if (lessonId) {
-            await fetch(`/api/v1/lessons/${lessonId}/exercises?exerciseId=${ex.id}`, {
-              method: "DELETE",
-              headers: { Authorization: `Bearer ${apiKey}` },
-            });
+            await api.lessons.unlinkExercise(lessonId, ex.id);
           }
         }
       } catch {
@@ -856,7 +813,6 @@ export function ExerciseWizard({
       <MediaLibrarySidebar
         open={mediaLibraryOpen}
         onOpenChange={setMediaLibraryOpen}
-        apiKey={apiKey}
         onSelect={handleMediaSelect}
       />
 
@@ -869,7 +825,6 @@ export function ExerciseWizard({
           exerciseType={regenerateExercise.type}
           exerciseTargetSkill={regenerateExercise.targetSkill}
           exerciseInstruction={regenerateExercise.instruction}
-          apiKey={apiKey}
           onRegenerated={(updated) => {
             setGeneratedExercises((prev) =>
               prev.map((e) => (e.id === updated.id ? { ...e, ...updated } : e))

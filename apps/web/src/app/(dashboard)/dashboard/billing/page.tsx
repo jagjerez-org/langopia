@@ -1,7 +1,8 @@
 "use client";
 
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/auth-provider";
 import { CreditCard, Check, Zap } from "lucide-react";
+import { useApiClient } from "@/hooks/use-api-client";
 
 const plans = [
   {
@@ -64,8 +65,9 @@ const plans = [
 ];
 
 export default function BillingPage() {
-  const { data: session } = useSession();
-  const currentPlan = session?.user?.plan ?? "free";
+  const { user } = useAuth();
+  const api = useApiClient();
+  const currentPlan = user?.plan ?? "free";
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -121,14 +123,11 @@ export default function BillingPage() {
                 disabled={isCurrent}
                 onClick={async () => {
                   if (isCurrent || plan.plan === "enterprise" || plan.plan === "free") return;
-                  const res = await fetch("/api/stripe/checkout", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ plan: plan.plan }),
-                  });
-                  if (res.ok) {
-                    const { url } = await res.json();
+                  try {
+                    const { url } = await api.stripe.checkout({ plan: plan.plan });
                     if (url) window.location.href = url;
+                  } catch {
+                    // ignore
                   }
                 }}
               >

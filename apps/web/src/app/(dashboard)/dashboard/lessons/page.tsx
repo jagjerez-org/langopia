@@ -6,6 +6,7 @@ import { CEFR_LEVELS, EXERCISE_LANGUAGES } from "@langopia/shared/types";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useRouter } from "next/navigation";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 
 interface Lesson {
   id: string;
@@ -26,8 +27,9 @@ const statusColors: Record<string, string> = {
 };
 
 export default function LessonsPage() {
-  const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
+  const { selectedAcademy, loading: academyLoading } = useAcademy();
   const router = useRouter();
+  const api = useApiKeyClient();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [total, setTotal] = useState(0);
 
@@ -44,25 +46,20 @@ export default function LessonsPage() {
   const [filterCefr, setFilterCefr] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const apiKey = selectedAcademyData?.apiKey;
-
   const loadLessons = useCallback(async () => {
-    if (!apiKey) return;
-
-    const params = new URLSearchParams({ limit: "100" });
-    if (filterLanguage !== "all") params.set("language", filterLanguage);
-    if (filterCefr !== "all") params.set("cefrLevel", filterCefr);
-    if (filterStatus !== "all") params.set("status", filterStatus);
-
-    const res = await fetch(`/api/v1/lessons?${params}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setLessons(data.data ?? []);
+    try {
+      const data = await api.lessons.list({
+        language: filterLanguage !== "all" ? filterLanguage : undefined,
+        cefrLevel: filterCefr !== "all" ? filterCefr : undefined,
+        status: filterStatus !== "all" ? filterStatus : undefined,
+        limit: 100,
+      });
+      setLessons((data.data ?? []) as unknown as Lesson[]);
       setTotal(data.total ?? 0);
+    } catch {
+      // ignore
     }
-  }, [apiKey, filterLanguage, filterCefr, filterStatus]);
+  }, [api, filterLanguage, filterCefr, filterStatus]);
 
   useEffect(() => {
     setLessons([]);
@@ -72,35 +69,24 @@ export default function LessonsPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!apiKey || !newTitle.trim()) return;
+    if (!newTitle.trim()) return;
 
     setSaving(true);
     try {
-      const res = await fetch("/api/v1/lessons", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: newTitle,
-          language: newLanguage,
-          cefrLevel: newCefrLevel,
-          description: newDescription || undefined,
-        }),
+      const lesson = await api.lessons.create({
+        title: newTitle,
+        language: newLanguage,
+        cefrLevel: newCefrLevel,
+        description: newDescription || undefined,
       });
-
-      if (res.ok) {
-        const lesson = await res.json();
-        setCreating(false);
-        setNewTitle("");
-        setNewDescription("");
-        toast.success("Lesson created");
-        router.push(`/dashboard/lessons/${lesson.id}`);
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Failed to create lesson");
-      }
+      setCreating(false);
+      setNewTitle("");
+      setNewDescription("");
+      toast.success("Lesson created");
+      router.push(`/dashboard/lessons/${lesson.id}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create lesson";
+      toast.error(message);
     } finally {
       setSaving(false);
     }

@@ -19,6 +19,7 @@ import { CEFR_LEVELS, EXERCISE_LANGUAGES } from "@langopia/shared/types";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useParams, useRouter } from "next/navigation";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,9 +84,10 @@ const lessonStatusColors: Record<string, string> = {
 };
 
 export default function LearningPathDetailPage() {
-  const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
+  const { selectedAcademy, loading: academyLoading } = useAcademy();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const api = useApiKeyClient();
 
   const [path, setPath] = useState<LearningPath | null>(null);
   const [loadingPath, setLoadingPath] = useState(true);
@@ -108,43 +110,33 @@ export default function LearningPathDetailPage() {
   const [deleteLessonId, setDeleteLessonId] = useState<string | null>(null);
   const [deletePathOpen, setDeletePathOpen] = useState(false);
 
-  const apiKey = selectedAcademyData?.apiKey;
-
   const loadPath = useCallback(async () => {
-    if (!apiKey || !id) return;
+    if (!id) return;
     setLoadingPath(true);
     try {
-      const res = await fetch(`/api/v1/learning-paths/${id}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        setPath(await res.json());
-      } else {
-        toast.error("Learning path not found");
-        router.push("/dashboard/learning-paths");
-      }
+      setPath(await api.learningPaths.get(id) as unknown as LearningPath);
+    } catch {
+      toast.error("Learning path not found");
+      router.push("/dashboard/learning-paths");
     } finally {
       setLoadingPath(false);
     }
-  }, [apiKey, id, router]);
+  }, [api, id, router]);
 
   const loadAvailableLessons = useCallback(async () => {
-    if (!apiKey) return;
     setLoadingLessons(true);
     try {
-      const params = new URLSearchParams({ limit: "200" });
-      if (path?.language) params.set("language", path.language);
-      const res = await fetch(`/api/v1/lessons?${params}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
+      const data = await api.lessons.list({
+        language: path?.language || undefined,
+        limit: 200,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setAvailableLessons(data.data ?? []);
-      }
+      setAvailableLessons((data.data ?? []) as unknown as AvailableLesson[]);
+    } catch {
+      // ignore
     } finally {
       setLoadingLessons(false);
     }
-  }, [apiKey, path?.language]);
+  }, [api, path?.language]);
 
   useEffect(() => {
     if (selectedAcademy) loadPath();
@@ -155,15 +147,11 @@ export default function LearningPathDetailPage() {
   }, [addLessonOpen, loadAvailableLessons]);
 
   async function handleUpdateField(field: string, value: unknown) {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/learning-paths/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ [field]: value }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setPath((prev) => prev ? { ...prev, ...updated } : prev);
+    try {
+      const updated = await api.learningPaths.update(id, { [field]: value });
+      setPath((prev) => prev ? { ...prev, ...(updated as unknown as LearningPath) } : prev);
+    } catch {
+      toast.error("Failed to update");
     }
   }
 
@@ -189,49 +177,38 @@ export default function LearningPathDetailPage() {
   }
 
   async function handleDeletePath() {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/learning-paths/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.learningPaths.delete(id);
       toast.success("Learning path deleted");
       router.push("/dashboard/learning-paths");
+    } catch {
+      toast.error("Failed to delete learning path");
     }
   }
 
   async function handleAddLesson(lessonId: string) {
-    if (!apiKey) return;
     setAddingLessonId(lessonId);
     try {
-      const res = await fetch(`/api/v1/learning-paths/${id}/lessons`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId }),
-      });
-      if (res.ok) {
-        toast.success("Lesson added");
-        setAddLessonOpen(false);
-        loadPath();
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Failed to add lesson");
-      }
+      await api.learningPaths.addLessons(id, { lessonId });
+      toast.success("Lesson added");
+      setAddLessonOpen(false);
+      loadPath();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to add lesson";
+      toast.error(message);
     } finally {
       setAddingLessonId(null);
     }
   }
 
   async function handleRemoveLesson(lessonId: string) {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/learning-paths/${id}/lessons?lessonId=${lessonId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.learningPaths.removeLesson(id, lessonId);
       setDeleteLessonId(null);
       toast.success("Lesson removed from path");
       loadPath();
+    } catch {
+      toast.error("Failed to remove lesson");
     }
   }
 
@@ -250,12 +227,12 @@ export default function LearningPathDetailPage() {
     // Optimistic update
     setPath((prev) => prev ? { ...prev, lessons: lessons.map((l, i) => ({ ...l, sortOrder: i })) } : prev);
 
-    if (!apiKey) return;
-    await fetch(`/api/v1/learning-paths/${id}/lessons`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ lessonIds: newOrder }),
-    });
+    try {
+      await api.learningPaths.reorderLessons(id, { lessonIds: newOrder });
+    } catch {
+      // revert on failure
+      loadPath();
+    }
   }
 
   // Filter out lessons already in the path

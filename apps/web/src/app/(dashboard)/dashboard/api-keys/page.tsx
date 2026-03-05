@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Key, Copy, Check, RefreshCw, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiClient } from "@/hooks/use-api-client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +19,7 @@ import {
 export default function ApiKeysPage() {
   const { selectedAcademy, selectedAcademyData, loading, refetchAcademies } =
     useAcademy();
+  const api = useApiClient();
   const [visible, setVisible] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -31,13 +33,11 @@ export default function ApiKeysPage() {
   async function regenerateKey() {
     if (!selectedAcademy) return;
 
-    const res = await fetch(`/api/academies/${selectedAcademy}`, {
-      method: "POST",
-    });
-    if (res.ok) {
+    try {
+      await api.academies.regenerateKey(selectedAcademy);
       await refetchAcademies();
       toast.success("API key regenerated successfully");
-    } else {
+    } catch {
       toast.error("Failed to regenerate API key");
     }
   }

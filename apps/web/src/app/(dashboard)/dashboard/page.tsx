@@ -1,27 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/auth-provider";
 import { School, Video, FileText, Clock, Zap, Sparkles } from "lucide-react";
-
-interface OverviewStats {
-  totalAcademies: number;
-  totalRooms: number;
-  totalReports: number;
-  totalClassHours: number;
-  totalTokens: number;
-}
+import type { DashboardOverview } from "@langopia/api-client";
+import { useApiClient } from "@/hooks/use-api-client";
 
 export default function DashboardOverviewPage() {
-  const { data: session } = useSession();
-  const [stats, setStats] = useState<OverviewStats | null>(null);
+  const { user } = useAuth();
+  const api = useApiClient();
+  const [stats, setStats] = useState<DashboardOverview | null>(null);
 
   useEffect(() => {
-    fetch("/api/dashboard/overview")
-      .then((res) => (res.ok ? res.json() : null))
-      .then(setStats)
-      .catch(() => {});
-  }, []);
+    api.dashboard.overview().then(setStats).catch(() => {});
+  }, [api]);
 
   const cards = [
     { label: "Academies", value: stats?.totalAcademies ?? 0, icon: School, color: "from-violet-500 to-purple-600" },
@@ -37,7 +29,7 @@ export default function DashboardOverviewPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             Welcome back,{" "}
-            <span className="text-gradient">{session?.user?.name?.split(" ")[0] ?? "there"}</span>
+            <span className="text-gradient">{user?.name?.split(" ")[0] ?? "there"}</span>
           </h1>
           <p className="mt-1.5 text-zinc-500 dark:text-zinc-400">
             Here&apos;s an overview of your Langopia account

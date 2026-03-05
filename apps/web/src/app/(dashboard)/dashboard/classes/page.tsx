@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -76,6 +77,7 @@ const STATUS_BADGE: Record<string, string> = {
 export default function ClassesPage() {
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
   const apiKey = selectedAcademyData?.apiKey;
+  const api = useApiKeyClient();
   const calendarRef = useRef<FullCalendar>(null);
 
   const [classes, setClasses] = useState<ClassEvent[]>([]);
@@ -103,53 +105,37 @@ export default function ClassesPage() {
 
   const fetchClasses = useCallback(async (from?: string, to?: string) => {
     if (!apiKey) return;
-    const params = new URLSearchParams();
-    if (from) params.set("from", from);
-    if (to) params.set("to", to);
-    params.set("limit", "100");
 
     try {
-      const res = await fetch(`/api/v1/classes?${params}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
+      const data = await api.classes.list({
+        from: from ? new Date(from).toISOString() : undefined,
+        to: to ? new Date(to).toISOString() : undefined,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setClasses(data.data);
-      }
+      setClasses(data.data as unknown as ClassEvent[]);
     } catch {
       /* ignore */
     }
-  }, [apiKey]);
+  }, [apiKey, api]);
 
   const fetchTeachers = useCallback(async () => {
     if (!apiKey) return;
     try {
-      const res = await fetch("/api/v1/teachers", {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTeachers(data.data);
-      }
+      const data = await api.teachers.list();
+      setTeachers(data as unknown as Teacher[]);
     } catch {
       /* ignore */
     }
-  }, [apiKey]);
+  }, [apiKey, api]);
 
   const fetchLessons = useCallback(async () => {
     if (!apiKey) return;
     try {
-      const res = await fetch("/api/v1/lessons?limit=100", {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setLessons(data.data);
-      }
+      const data = await api.lessons.list({ limit: 100 });
+      setLessons(data.data as unknown as Lesson[]);
     } catch {
       /* ignore */
     }
-  }, [apiKey]);
+  }, [apiKey, api]);
 
   useEffect(() => {
     if (apiKey) {
@@ -190,37 +176,27 @@ export default function ClassesPage() {
 
     setSaving(true);
     try {
-      const res = await fetch("/api/v1/classes", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: newTitle,
-          scheduledAt: new Date(newScheduledAt).toISOString(),
-          durationMinutes: newDuration,
-          classType: newClassType,
-          language: newLanguage,
-          maxStudents: newMaxStudents,
-          teacherId: newTeacherId || undefined,
-          lessonId: newLessonId || undefined,
-          studentEmails: newStudentEmails ? newStudentEmails.split(",").map((e) => e.trim()).filter(Boolean) : undefined,
-          cancellationMinutes: newCancellationMinutes,
-        }),
+      const studentEmails = newStudentEmails ? newStudentEmails.split(",").map((e) => e.trim()).filter(Boolean) : undefined;
+      await api.classes.create({
+        title: newTitle,
+        scheduledAt: new Date(newScheduledAt).toISOString(),
+        durationMinutes: newDuration,
+        classType: newClassType,
+        language: newLanguage,
+        maxStudents: newMaxStudents,
+        teacherId: newTeacherId || undefined,
+        lessonId: newLessonId || undefined,
+        studentEmails: studentEmails && studentEmails.length > 0 ? studentEmails : undefined,
+        cancellationMinutes: newCancellationMinutes,
       });
 
-      if (res.ok) {
-        toast.success("Class created!");
-        setCreateOpen(false);
-        resetCreateForm();
-        if (dateRange) fetchClasses(dateRange.from, dateRange.to);
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to create class");
-      }
-    } catch {
-      toast.error("Failed to create class");
+      toast.success("Class created!");
+      setCreateOpen(false);
+      resetCreateForm();
+      if (dateRange) fetchClasses(dateRange.from, dateRange.to);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create class";
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -232,25 +208,13 @@ export default function ClassesPage() {
     const reason = prompt("Cancellation reason (optional):");
 
     try {
-      const res = await fetch(`/api/v1/classes/${selectedClass.id}/cancel`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ reason: reason || undefined }),
-      });
-
-      if (res.ok) {
-        toast.success("Class cancelled");
-        setDetailOpen(false);
-        if (dateRange) fetchClasses(dateRange.from, dateRange.to);
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to cancel class");
-      }
-    } catch {
-      toast.error("Failed to cancel class");
+      await api.classes.cancel(selectedClass.id);
+      toast.success("Class cancelled");
+      setDetailOpen(false);
+      if (dateRange) fetchClasses(dateRange.from, dateRange.to);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to cancel class";
+      toast.error(message);
     }
   }
 

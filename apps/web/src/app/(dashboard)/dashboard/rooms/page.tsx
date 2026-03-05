@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Video, ExternalLink, Copy, Check } from "lucide-react";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 
 interface Room {
   id: string;
@@ -20,6 +21,7 @@ interface Room {
 
 export default function RoomsPage() {
   const { selectedAcademy, selectedAcademyData, loading } = useAcademy();
+  const api = useApiKeyClient();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [total, setTotal] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -29,15 +31,13 @@ export default function RoomsPage() {
     setTotal(0);
     if (!selectedAcademy || !selectedAcademyData?.apiKey) return;
 
-    fetch("/api/v1/rooms", {
-      headers: { Authorization: `Bearer ${selectedAcademyData.apiKey}` },
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        setRooms(data.data ?? []);
-        setTotal(data.total ?? 0);
-      });
-  }, [selectedAcademy, selectedAcademyData]);
+    api.rooms.list()
+      .then((result) => {
+        setRooms(result.data as unknown as Room[]);
+        setTotal(result.total ?? 0);
+      })
+      .catch(() => {});
+  }, [selectedAcademy, selectedAcademyData, api]);
 
   if (loading) {
     return (
