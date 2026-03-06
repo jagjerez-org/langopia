@@ -9,6 +9,7 @@ export interface CreateAcademyRequest {
 
 export interface UpdateAcademyRequest {
   name?: string;
+  logoUrl?: string;
   settings?: Record<string, unknown>;
 }
 

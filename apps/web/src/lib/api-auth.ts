@@ -131,7 +131,7 @@ export async function checkPlanLimit(
   let limit = 0;
   switch (metric) {
     case UsageMetric.ROOMS_CREATED:
-      limit = limits.maxRoomsPerMonth;
+      limit = limits.maxClassesPerMonth;
       break;
     case UsageMetric.CLASS_MINUTES:
       limit = limits.maxClassHoursPerMonth * 60;

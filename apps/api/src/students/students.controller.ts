@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Patch, Param, Query, UseGuards, HttpCode, HttpStatus } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { ApiKeyGuard } from "../auth/guards/api-key.guard.js";
 import { CurrentAcademy } from "../auth/decorators/current-academy.decorator.js";
@@ -23,6 +23,7 @@ export class StudentsController {
       search: query.search,
       limit: query.limit ?? 50,
       offset: query.offset ?? 0,
+      includeInactive: query.includeInactive === "true",
     });
   }
 
@@ -33,5 +34,25 @@ export class StudentsController {
     @Param("id") id: string,
   ) {
     return this.studentsService.getStudentDetail(academy.id, id);
+  }
+
+  @Patch(":id/deactivate")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Deactivate a student (soft delete)" })
+  async deactivateStudent(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+  ) {
+    return this.studentsService.setActive(academy.id, id, false);
+  }
+
+  @Patch(":id/activate")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Reactivate a student" })
+  async activateStudent(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+  ) {
+    return this.studentsService.setActive(academy.id, id, true);
   }
 }

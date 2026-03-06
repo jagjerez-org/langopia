@@ -13,3 +13,17 @@ export interface CheckoutResponse {
 export interface PortalResponse {
   url: string;
 }
+
+export interface ConnectOnboardRequest {
+  academyId: string;
+}
+
+export interface ConnectOnboardResponse {
+  url: string;
+}
+
+export interface ConnectStatusResponse {
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+}

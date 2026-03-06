@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { TutorialOverlay } from "@/components/tutorial-overlay";
 
 interface ClassEvent {
   id: string;
@@ -98,6 +99,8 @@ export default function ClassesPage() {
   const [newLessonId, setNewLessonId] = useState("");
   const [newStudentEmails, setNewStudentEmails] = useState("");
   const [newCancellationMinutes, setNewCancellationMinutes] = useState(60);
+  const [newCourseId, setNewCourseId] = useState("");
+  const [newZoomLink, setNewZoomLink] = useState("");
 
   // Detail dialog
   const [detailOpen, setDetailOpen] = useState(false);
@@ -186,6 +189,8 @@ export default function ClassesPage() {
         maxStudents: newMaxStudents,
         teacherId: newTeacherId || undefined,
         lessonId: newLessonId || undefined,
+        courseId: newCourseId || undefined,
+        zoomLink: newZoomLink || undefined,
         studentEmails: studentEmails && studentEmails.length > 0 ? studentEmails : undefined,
         cancellationMinutes: newCancellationMinutes,
       });
@@ -229,6 +234,8 @@ export default function ClassesPage() {
     setNewLessonId("");
     setNewStudentEmails("");
     setNewCancellationMinutes(60);
+    setNewCourseId("");
+    setNewZoomLink("");
   }
 
   const calendarEvents = classes.map((c) => {
@@ -266,7 +273,15 @@ export default function ClassesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
+    <>
+      <TutorialOverlay
+        sectionId="classes"
+        steps={[
+          { title: "Class Calendar", description: "View and manage all your scheduled classes in calendar format." },
+          { title: "Create Classes", description: "Schedule individual or group classes with teachers and students." },
+        ]}
+      />
+      <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Classes</h1>
@@ -372,6 +387,11 @@ export default function ClassesPage() {
               </div>
             )}
             <div>
+              <label className="mb-1 block text-sm font-medium">Zoom Link</label>
+              <Input value={newZoomLink} onChange={(e) => setNewZoomLink(e.target.value)} placeholder="https://zoom.us/j/..." />
+              <p className="mt-1 text-xs text-zinc-400">Optional — use Zoom instead of LiveKit</p>
+            </div>
+            <div>
               <label className="mb-1 block text-sm font-medium">Student Emails</label>
               <Input value={newStudentEmails} onChange={(e) => setNewStudentEmails(e.target.value)} placeholder="student1@email.com, student2@email.com" />
               <p className="mt-1 text-xs text-zinc-400">Comma-separated emails</p>
@@ -452,5 +472,6 @@ export default function ClassesPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }

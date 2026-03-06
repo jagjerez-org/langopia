@@ -16,6 +16,7 @@ import type { AcademyMember } from "./academy-member.entity.js";
 import type { Room } from "./room.entity.js";
 import type { User } from "./user.entity.js";
 import type { ClassStudent } from "./class-student.entity.js";
+import type { Course } from "./course.entity.js";
 
 @Entity("classes")
 export class Class {
@@ -78,6 +79,12 @@ export class Class {
   @Column({ type: "uuid", nullable: true })
   roomId!: string | null;
 
+  @Column({ type: "uuid", nullable: true })
+  courseId!: string | null;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  zoomLink!: string | null;
+
   @ManyToOne("Academy", "classes")
   @JoinColumn({ name: "academyId" })
   academy!: Relation<Academy>;
@@ -93,6 +100,10 @@ export class Class {
   @ManyToOne("Room", { nullable: true })
   @JoinColumn({ name: "roomId" })
   room!: Relation<Room | null>;
+
+  @ManyToOne("Course", { nullable: true })
+  @JoinColumn({ name: "courseId" })
+  course!: Relation<Course | null>;
 
   @ManyToOne("User")
   @JoinColumn({ name: "createdByUserId" })

@@ -124,7 +124,9 @@ export class ClassesService {
     cls.maxStudents = dto.maxStudents ?? 1;
     cls.language = dto.language ?? "en";
     cls.lessonId = dto.lessonId ?? null;
+    cls.courseId = dto.courseId ?? null;
     cls.teacherId = resolvedTeacherId;
+    cls.zoomLink = dto.zoomLink ?? null;
     cls.status = "scheduled";
     cls.scheduledAt = new Date(dto.scheduledAt);
     cls.durationMinutes = dto.durationMinutes ?? 60;
@@ -236,6 +238,8 @@ export class ClassesService {
       scheduledAt: saved.scheduledAt,
       durationMinutes: saved.durationMinutes,
       cancellationMinutes: saved.cancellationMinutes,
+      courseId: saved.courseId,
+      zoomLink: saved.zoomLink,
       teacherUrl,
       studentUrl,
       teacher: teacherInfo,
@@ -394,6 +398,14 @@ export class ClassesService {
         }
       }
       cls.lessonId = dto.lessonId ?? null;
+    }
+
+    if (dto.courseId !== undefined) {
+      cls.courseId = dto.courseId ?? null;
+    }
+
+    if (dto.zoomLink !== undefined) {
+      cls.zoomLink = dto.zoomLink ?? null;
     }
 
     if (dto.teacherId !== undefined) {

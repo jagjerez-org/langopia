@@ -16,6 +16,14 @@ export class TeachersResource {
     });
   }
 
+  get(id: string): Promise<TeacherResponse> {
+    return this.client.request({
+      method: "GET",
+      path: `/v1/teachers/${id}`,
+      auth: "apikey",
+    });
+  }
+
   invite(data: InviteTeacherRequest): Promise<InviteTeacherResponse> {
     return this.client.request({
       method: "POST",

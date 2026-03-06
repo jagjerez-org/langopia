@@ -24,6 +24,12 @@ import {
   Dumbbell,
   GraduationCap,
   FolderOpen,
+  Library,
+  UsersRound,
+  Wallet,
+  Plug,
+  Settings,
+  CreditCard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -45,17 +51,23 @@ import { Badge } from "@/components/ui/badge";
 const globalNavItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/usage", label: "Usage", icon: BarChart3 },
+  { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
+  { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
 const academyNavItems = [
   { href: "/dashboard/classes", label: "Classes", icon: Calendar },
+  { href: "/dashboard/courses", label: "Courses", icon: Library },
   { href: "/dashboard/learning-paths", label: "Learning Paths", icon: Route },
   { href: "/dashboard/lessons", label: "Lessons", icon: BookOpen },
   { href: "/dashboard/exercises", label: "Exercise Bank", icon: Dumbbell },
   { href: "/dashboard/media", label: "Media Library", icon: FolderOpen },
   { href: "/dashboard/students", label: "Students", icon: Users },
   { href: "/dashboard/reports", label: "Reports", icon: FileText },
-  { href: "/dashboard/api-keys", label: "API Keys", icon: Key },
+  { href: "/dashboard/team", label: "Team", icon: UsersRound },
+  { href: "/dashboard/financings", label: "Financings", icon: Wallet },
+  { href: "/dashboard/landing", label: "Landing Page", icon: Globe },
+  { href: "/dashboard/integrations", label: "Integrations", icon: Plug },
 ];
 
 const ACADEMY_COLORS = [
@@ -256,8 +268,7 @@ export function Sidebar() {
               : (
                 <>
                   {renderNavItems(academyNavItems)}
-                  {selectedAcademyData?.academyType === "academy" &&
-                    renderNavItems([{ href: "/dashboard/teachers", label: "Teachers", icon: GraduationCap }])}
+                  {renderNavItems([{ href: "/dashboard/teachers", label: "Teachers", icon: GraduationCap }])}
                 </>
               )}
           </>

@@ -40,8 +40,18 @@ export class UpdateClassDto {
   @IsString()
   lessonId?: string | null;
 
+  @ApiPropertyOptional({ description: "UUID of the course (null to unset)" })
+  @IsOptional()
+  @IsString()
+  courseId?: string | null;
+
   @ApiPropertyOptional({ description: "UUID of the teacher AcademyMember (null to unset)" })
   @IsOptional()
   @IsString()
   teacherId?: string | null;
+
+  @ApiPropertyOptional({ description: "External Zoom meeting link (null to unset)" })
+  @IsOptional()
+  @IsString()
+  zoomLink?: string | null;
 }

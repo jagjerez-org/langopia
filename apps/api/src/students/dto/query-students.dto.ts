@@ -22,4 +22,9 @@ export class QueryStudentsDto {
   @IsInt()
   @Min(0)
   offset?: number = 0;
+
+  @ApiPropertyOptional({ description: "Include inactive (soft-deleted) students", default: "false" })
+  @IsOptional()
+  @IsString()
+  includeInactive?: string;
 }

@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Users, Search } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Users, Search, UserX, UserCheck } from "lucide-react";
+import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useApiKeyClient } from "@/hooks/use-api-client";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface Student {
   id: string;
   email: string;
   name: string;
+  isActive: boolean;
   totalRooms: number;
   totalMinutes: number;
   cefrEstimate: string | null;
@@ -22,22 +26,43 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
+  const [showInactive, setShowInactive] = useState(false);
+
+  const fetchStudents = useCallback(async () => {
+    if (!selectedAcademy || !selectedAcademyData?.apiKey) return;
+    try {
+      const data = await api.students.list({
+        search: search || undefined,
+        includeInactive: showInactive || undefined,
+        limit: 50,
+      });
+      setStudents((data.data ?? []) as unknown as Student[]);
+      setTotal(data.total ?? 0);
+    } catch {
+      /* ignore */
+    }
+  }, [selectedAcademy, selectedAcademyData, search, showInactive, api]);
 
   useEffect(() => {
     setStudents([]);
     setTotal(0);
-    if (!selectedAcademy || !selectedAcademyData?.apiKey) return;
+    fetchStudents();
+  }, [fetchStudents]);
 
-    api.students
-      .list({ search: search || undefined, limit: 50 })
-      .then((data) => {
-        setStudents((data.data ?? []) as unknown as Student[]);
-        setTotal(data.total ?? 0);
-      })
-      .catch(() => {
-        /* ignore */
-      });
-  }, [selectedAcademy, selectedAcademyData, search, api]);
+  async function toggleActive(student: Student) {
+    try {
+      if (student.isActive) {
+        await api.students.deactivate(student.id);
+        toast.success(`${student.name || student.email} deactivated`);
+      } else {
+        await api.students.activate(student.id);
+        toast.success(`${student.name || student.email} activated`);
+      }
+      fetchStudents();
+    } catch {
+      toast.error("Failed to update student status");
+    }
+  }
 
   if (loading) {
     return (
@@ -73,10 +98,18 @@ export default function StudentsPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Students</h1>
-          <p className="text-sm text-zinc-500">{total} students tracked</p>
+          <h1 className="text-2xl font-bold tracking-tight">Students</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">{total} students tracked</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant={showInactive ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowInactive(!showInactive)}
+          >
+            <UserX className="mr-1.5 h-3.5 w-3.5" />
+            {showInactive ? "Showing inactive" : "Show inactive"}
+          </Button>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
             <input
@@ -97,6 +130,9 @@ export default function StudentsPage() {
                 Student
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
+                Status
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
                 CEFR
               </th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
@@ -108,14 +144,32 @@ export default function StudentsPage() {
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
                 Last Seen
               </th>
+              <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-zinc-500">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
             {students.map((student) => (
-              <tr key={student.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30">
+              <tr
+                key={student.id}
+                className={`hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 ${!student.isActive ? "opacity-60" : ""}`}
+              >
                 <td className="px-4 py-3">
                   <p className="font-medium">{student.name}</p>
                   <p className="text-xs text-zinc-500">{student.email}</p>
+                </td>
+                <td className="px-4 py-3">
+                  <Badge
+                    variant="secondary"
+                    className={
+                      student.isActive
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                    }
+                  >
+                    {student.isActive ? "Active" : "Inactive"}
+                  </Badge>
                 </td>
                 <td className="px-4 py-3">
                   {student.cefrEstimate ? (
@@ -134,10 +188,24 @@ export default function StudentsPage() {
                   {student.totalRooms}
                 </td>
                 <td className="px-4 py-3 text-zinc-600 dark:text-zinc-400">
-                  {Math.round(student.totalMinutes / 60 * 10) / 10}h
+                  {Math.round((student.totalMinutes / 60) * 10) / 10}h
                 </td>
                 <td className="px-4 py-3 text-xs text-zinc-500">
                   {new Date(student.lastSeenAt).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleActive(student)}
+                    title={student.isActive ? "Deactivate student" : "Activate student"}
+                  >
+                    {student.isActive ? (
+                      <UserX className="h-4 w-4 text-zinc-400 hover:text-red-500" />
+                    ) : (
+                      <UserCheck className="h-4 w-4 text-zinc-400 hover:text-emerald-500" />
+                    )}
+                  </Button>
                 </td>
               </tr>
             ))}

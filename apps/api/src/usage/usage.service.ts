@@ -74,7 +74,7 @@ export class UsageService {
     let limit = 0;
     switch (metric) {
       case UsageMetric.ROOMS_CREATED:
-        limit = limits.maxRoomsPerMonth;
+        limit = limits.maxClassesPerMonth;
         break;
       case UsageMetric.CLASS_MINUTES:
         limit = limits.maxClassHoursPerMonth * 60;
@@ -120,7 +120,7 @@ export class UsageService {
       let limit = 0;
       switch (metric) {
         case UsageMetric.ROOMS_CREATED:
-          limit = limits.maxRoomsPerMonth;
+          limit = limits.maxClassesPerMonth;
           break;
         case UsageMetric.CLASS_MINUTES:
           limit = limits.maxClassHoursPerMonth * 60;

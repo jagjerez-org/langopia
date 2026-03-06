@@ -25,4 +25,20 @@ export class StudentsResource {
       auth: "apikey",
     });
   }
+
+  deactivate(id: string): Promise<StudentResponse> {
+    return this.client.request({
+      method: "PATCH",
+      path: `/v1/students/${id}/deactivate`,
+      auth: "apikey",
+    });
+  }
+
+  activate(id: string): Promise<StudentResponse> {
+    return this.client.request({
+      method: "PATCH",
+      path: `/v1/students/${id}/activate`,
+      auth: "apikey",
+    });
+  }
 }

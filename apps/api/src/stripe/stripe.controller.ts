@@ -1,7 +1,9 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
+  Param,
   Req,
   UseGuards,
   HttpCode,
@@ -39,6 +41,26 @@ export class StripeController {
   @ApiOperation({ summary: "Create Stripe billing portal session" })
   async createPortal(@CurrentUser() user: User) {
     return this.stripeService.createPortalSession(user.id);
+  }
+
+  @Post("connect/onboard")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Start Stripe Connect onboarding for academy" })
+  async createConnectAccount(
+    @CurrentUser() user: User,
+    @Body() body: { academyId: string },
+  ) {
+    return this.stripeService.createConnectAccount(user.id, body.academyId);
+  }
+
+  @Get("connect/status/:academyId")
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: "Check Stripe Connect account status" })
+  async getConnectStatus(@Param("academyId") academyId: string) {
+    return this.stripeService.getConnectStatus(academyId);
   }
 
   @Post("webhook")

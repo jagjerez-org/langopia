@@ -12,9 +12,11 @@ export interface CreateClassRequest {
   language?: string;
   maxStudents?: number;
   lessonId?: string;
+  courseId?: string;
   teacherId?: string;
   studentEmails?: string[];
   cancellationMinutes?: number;
+  zoomLink?: string;
 }
 
 export interface UpdateClassRequest {
@@ -24,7 +26,9 @@ export interface UpdateClassRequest {
   durationMinutes?: number;
   maxStudents?: number;
   lessonId?: string | null;
+  courseId?: string | null;
   teacherId?: string | null;
+  zoomLink?: string | null;
 }
 
 export interface QueryClassesParams extends PaginationParams {
@@ -62,8 +66,10 @@ export interface ClassResponse {
   studentUrl: string;
   cancellationMinutes: number;
   lessonId: string | null;
+  courseId: string | null;
   teacherId: string | null;
   roomId: string | null;
+  zoomLink: string | null;
   students: ClassStudentResponse[];
   createdAt: string;
   updatedAt: string;

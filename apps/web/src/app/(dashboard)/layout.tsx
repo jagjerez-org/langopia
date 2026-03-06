@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { AuthProvider, useAuth } from "@/components/auth-provider";
 import { AcademyProvider } from "@/components/academy-provider";
+import { TutorialProvider } from "@/components/tutorial-provider";
 
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -25,15 +26,17 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AcademyProvider>
-      <div className="flex h-screen bg-zinc-50/50 dark:bg-zinc-950">
-        <Sidebar />
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <Header />
-          <main className="bg-mesh-subtle flex-1 overflow-y-auto p-6">
-            {children}
-          </main>
+      <TutorialProvider>
+        <div className="flex h-screen bg-zinc-50/50 dark:bg-zinc-950">
+          <Sidebar />
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <Header />
+            <main className="bg-mesh-subtle flex-1 overflow-y-auto p-6">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </TutorialProvider>
     </AcademyProvider>
   );
 }

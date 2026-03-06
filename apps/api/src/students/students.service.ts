@@ -18,7 +18,7 @@ export class StudentsService {
 
   async listStudents(
     academyId: string,
-    opts: { search?: string; limit: number; offset: number },
+    opts: { search?: string; limit: number; offset: number; includeInactive?: boolean },
   ) {
     const { search, limit, offset } = opts;
 
@@ -28,6 +28,10 @@ export class StudentsService {
       .orderBy("student.lastSeenAt", "DESC")
       .take(limit)
       .skip(offset);
+
+    if (opts.includeInactive !== true) {
+      qb.andWhere("student.isActive = :isActive", { isActive: true });
+    }
 
     if (search) {
       qb.andWhere(
@@ -46,6 +50,7 @@ export class StudentsService {
         totalRooms: s.totalRooms,
         totalMinutes: s.totalMinutes,
         cefrEstimate: s.cefrEstimate,
+        isActive: s.isActive,
         firstSeenAt: s.firstSeenAt,
         lastSeenAt: s.lastSeenAt,
       })),
@@ -88,6 +93,7 @@ export class StudentsService {
       totalMinutes: student.totalMinutes,
       cefrEstimate: student.cefrEstimate,
       firstSeenAt: student.firstSeenAt,
+      isActive: student.isActive,
       lastSeenAt: student.lastSeenAt,
       recentRooms: participations.map((p) => ({
         roomId: p.roomId,
@@ -111,5 +117,20 @@ export class StudentsService {
         createdAt: re.createdAt,
       })),
     };
+  }
+
+  async setActive(academyId: string, id: string, isActive: boolean) {
+    const student = await this.studentRepo.findOne({
+      where: { id, academyId },
+    });
+
+    if (!student) {
+      throw new NotFoundException("Student not found");
+    }
+
+    student.isActive = isActive;
+    await this.studentRepo.save(student);
+
+    return { id: student.id, isActive: student.isActive };
   }
 }

@@ -64,7 +64,7 @@ export class UsageStatsController {
       plan,
       usage,
       limits: {
-        maxRoomsPerMonth: limits.maxRoomsPerMonth,
+        maxClassesPerMonth: limits.maxClassesPerMonth,
         maxClassHoursPerMonth: limits.maxClassHoursPerMonth,
         maxReportsPerMonth: limits.maxReportsPerMonth,
         maxStudentsPerRoom: limits.maxStudentsPerRoom,

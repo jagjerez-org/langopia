@@ -13,7 +13,7 @@ export interface UsageResponse {
   plan: UserPlan;
   usage: Record<UsageMetric, number>;
   limits: {
-    maxRoomsPerMonth: number;
+    maxClassesPerMonth: number;
     maxClassHoursPerMonth: number;
     maxReportsPerMonth: number;
     maxStudentsPerRoom: number;

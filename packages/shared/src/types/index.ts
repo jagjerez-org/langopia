@@ -16,6 +16,91 @@ export enum AcademyRole {
   STAFF = "staff",
 }
 
+// ─── Team Roles (SaaS Staff) ──────────────────────────────
+
+export enum TeamRole {
+  ADMIN = "admin",
+  CONTENT_MANAGER = "content_manager",
+  FINANCING = "financing",
+  COORDINATOR = "coordinator",
+}
+
+// ─── Permissions ──────────────────────────────────────────
+
+export enum Permission {
+  CLASSES_VIEW = "classes:view",
+  CLASSES_CREATE = "classes:create",
+  CLASSES_EDIT = "classes:edit",
+  CLASSES_CANCEL = "classes:cancel",
+
+  COURSES_VIEW = "courses:view",
+  COURSES_MANAGE = "courses:manage",
+
+  LESSONS_VIEW = "lessons:view",
+  LESSONS_MANAGE = "lessons:manage",
+
+  EXERCISES_VIEW = "exercises:view",
+  EXERCISES_MANAGE = "exercises:manage",
+
+  LEARNING_PATHS_VIEW = "learning_paths:view",
+  LEARNING_PATHS_MANAGE = "learning_paths:manage",
+
+  MEDIA_VIEW = "media:view",
+  MEDIA_MANAGE = "media:manage",
+
+  STUDENTS_VIEW = "students:view",
+  STUDENTS_CREATE = "students:create",
+  STUDENTS_DEACTIVATE = "students:deactivate",
+
+  TEACHERS_VIEW = "teachers:view",
+  TEACHERS_APPROVE = "teachers:approve",
+
+  FINANCINGS_VIEW_KPIS = "financings:view_kpis",
+  FINANCINGS_MANAGE_PLANS = "financings:manage_plans",
+
+  TEAM_VIEW = "team:view",
+  TEAM_INVITE = "team:invite",
+  TEAM_EDIT_ROLES = "team:edit_roles",
+
+  INTEGRATIONS_VIEW = "integrations:view",
+  INTEGRATIONS_MANAGE = "integrations:manage",
+
+  ACADEMY_SETTINGS = "academy:settings",
+}
+
+export const ROLE_TEMPLATES: Record<TeamRole, Permission[]> = {
+  [TeamRole.ADMIN]: Object.values(Permission),
+  [TeamRole.CONTENT_MANAGER]: [
+    Permission.COURSES_VIEW,
+    Permission.COURSES_MANAGE,
+    Permission.LESSONS_VIEW,
+    Permission.LESSONS_MANAGE,
+    Permission.EXERCISES_VIEW,
+    Permission.EXERCISES_MANAGE,
+    Permission.LEARNING_PATHS_VIEW,
+    Permission.LEARNING_PATHS_MANAGE,
+    Permission.MEDIA_VIEW,
+    Permission.MEDIA_MANAGE,
+    Permission.CLASSES_VIEW,
+  ],
+  [TeamRole.FINANCING]: [
+    Permission.FINANCINGS_VIEW_KPIS,
+    Permission.FINANCINGS_MANAGE_PLANS,
+    Permission.STUDENTS_VIEW,
+  ],
+  [TeamRole.COORDINATOR]: [
+    Permission.CLASSES_VIEW,
+    Permission.CLASSES_CREATE,
+    Permission.CLASSES_EDIT,
+    Permission.CLASSES_CANCEL,
+    Permission.STUDENTS_VIEW,
+    Permission.STUDENTS_CREATE,
+    Permission.STUDENTS_DEACTIVATE,
+    Permission.TEACHERS_VIEW,
+    Permission.TEACHERS_APPROVE,
+  ],
+};
+
 // ─── Academy Type ──────────────────────────────────────────
 
 export enum AcademyType {
@@ -109,6 +194,55 @@ export enum LessonStatus {
   DRAFT = "draft",
   READY = "ready",
   COMPLETED = "completed",
+}
+
+// ─── Academy Plans (for students) ─────────────────────
+
+export enum AcademyPlanPeriodicity {
+  DAILY = "daily",
+  WEEKLY = "weekly",
+  MONTHLY = "monthly",
+  ANNUAL = "annual",
+}
+
+export enum StudentSubscriptionStatus {
+  ACTIVE = "active",
+  PAST_DUE = "past_due",
+  CANCELLED = "cancelled",
+  EXPIRED = "expired",
+}
+
+// ─── Teacher Application ─────────────────────────────
+
+export enum TeacherApplicationStatus {
+  PENDING = "pending",
+  APPROVED = "approved",
+  REJECTED = "rejected",
+}
+
+// ─── Course ──────────────────────────────────────────
+
+export enum CourseStatus {
+  DRAFT = "draft",
+  PUBLISHED = "published",
+  ARCHIVED = "archived",
+}
+
+// ─── Onboarding ──────────────────────────────────────
+
+export enum OnboardingStep {
+  OVERVIEW = "overview",
+  CLASSES = "classes",
+  COURSES = "courses",
+  LESSONS = "lessons",
+  EXERCISES = "exercises",
+  LEARNING_PATHS = "learning_paths",
+  MEDIA_LIBRARY = "media_library",
+  STUDENTS = "students",
+  TEACHERS = "teachers",
+  FINANCINGS = "financings",
+  TEAM = "team",
+  INTEGRATIONS = "integrations",
 }
 
 // ─── Media ─────────────────────────────────────────
@@ -252,52 +386,62 @@ export enum UsageMetric {
 
 export const PLAN_LIMITS: Record<UserPlan, {
   maxAcademies: number;
-  maxRoomsPerMonth: number;
+  maxClassesPerMonth: number;
   maxClassHoursPerMonth: number;
   maxReportsPerMonth: number;
   maxStudentsPerRoom: number;
   maxStorageBytes: number;
   maxAiTokensPerMonth: number;
   maxTtsCharactersPerMonth: number;
+  integrations: boolean;
+  academyLanding: boolean;
 }> = {
   [UserPlan.FREE]: {
     maxAcademies: 1,
-    maxRoomsPerMonth: 10,
-    maxClassHoursPerMonth: 5,
-    maxReportsPerMonth: 5,
+    maxClassesPerMonth: 10,
+    maxClassHoursPerMonth: 10,
+    maxReportsPerMonth: 999_999,
     maxStudentsPerRoom: 2,
-    maxStorageBytes: 1_073_741_824, // 1GB
+    maxStorageBytes: 5_368_709_120, // 5GB
     maxAiTokensPerMonth: 50_000,
     maxTtsCharactersPerMonth: 10_000,
+    integrations: false,
+    academyLanding: false,
   },
   [UserPlan.STARTER]: {
     maxAcademies: 3,
-    maxRoomsPerMonth: 50,
+    maxClassesPerMonth: 50,
     maxClassHoursPerMonth: 25,
-    maxReportsPerMonth: 50,
+    maxReportsPerMonth: 999_999,
     maxStudentsPerRoom: 8,
     maxStorageBytes: 10_737_418_240, // 10GB
     maxAiTokensPerMonth: 500_000,
     maxTtsCharactersPerMonth: 100_000,
+    integrations: false,
+    academyLanding: false,
   },
   [UserPlan.PROFESSIONAL]: {
     maxAcademies: 10,
-    maxRoomsPerMonth: 200,
+    maxClassesPerMonth: 200,
     maxClassHoursPerMonth: 100,
-    maxReportsPerMonth: 200,
+    maxReportsPerMonth: 999_999,
     maxStudentsPerRoom: 25,
     maxStorageBytes: 53_687_091_200, // 50GB
     maxAiTokensPerMonth: 2_000_000,
     maxTtsCharactersPerMonth: 500_000,
+    integrations: true,
+    academyLanding: false,
   },
   [UserPlan.ENTERPRISE]: {
     maxAcademies: 999,
-    maxRoomsPerMonth: 999999,
-    maxClassHoursPerMonth: 999999,
-    maxReportsPerMonth: 999999,
+    maxClassesPerMonth: 999_999,
+    maxClassHoursPerMonth: 999_999,
+    maxReportsPerMonth: 999_999,
     maxStudentsPerRoom: 50,
     maxStorageBytes: 536_870_912_000, // 500GB
     maxAiTokensPerMonth: 999_999_999,
     maxTtsCharactersPerMonth: 999_999_999,
+    integrations: true,
+    academyLanding: true,
   },
 };

@@ -12,6 +12,7 @@ import {
 } from "typeorm";
 import type { Academy } from "./academy.entity.js";
 import type { RoomParticipant } from "./room-participant.entity.js";
+import type { StudentSubscription } from "./student-subscription.entity.js";
 
 @Entity("students")
 @Unique(["academyId", "email"])
@@ -37,12 +38,21 @@ export class Student {
   @Column({ type: "varchar", length: 10, nullable: true })
   cefrEstimate!: string | null;
 
+  @Column({ type: "boolean", default: true })
+  isActive!: boolean;
+
+  @Column({ type: "uuid", nullable: true })
+  userId!: string | null;
+
   @ManyToOne("Academy", "students")
   @JoinColumn({ name: "academyId" })
   academy!: Relation<Academy>;
 
   @OneToMany("RoomParticipant", "student")
   participations!: Relation<RoomParticipant[]>;
+
+  @OneToMany("StudentSubscription", "student")
+  subscriptions!: Relation<StudentSubscription[]>;
 
   @CreateDateColumn({ type: "timestamptz" })
   firstSeenAt!: Date;

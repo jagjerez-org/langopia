@@ -7,7 +7,9 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { LearningPath } from "../database/entities/learning-path.entity.js";
 import { LearningPathLesson } from "../database/entities/learning-path-lesson.entity.js";
+import { LearningPathCourse } from "../database/entities/learning-path-course.entity.js";
 import { Lesson } from "../database/entities/lesson.entity.js";
+import { Course } from "../database/entities/course.entity.js";
 import { LearningPathStatus } from "@langopia/shared/types";
 
 @Injectable()
@@ -17,8 +19,12 @@ export class LearningPathsService {
     private readonly lpRepo: Repository<LearningPath>,
     @InjectRepository(LearningPathLesson)
     private readonly lplRepo: Repository<LearningPathLesson>,
+    @InjectRepository(LearningPathCourse)
+    private readonly lpcRepo: Repository<LearningPathCourse>,
     @InjectRepository(Lesson)
     private readonly lessonRepo: Repository<Lesson>,
+    @InjectRepository(Course)
+    private readonly courseRepo: Repository<Course>,
   ) {}
 
   async listLearningPaths(
@@ -36,6 +42,7 @@ export class LearningPathsService {
     const qb = this.lpRepo
       .createQueryBuilder("lp")
       .loadRelationCountAndMap("lp.lessonCount", "lp.learningPathLessons")
+      .loadRelationCountAndMap("lp.courseCount", "lp.learningPathCourses")
       .where("lp.academyId = :academyId", { academyId })
       .orderBy("lp.createdAt", "DESC")
       .take(limit)
@@ -48,7 +55,7 @@ export class LearningPathsService {
     const [paths, total] = await qb.getManyAndCount();
 
     return {
-      data: paths.map((lp: LearningPath & { lessonCount?: number }) => ({
+      data: paths.map((lp: LearningPath & { lessonCount?: number; courseCount?: number }) => ({
         id: lp.id,
         title: lp.title,
         description: lp.description,
@@ -58,6 +65,7 @@ export class LearningPathsService {
         thumbnailUrl: lp.thumbnailUrl,
         estimatedHours: lp.estimatedHours,
         lessonCount: lp.lessonCount ?? 0,
+        courseCount: lp.courseCount ?? 0,
         createdAt: lp.createdAt,
         updatedAt: lp.updatedAt,
       })),
@@ -363,5 +371,138 @@ export class LearningPathsService {
     }
 
     await this.lplRepo.remove(link);
+  }
+
+  // ─── Course Management ─────────────────────────────
+
+  async listCourses(academyId: string, lpId: string) {
+    const lp = await this.lpRepo.findOne({
+      where: { id: lpId, academyId },
+    });
+    if (!lp) {
+      throw new NotFoundException("Learning path not found");
+    }
+
+    const links = await this.lpcRepo
+      .createQueryBuilder("lpc")
+      .leftJoinAndSelect("lpc.course", "course")
+      .where("lpc.learningPathId = :lpId", { lpId })
+      .orderBy("lpc.sortOrder", "ASC")
+      .getMany();
+
+    return {
+      data: links.map((lpc) => ({
+        id: lpc.course.id,
+        title: lpc.course.title,
+        description: lpc.course.description,
+        language: lpc.course.language,
+        cefrLevel: lpc.course.cefrLevel,
+        status: lpc.course.status,
+        sortOrder: lpc.sortOrder,
+      })),
+    };
+  }
+
+  async addCourses(
+    academyId: string,
+    lpId: string,
+    courseIds: string[],
+  ) {
+    const lp = await this.lpRepo.findOne({
+      where: { id: lpId, academyId },
+    });
+    if (!lp) {
+      throw new NotFoundException("Learning path not found");
+    }
+
+    if (!courseIds || courseIds.length === 0) {
+      throw new BadRequestException("courseIds array is required");
+    }
+
+    const courses = await this.courseRepo.find({
+      where: courseIds.map((cid) => ({ id: cid, academyId })),
+    });
+    const validIds = new Set(courses.map((c) => c.id));
+    const invalid = courseIds.filter((cid) => !validIds.has(cid));
+    if (invalid.length > 0) {
+      throw new BadRequestException(
+        `Courses not found: ${invalid.join(", ")}`,
+      );
+    }
+
+    const maxSort = await this.lpcRepo
+      .createQueryBuilder("lpc")
+      .select("COALESCE(MAX(lpc.sortOrder), -1)", "maxSort")
+      .where("lpc.learningPathId = :lpId", { lpId })
+      .getRawOne();
+    let nextSort = (maxSort?.maxSort ?? -1) + 1;
+
+    let added = 0;
+    for (const cid of courseIds) {
+      const existing = await this.lpcRepo.findOne({
+        where: { learningPathId: lpId, courseId: cid },
+      });
+      if (existing) continue;
+
+      const link = new LearningPathCourse();
+      link.learningPathId = lpId;
+      link.courseId = cid;
+      link.sortOrder = nextSort++;
+      await this.lpcRepo.save(link);
+      added++;
+    }
+
+    return { added };
+  }
+
+  async reorderCourses(
+    academyId: string,
+    lpId: string,
+    courseIds: string[],
+  ) {
+    const lp = await this.lpRepo.findOne({
+      where: { id: lpId, academyId },
+    });
+    if (!lp) {
+      throw new NotFoundException("Learning path not found");
+    }
+
+    const links = await this.lpcRepo.find({
+      where: { learningPathId: lpId },
+    });
+    const linkMap = new Map(links.map((l) => [l.courseId, l]));
+
+    for (let i = 0; i < courseIds.length; i++) {
+      const link = linkMap.get(courseIds[i]);
+      if (link) {
+        link.sortOrder = i;
+        await this.lpcRepo.save(link);
+      }
+    }
+
+    return { reordered: true };
+  }
+
+  async removeCourse(
+    academyId: string,
+    lpId: string,
+    courseId: string,
+  ) {
+    const lp = await this.lpRepo.findOne({
+      where: { id: lpId, academyId },
+    });
+    if (!lp) {
+      throw new NotFoundException("Learning path not found");
+    }
+
+    const link = await this.lpcRepo.findOne({
+      where: { learningPathId: lpId, courseId },
+    });
+
+    if (!link) {
+      throw new NotFoundException("Course not linked to this learning path");
+    }
+
+    await this.lpcRepo.remove(link);
   }
 }

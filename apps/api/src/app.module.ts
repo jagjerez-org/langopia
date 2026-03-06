@@ -18,6 +18,16 @@ import { ExercisesModule } from "./exercises/exercises.module.js";
 import { MediaModule } from "./media/media.module.js";
 import { MeModule } from "./me/me.module.js";
 import { PushNotificationModule } from "./push-notification/push-notification.module.js";
+import { AcademyLevelsModule } from "./academy-levels/academy-levels.module.js";
+import { AcademyLanguagesModule } from "./academy-languages/academy-languages.module.js";
+import { CoursesModule } from "./courses/courses.module.js";
+import { AcademyPlansModule } from "./academy-plans/academy-plans.module.js";
+import { StudentSubscriptionsModule } from "./student-subscriptions/student-subscriptions.module.js";
+import { TeacherApplicationsModule } from "./teacher-applications/teacher-applications.module.js";
+import { TeamModule } from "./team/team.module.js";
+import { FinancingsModule } from "./financings/financings.module.js";
+import { OnboardingModule } from "./onboarding/onboarding.module.js";
+import { AcademyLandingModule } from "./academy-landing/academy-landing.module.js";
 import { HealthController } from "./health/health.controller.js";
 
 @Module({
@@ -44,6 +54,16 @@ import { HealthController } from "./health/health.controller.js";
     MediaModule,
     MeModule,
     PushNotificationModule,
+    AcademyLevelsModule,
+    AcademyLanguagesModule,
+    CoursesModule,
+    AcademyPlansModule,
+    StudentSubscriptionsModule,
+    TeacherApplicationsModule,
+    TeamModule,
+    FinancingsModule,
+    OnboardingModule,
+    AcademyLandingModule,
   ],
   controllers: [HealthController],
 })

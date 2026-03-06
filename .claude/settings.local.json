@@ -43,7 +43,9 @@
       "Bash(export:*)",
       "Bash(winget install:*)",
       "Bash(reg query:*)",
-      "Bash(adb devices:*)"
+      "Bash(adb devices:*)",
+      "Bash(npx shadcn@latest:*)",
+      "Bash(docker compose:*)"
     ]
   }
 }

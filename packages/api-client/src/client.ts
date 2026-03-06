@@ -16,6 +16,16 @@ import {
   RoomsResource,
   RoomInternalResource,
   MeResource,
+  AcademyLevelsResource,
+  AcademyLanguagesResource,
+  CoursesResource,
+  AcademyPlansResource,
+  StudentSubscriptionsResource,
+  TeacherApplicationsResource,
+  TeamResource,
+  FinancingsResource,
+  OnboardingResource,
+  AcademyLandingResource,
 } from "./resources";
 
 export type AuthMode = "jwt" | "apikey" | "none";
@@ -58,6 +68,16 @@ export class LangopiaClient {
   readonly rooms: RoomsResource;
   readonly roomInternal: RoomInternalResource;
   readonly me: MeResource;
+  readonly academyLevels: AcademyLevelsResource;
+  readonly academyLanguages: AcademyLanguagesResource;
+  readonly courses: CoursesResource;
+  readonly academyPlans: AcademyPlansResource;
+  readonly studentSubscriptions: StudentSubscriptionsResource;
+  readonly teacherApplications: TeacherApplicationsResource;
+  readonly team: TeamResource;
+  readonly financings: FinancingsResource;
+  readonly onboarding: OnboardingResource;
+  readonly academyLanding: AcademyLandingResource;
 
   constructor(config: LangopiaClientConfig) {
     this.config = config;
@@ -78,6 +98,16 @@ export class LangopiaClient {
     this.rooms = new RoomsResource(this);
     this.roomInternal = new RoomInternalResource(this);
     this.me = new MeResource(this);
+    this.academyLevels = new AcademyLevelsResource(this);
+    this.academyLanguages = new AcademyLanguagesResource(this);
+    this.courses = new CoursesResource(this);
+    this.academyPlans = new AcademyPlansResource(this);
+    this.studentSubscriptions = new StudentSubscriptionsResource(this);
+    this.teacherApplications = new TeacherApplicationsResource(this);
+    this.team = new TeamResource(this);
+    this.financings = new FinancingsResource(this);
+    this.onboarding = new OnboardingResource(this);
+    this.academyLanding = new AcademyLandingResource(this);
   }
 
   /** Update tokens after login/refresh */

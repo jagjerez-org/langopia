@@ -90,4 +90,39 @@ export class LearningPathsResource {
       query: { lessonId },
     });
   }
+
+  listCourses(id: string): Promise<unknown[]> {
+    return this.client.request({
+      method: "GET",
+      path: `/v1/learning-paths/${id}/courses`,
+      auth: "apikey",
+    });
+  }
+
+  addCourses(id: string, courseIds: string[]): Promise<LearningPathResponse> {
+    return this.client.request({
+      method: "POST",
+      path: `/v1/learning-paths/${id}/courses`,
+      auth: "apikey",
+      body: { courseIds },
+    });
+  }
+
+  reorderCourses(id: string, courseIds: string[]): Promise<LearningPathResponse> {
+    return this.client.request({
+      method: "PATCH",
+      path: `/v1/learning-paths/${id}/courses`,
+      auth: "apikey",
+      body: { courseIds },
+    });
+  }
+
+  removeCourse(id: string, courseId: string): Promise<void> {
+    return this.client.request({
+      method: "DELETE",
+      path: `/v1/learning-paths/${id}/courses`,
+      auth: "apikey",
+      query: { courseId },
+    });
+  }
 }

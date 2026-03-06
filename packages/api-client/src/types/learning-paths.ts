@@ -40,6 +40,12 @@ export interface ReorderLessonsRequest {
 
 // ─── Responses ──────────────────────────────────────
 
+export interface ReorderCoursesRequest {
+  courseIds: string[];
+}
+
+// ─── Responses ──────────────────────────────────────
+
 export interface LearningPathResponse {
   id: string;
   title: string;
@@ -51,6 +57,7 @@ export interface LearningPathResponse {
   estimatedHours: number | null;
   academyId: string;
   lessonCount?: number;
+  courseCount?: number;
   lessons?: LessonResponse[];
   createdAt: string;
   updatedAt: string;

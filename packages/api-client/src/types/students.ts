@@ -4,6 +4,7 @@ import type { PaginationParams } from "./common";
 
 export interface QueryStudentsParams extends PaginationParams {
   search?: string;
+  includeInactive?: boolean;
 }
 
 // ─── Responses ──────────────────────────────────────
@@ -13,6 +14,7 @@ export interface StudentResponse {
   email: string;
   name: string | null;
   academyId: string;
+  isActive: boolean;
   totalClasses: number;
   lastClassAt: string | null;
   createdAt: string;

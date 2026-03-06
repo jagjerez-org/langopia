@@ -9,6 +9,7 @@ import {
 } from "typeorm";
 import { UserPlan } from "@langopia/shared/types";
 import type { AcademyMember } from "./academy-member.entity.js";
+import type { TeamMember } from "./team-member.entity.js";
 
 @Entity("users")
 export class User {
@@ -47,6 +48,9 @@ export class User {
 
   @OneToMany("AcademyMember", "user")
   academyMemberships!: Relation<AcademyMember[]>;
+
+  @OneToMany("TeamMember", "user")
+  teamMemberships!: Relation<TeamMember[]>;
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;

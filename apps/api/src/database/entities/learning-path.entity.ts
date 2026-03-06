@@ -12,6 +12,7 @@ import {
 import { LearningPathStatus } from "@langopia/shared/types";
 import type { Academy } from "./academy.entity.js";
 import type { LearningPathLesson } from "./learning-path-lesson.entity.js";
+import type { LearningPathCourse } from "./learning-path-course.entity.js";
 
 @Entity("learning_paths")
 export class LearningPath {
@@ -48,6 +49,9 @@ export class LearningPath {
 
   @OneToMany("LearningPathLesson", "learningPath")
   learningPathLessons!: Relation<LearningPathLesson[]>;
+
+  @OneToMany("LearningPathCourse", "learningPath")
+  learningPathCourses!: Relation<LearningPathCourse[]>;
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;

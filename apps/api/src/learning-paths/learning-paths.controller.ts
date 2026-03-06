@@ -150,4 +150,48 @@ export class LearningPathsController {
   ) {
     await this.learningPathsService.removeLesson(academy.id, id, lessonId);
   }
+
+  // ─── Course Endpoints ─────────────────────────────
+
+  @Get(":id/courses")
+  @ApiOperation({ summary: "List courses in this learning path" })
+  async listCourses(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+  ) {
+    return this.learningPathsService.listCourses(academy.id, id);
+  }
+
+  @Post(":id/courses")
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Add courses to learning path" })
+  async addCourses(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+    @Body() dto: { courseIds: string[] },
+  ) {
+    return this.learningPathsService.addCourses(academy.id, id, dto.courseIds);
+  }
+
+  @Patch(":id/courses")
+  @ApiOperation({ summary: "Reorder courses in learning path" })
+  async reorderCourses(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+    @Body() dto: { courseIds: string[] },
+  ) {
+    return this.learningPathsService.reorderCourses(academy.id, id, dto.courseIds);
+  }
+
+  @Delete(":id/courses")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Remove a course from learning path" })
+  @ApiQuery({ name: "courseId", required: true })
+  async removeCourse(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+    @Query("courseId") courseId: string,
+  ) {
+    await this.learningPathsService.removeCourse(academy.id, id, courseId);
+  }
 }

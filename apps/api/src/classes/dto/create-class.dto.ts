@@ -51,10 +51,20 @@ export class CreateClassDto {
   @IsString()
   lessonId?: string;
 
+  @ApiPropertyOptional({ description: "UUID of the course to attach" })
+  @IsOptional()
+  @IsString()
+  courseId?: string;
+
   @ApiPropertyOptional({ description: "UUID of the teacher (AcademyMember)" })
   @IsOptional()
   @IsString()
   teacherId?: string;
+
+  @ApiPropertyOptional({ description: "External Zoom meeting link" })
+  @IsOptional()
+  @IsString()
+  zoomLink?: string;
 
   @ApiPropertyOptional({
     description: "Student email addresses to enroll",
