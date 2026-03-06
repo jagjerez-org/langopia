@@ -8,12 +8,13 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@langopia/api-client";
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -26,10 +27,15 @@ export default function LoginScreen() {
 
     try {
       await login(email.trim(), password);
+      router.replace("/(tabs)");
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Invalid email or password",
-      );
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else if (err instanceof TypeError && err.message === "Network request failed") {
+        setError("Cannot connect to server. Check your network connection.");
+      } else {
+        setError(err instanceof Error ? err.message : "Invalid email or password");
+      }
       setLoading(false);
     }
   }

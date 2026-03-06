@@ -1,6 +1,23 @@
-import { createMMKV } from "react-native-mmkv";
+let storage: {
+  getString(key: string): string | undefined;
+  set(key: string, value: string): void;
+  remove(key: string): void;
+  clearAll(): void;
+};
 
-const storage = createMMKV({ id: "langopia-cache" });
+try {
+  const { createMMKV } = require("react-native-mmkv");
+  storage = createMMKV({ id: "langopia-cache" });
+} catch {
+  // Fallback for Expo Go (MMKV requires native modules)
+  const map = new Map<string, string>();
+  storage = {
+    getString: (key: string) => map.get(key),
+    set: (key: string, value: string) => { map.set(key, value); },
+    remove: (key: string) => { map.delete(key); },
+    clearAll: () => { map.clear(); },
+  };
+}
 
 const DEFAULT_TTL_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -55,4 +72,9 @@ export const CacheKeys = {
     `exercises:${params ? JSON.stringify(params) : "all"}`,
   exerciseDetail: (id: string) => `exercise:${id}`,
   notifications: () => "notifications",
+  classes: (status: string) => `classes:${status}`,
+  classDetail: (id: string) => `class:${id}`,
+  reports: () => "reports",
+  reportDetail: (id: string) => `report:${id}`,
+  homeStats: () => "home:stats",
 };

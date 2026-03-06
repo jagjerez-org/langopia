@@ -10,6 +10,7 @@ import { entities } from "./entities/index.js";
         type: "postgres" as const,
         url: config.getOrThrow<string>("DATABASE_URL"),
         entities,
+        migrations: ["dist/database/migrations/*.js"],
         synchronize: false,
       }),
       inject: [ConfigService],

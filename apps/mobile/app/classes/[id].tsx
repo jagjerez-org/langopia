@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +8,8 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useApiClient } from "@/lib/api";
+import { useCachedQuery } from "@/lib/use-cached-query";
+import { CacheKeys } from "@/lib/cache";
 import type { MyClassDetail } from "@langopia/api-client";
 
 const statusColors: Record<string, { bg: string; text: string }> = {
@@ -23,17 +24,12 @@ export default function ClassDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const api = useApiClient();
-  const [cls, setCls] = useState<MyClassDetail | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    api.me
-      .classDetail(id)
-      .then(setCls)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [api, id]);
+  const { data: cls, loading } = useCachedQuery<MyClassDetail>(
+    CacheKeys.classDetail(id ?? ""),
+    () => api.me.classDetail(id!),
+    [id],
+  );
 
   if (loading) {
     return (

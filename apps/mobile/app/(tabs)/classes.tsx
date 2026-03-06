@@ -1,14 +1,17 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useApiClient } from "@/lib/api";
+import { useCachedQuery } from "@/lib/use-cached-query";
+import { CacheKeys } from "@/lib/cache";
 import type { MyClassesList } from "@langopia/api-client";
 
 const statusTabs = [
@@ -30,21 +33,12 @@ export default function ClassesScreen() {
   const api = useApiClient();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("scheduled");
-  const [data, setData] = useState<MyClassesList | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(() => {
-    setLoading(true);
-    api.me
-      .classes({ status: activeTab })
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [api, activeTab]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const { data, loading, isStale, refresh } = useCachedQuery<MyClassesList>(
+    CacheKeys.classes(activeTab),
+    () => api.me.classes({ status: activeTab }),
+    [activeTab],
+  );
 
   return (
     <View className="flex-1 bg-white dark:bg-zinc-900">
@@ -78,6 +72,14 @@ export default function ClassesScreen() {
         ))}
       </ScrollView>
 
+      {isStale && (
+        <View className="bg-amber-50 px-4 py-1 dark:bg-amber-900/20">
+          <Text className="text-xs text-amber-600 dark:text-amber-400">
+            Showing cached data
+          </Text>
+        </View>
+      )}
+
       {/* Class list */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
@@ -91,7 +93,13 @@ export default function ClassesScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, gap: 8 }}>
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{ padding: 16, gap: 8 }}
+          refreshControl={
+            <RefreshControl refreshing={false} onRefresh={refresh} />
+          }
+        >
           {data.data.map((cls) => {
             const colors = statusColors[cls.status] ?? statusColors.scheduled;
             return (

@@ -9,9 +9,6 @@
     "lint": "eslint",
     "type-check": "tsc --noEmit",
     "db:sync": "npx tsx --env-file=.env scripts/db-sync.ts",
-    "db:generate": "typeorm migration:generate -d src/lib/database.ts",
-    "db:migrate": "typeorm migration:run -d src/lib/database.ts",
-    "db:revert": "typeorm migration:revert -d src/lib/database.ts",
     "db:embed": "npx tsx --env-file=.env scripts/backfill-embeddings.ts"
   },
   "dependencies": {

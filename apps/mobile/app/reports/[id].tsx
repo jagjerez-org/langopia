@@ -1,24 +1,20 @@
-import { useEffect, useState } from "react";
 import { View, Text, ScrollView, ActivityIndicator } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useApiClient } from "@/lib/api";
+import { useCachedQuery } from "@/lib/use-cached-query";
+import { CacheKeys } from "@/lib/cache";
 import type { MyReportDetail } from "@langopia/api-client";
 
 export default function ReportDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const api = useApiClient();
-  const [report, setReport] = useState<MyReportDetail | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!id) return;
-    api.me
-      .reportDetail(id)
-      .then(setReport)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [api, id]);
+  const { data: report, loading } = useCachedQuery<MyReportDetail>(
+    CacheKeys.reportDetail(id ?? ""),
+    () => api.me.reportDetail(id!),
+    [id],
+  );
 
   if (loading) {
     return (

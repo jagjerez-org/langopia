@@ -1,12 +1,19 @@
-import { useState } from "react";
-import { View, Text, Pressable, SafeAreaView } from "react-native";
+import { useState, lazy, Suspense } from "react";
+import { View, Text, Pressable, SafeAreaView, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ApiError } from "@langopia/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { createPublicRoomClient } from "@/lib/api";
 import { JoinFormNative } from "@/components/room/join-form-native";
-import { RoomViewNative } from "@/components/room/room-view-native";
+
+// Lazy-load to avoid importing @livekit/react-native at module evaluation time
+// (Expo Router eagerly loads all route modules)
+const RoomViewNative = lazy(() =>
+  import("@/components/room/room-view-native").then((m) => ({
+    default: m.RoomViewNative,
+  })),
+);
 
 /** Actual shape returned by the NestJS API (superset of api-client type) */
 interface RoomSession {
@@ -92,12 +99,21 @@ export default function RoomScreen() {
 
   if (phase === "in_room" && session) {
     return (
-      <RoomViewNative
-        session={session}
-        livekitUrl={session.livekitUrl}
-        participantName={participantName}
-        onEnded={() => setPhase("ended")}
-      />
+      <Suspense
+        fallback={
+          <SafeAreaView className="flex-1 items-center justify-center bg-zinc-950">
+            <ActivityIndicator size="large" color="#7c3aed" />
+            <Text className="mt-4 text-white">Loading room...</Text>
+          </SafeAreaView>
+        }
+      >
+        <RoomViewNative
+          session={session}
+          livekitUrl={session.livekitUrl}
+          participantName={participantName}
+          onEnded={() => setPhase("ended")}
+        />
+      </Suspense>
     );
   }
 

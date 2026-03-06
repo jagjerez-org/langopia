@@ -53,7 +53,8 @@
       ],
       ["expo-notifications", { "color": "#7c3aed" }],
       "@react-native-firebase/app",
-      "@react-native-firebase/messaging"
+      "@react-native-firebase/messaging",
+      "./plugins/fix-firebase-notification-color"
     ]
   }
 }

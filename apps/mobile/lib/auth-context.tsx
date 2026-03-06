@@ -6,15 +6,15 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import * as SecureStore from "expo-secure-store";
 import { LangopiaClient } from "@langopia/api-client";
+import { storage } from "@/lib/storage";
 import type { UserPlan } from "@langopia/shared/types";
 
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL || "http://localhost:2501";
 
-const TOKEN_KEY = "langopia:accessToken";
-const REFRESH_KEY = "langopia:refreshToken";
+const TOKEN_KEY = "langopia.accessToken";
+const REFRESH_KEY = "langopia.refreshToken";
 
 export interface AuthUser {
   id: string;
@@ -45,8 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Bootstrap: check SecureStore for existing tokens
   useEffect(() => {
     (async () => {
-      const storedAccess = await SecureStore.getItemAsync(TOKEN_KEY);
-      const storedRefresh = await SecureStore.getItemAsync(REFRESH_KEY);
+      const storedAccess = await storage.getItem(TOKEN_KEY);
+      const storedRefresh = await storage.getItem(REFRESH_KEY);
 
       if (!storedAccess) {
         setLoading(false);
@@ -62,9 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         accessToken: storedAccess,
         refreshToken: storedRefresh ?? undefined,
         onTokenRefresh: (tokens) => {
-          SecureStore.setItemAsync(TOKEN_KEY, tokens.accessToken);
+          storage.setItem(TOKEN_KEY, tokens.accessToken);
           if (tokens.refreshToken) {
-            SecureStore.setItemAsync(REFRESH_KEY, tokens.refreshToken);
+            storage.setItem(REFRESH_KEY, tokens.refreshToken);
           }
           setAccessToken(tokens.accessToken);
           if (tokens.refreshToken) setRefreshToken(tokens.refreshToken);
@@ -81,8 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       } catch {
         // Tokens expired and refresh failed — clear
-        await SecureStore.deleteItemAsync(TOKEN_KEY);
-        await SecureStore.deleteItemAsync(REFRESH_KEY);
+        await storage.deleteItem(TOKEN_KEY);
+        await storage.deleteItem(REFRESH_KEY);
         setAccessToken(null);
         setRefreshToken(null);
       } finally {
@@ -95,8 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const client = new LangopiaClient({ baseUrl: API_URL });
     const res = await client.auth.login({ email, password });
 
-    await SecureStore.setItemAsync(TOKEN_KEY, res.accessToken);
-    await SecureStore.setItemAsync(REFRESH_KEY, res.refreshToken);
+    await storage.setItem(TOKEN_KEY, res.accessToken);
+    await storage.setItem(REFRESH_KEY, res.refreshToken);
     setAccessToken(res.accessToken);
     setRefreshToken(res.refreshToken);
     setUser({
@@ -112,8 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const client = new LangopiaClient({ baseUrl: API_URL });
       const res = await client.auth.register({ name, email, password });
 
-      await SecureStore.setItemAsync(TOKEN_KEY, res.accessToken);
-      await SecureStore.setItemAsync(REFRESH_KEY, res.refreshToken);
+      await storage.setItem(TOKEN_KEY, res.accessToken);
+      await storage.setItem(REFRESH_KEY, res.refreshToken);
       setAccessToken(res.accessToken);
       setRefreshToken(res.refreshToken);
       setUser({
@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     // Best-effort: unregister push token before clearing credentials
     try {
-      const currentAccess = await SecureStore.getItemAsync(TOKEN_KEY);
+      const currentAccess = await storage.getItem(TOKEN_KEY);
       if (currentAccess) {
         const { unregisterPushToken } = await import("@/lib/notifications");
         const client = new LangopiaClient({
@@ -142,8 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Don't block logout on push token unregistration failure
     }
 
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(REFRESH_KEY);
+    await storage.deleteItem(TOKEN_KEY);
+    await storage.deleteItem(REFRESH_KEY);
     setAccessToken(null);
     setRefreshToken(null);
     setUser(null);
@@ -171,10 +171,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const defaultAuthValue: AuthContextValue = {
+  user: null,
+  accessToken: null,
+  refreshToken: null,
+  loading: true,
+  login: async () => {},
+  register: async () => {},
+  logout: () => {},
+  updateUser: () => {},
+};
+
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return ctx;
+  // Return safe defaults if called before AuthProvider mounts (Expo Router v6 eager rendering)
+  return ctx ?? defaultAuthValue;
 }

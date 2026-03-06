@@ -1,29 +1,26 @@
-import { useEffect, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useApiClient } from "@/lib/api";
+import { useCachedQuery } from "@/lib/use-cached-query";
+import { CacheKeys } from "@/lib/cache";
 import type { MyReportsList } from "@langopia/api-client";
 
 export default function ReportsScreen() {
   const api = useApiClient();
   const router = useRouter();
-  const [data, setData] = useState<MyReportsList | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api.me
-      .reports()
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, [api]);
+  const { data, loading, isStale, refresh } = useCachedQuery<MyReportsList>(
+    CacheKeys.reports(),
+    () => api.me.reports(),
+  );
 
   if (loading) {
     return (
@@ -48,7 +45,17 @@ export default function ReportsScreen() {
     <ScrollView
       className="flex-1 bg-white dark:bg-zinc-900"
       contentContainerStyle={{ padding: 16, gap: 8 }}
+      refreshControl={
+        <RefreshControl refreshing={false} onRefresh={refresh} />
+      }
     >
+      {isStale && (
+        <View className="rounded-lg bg-amber-50 px-3 py-1.5 dark:bg-amber-900/20">
+          <Text className="text-xs text-amber-600 dark:text-amber-400">
+            Showing cached data
+          </Text>
+        </View>
+      )}
       {data.data.map((report) => (
         <Pressable
           key={report.id}

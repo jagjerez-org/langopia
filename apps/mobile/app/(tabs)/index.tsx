@@ -5,27 +5,28 @@ import {
   ScrollView,
   Pressable,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/lib/auth-context";
 import { useApiClient } from "@/lib/api";
+import { useCachedQuery } from "@/lib/use-cached-query";
+import { CacheKeys } from "@/lib/cache";
 import type { MyStats } from "@langopia/api-client";
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const api = useApiClient();
   const router = useRouter();
-  const [stats, setStats] = useState<MyStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const { data: stats, loading, refresh } = useCachedQuery<MyStats>(
+    CacheKeys.homeStats(),
+    () => api.me.stats(),
+  );
+
   useEffect(() => {
-    api.me
-      .stats()
-      .then(setStats)
-      .catch(() => {})
-      .finally(() => setLoading(false));
     api.me
       .notifications({ limit: 1 })
       .then((res) => setUnreadCount(res.unreadCount))
@@ -62,7 +63,12 @@ export default function HomeScreen() {
   ];
 
   return (
-    <ScrollView className="flex-1 bg-white dark:bg-zinc-900">
+    <ScrollView
+      className="flex-1 bg-white dark:bg-zinc-900"
+      refreshControl={
+        <RefreshControl refreshing={false} onRefresh={refresh} />
+      }
+    >
       <View className="px-5 pb-8 pt-4">
         {/* Greeting */}
         <Text className="text-2xl font-bold text-zinc-900 dark:text-white">

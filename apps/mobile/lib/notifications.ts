@@ -4,7 +4,7 @@ import { Platform } from "react-native";
 import type { LangopiaClient } from "@langopia/api-client";
 
 // Show notifications when app is in foreground
-Notifications.setNotificationHandler({
+Notifications.setNotificationHandler?.({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,

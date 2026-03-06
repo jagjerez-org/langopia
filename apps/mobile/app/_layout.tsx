@@ -1,20 +1,30 @@
 import "../global.css";
-import { registerGlobals } from "@livekit/react-native";
+import { Platform } from "react-native";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 
-registerGlobals();
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+if (Platform.OS !== "web" && !isExpoGo) {
+  try {
+    require("@livekit/react-native").registerGlobals();
+  } catch {
+    // LiveKit native module not available — skip
+  }
+}
 
 import { useEffect, useRef } from "react";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { useApiClient } from "@/lib/api";
-import {
-  registerForPushNotifications,
-  onTokenRefresh,
-  getNotificationRoute,
-} from "@/lib/notifications";
+
+let Notifications: typeof import("expo-notifications") | null = null;
+let notificationsLib: typeof import("@/lib/notifications") | null = null;
+if (Platform.OS !== "web" && !isExpoGo) {
+  Notifications = require("expo-notifications");
+  notificationsLib = require("@/lib/notifications");
+}
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,7 +33,7 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const client = useApiClient();
-  const notificationListener = useRef<Notifications.EventSubscription>(undefined);
+  const notificationListener = useRef<any>(undefined);
 
   useEffect(() => {
     if (loading) return;
@@ -43,21 +53,20 @@ function RootLayoutNav() {
     }
   }, [loading]);
 
-  // Register for push notifications when user is logged in
+  // Register for push notifications when user is logged in (native only)
   useEffect(() => {
-    if (!user) return;
+    if (!user || !Notifications || !notificationsLib) return;
 
-    registerForPushNotifications(client);
+    notificationsLib.registerForPushNotifications(client);
 
-    const unsubTokenRefresh = onTokenRefresh(client);
+    const unsubTokenRefresh = notificationsLib.onTokenRefresh(client);
 
-    // Handle notification taps
     notificationListener.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data as
           | Record<string, string>
           | undefined;
-        const route = getNotificationRoute(data);
+        const route = notificationsLib!.getNotificationRoute(data);
         if (route) {
           router.push(route as any);
         }
