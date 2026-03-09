@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { useAcademy } from "@/components/academy-provider";
-import { LangopiaClient } from "@langopia/api-client";
+import { useApiClient } from "@/hooks/use-api-client";
+import type { DashboardUsageResponse } from "@langopia/api-client";
 import {
   RadialBarChart,
   RadialBar,
@@ -17,22 +18,6 @@ import {
   Cell,
   Legend,
 } from "recharts";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:2501";
-
-interface UsageData {
-  period: string;
-  plan: string;
-  usage: Record<string, number>;
-  limits: {
-    maxClassesPerMonth: number;
-    maxClassHoursPerMonth: number;
-    maxReportsPerMonth: number;
-    maxStudentsPerRoom: number;
-    maxStorageBytes: number;
-    maxAiTokensPerMonth: number;
-  };
-}
 
 const METRIC_COLORS: Record<string, string> = {
   "Rooms Created": "#8b5cf6",   // violet-500
@@ -115,23 +100,22 @@ function GaugeCard({ metric }: { metric: MetricDef }) {
 
 export default function UsagePage() {
   const { academies } = useAcademy();
-  const [usage, setUsage] = useState<UsageData | null>(null);
+  const api = useApiClient();
+  const [usage, setUsage] = useState<DashboardUsageResponse | null>(null);
   const [loadingUsage, setLoadingUsage] = useState(true);
 
   useEffect(() => {
-    const withKeys = academies.filter((a) => a.apiKey);
-    if (withKeys.length === 0) {
+    if (academies.length === 0) {
       setLoadingUsage(false);
       return;
     }
 
     Promise.all(
-      withKeys.map((a) => {
-        const client = new LangopiaClient({ baseUrl: API_URL, apiKey: a.apiKey });
-        return client.usage.get().catch(() => null);
-      })
+      academies.map((a) =>
+        api.dashboard.usage(a.id).catch(() => null)
+      )
     ).then((results) => {
-      const valid = results.filter(Boolean) as UsageData[];
+      const valid = results.filter(Boolean) as DashboardUsageResponse[];
       if (valid.length === 0) {
         setLoadingUsage(false);
         return;
@@ -153,7 +137,7 @@ export default function UsagePage() {
       });
       setLoadingUsage(false);
     });
-  }, [academies]);
+  }, [academies, api]);
 
   const metrics: MetricDef[] = usage
     ? [

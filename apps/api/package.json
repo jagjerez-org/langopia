@@ -7,9 +7,9 @@
     "build": "nest build",
     "start:prod": "node --experimental-transform-types dist/main",
     "type-check": "tsc --noEmit",
-    "db:generate": "tsx --env-file=.env node_modules/typeorm/cli.js migration:generate src/database/migrations/Migration -d src/database/data-source.ts",
-    "db:migrate": "tsx --env-file=.env node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
-    "db:revert": "tsx --env-file=.env node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
+    "db:generate": "tsx --env-file=.env ../../node_modules/typeorm/cli.js migration:generate src/database/migrations/Migration -d src/database/data-source.ts",
+    "db:migrate": "tsx --env-file=.env ../../node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
+    "db:revert": "tsx --env-file=.env ../../node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts",
     "db:seed": "tsx --env-file=.env src/database/seed.ts",
     "db:seed:prod": "tsx --env-file=.env src/database/seed-production.ts"
   },

@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { BookOpen, Plus, Filter, ChevronRight } from "lucide-react";
-import { CEFR_LEVELS, EXERCISE_LANGUAGES } from "@langopia/shared/types";
+import { EXERCISE_LANGUAGES } from "@langopia/shared/types";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useRouter } from "next/navigation";
@@ -30,6 +31,7 @@ export default function LessonsPage() {
   const { selectedAcademy, loading: academyLoading } = useAcademy();
   const router = useRouter();
   const api = useApiKeyClient();
+  const { levelCodes } = useAcademyLevels();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [total, setTotal] = useState(0);
 
@@ -180,7 +182,7 @@ export default function LessonsPage() {
                 onChange={(e) => setNewCefrLevel(e.target.value)}
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
               >
-                {CEFR_LEVELS.map((l) => (
+                {levelCodes.map((l) => (
                   <option key={l} value={l}>{l}</option>
                 ))}
               </select>
@@ -234,7 +236,7 @@ export default function LessonsPage() {
           className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800"
         >
           <option value="all">All levels</option>
-          {CEFR_LEVELS.map((l) => (
+          {levelCodes.map((l) => (
             <option key={l} value={l}>{l}</option>
           ))}
         </select>

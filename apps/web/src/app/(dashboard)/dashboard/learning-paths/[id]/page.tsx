@@ -16,7 +16,7 @@ import {
   ExternalLink,
   Library,
 } from "lucide-react";
-import { CEFR_LEVELS, EXERCISE_LANGUAGES } from "@langopia/shared/types";
+import { EXERCISE_LANGUAGES } from "@langopia/shared/types";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useParams, useRouter } from "next/navigation";

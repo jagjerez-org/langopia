@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useParams, useRouter } from "next/navigation";
 import { useApiKeyClient } from "@/hooks/use-api-client";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
 import type { UpdateExerciseRequest, UpdateLessonRequest } from "@langopia/api-client";
 import {
   AlertDialog,
@@ -92,6 +93,7 @@ export default function LessonDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const api = useApiKeyClient();
+  const { levelCodes } = useAcademyLevels();
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -338,6 +340,7 @@ export default function LessonDetailPage() {
           lessonTitle={lesson.title}
           lessonLanguage={lesson.language}
           lessonCefrLevel={lesson.cefrLevel}
+          levelCodes={levelCodes}
           onComplete={() => {
             loadExercises();
             loadLesson();

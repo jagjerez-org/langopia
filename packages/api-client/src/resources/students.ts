@@ -1,6 +1,7 @@
 import type { LangopiaClient } from "../client";
 import type {
   QueryStudentsParams,
+  CreateStudentRequest,
   StudentResponse,
   StudentDetailResponse,
   Paginated,
@@ -8,6 +9,15 @@ import type {
 
 export class StudentsResource {
   constructor(private client: LangopiaClient) {}
+
+  create(data: CreateStudentRequest): Promise<StudentResponse> {
+    return this.client.request({
+      method: "POST",
+      path: "/v1/students",
+      auth: "apikey",
+      body: data,
+    });
+  }
 
   list(params?: QueryStudentsParams): Promise<Paginated<StudentResponse>> {
     return this.client.request({

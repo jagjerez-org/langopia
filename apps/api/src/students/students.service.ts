@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, ConflictException, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Student } from "../database/entities/student.entity.js";
 import { RoomParticipant } from "../database/entities/room-participant.entity.js";
 import { ReportExercise } from "../database/entities/report-exercise.entity.js";
+import type { CreateStudentDto } from "./dto/create-student.dto.js";
 
 @Injectable()
 export class StudentsService {
@@ -15,6 +16,34 @@ export class StudentsService {
     @InjectRepository(ReportExercise)
     private readonly reportExerciseRepo: Repository<ReportExercise>,
   ) {}
+
+  async createStudent(academyId: string, dto: CreateStudentDto) {
+    const existing = await this.studentRepo.findOne({
+      where: { academyId, email: dto.email },
+    });
+
+    if (existing) {
+      if (!existing.isActive) {
+        existing.isActive = true;
+        existing.name = dto.name;
+        if (dto.cefrEstimate !== undefined) {
+          existing.cefrEstimate = dto.cefrEstimate ?? null;
+        }
+        await this.studentRepo.save(existing);
+        return existing;
+      }
+      throw new ConflictException("A student with this email already exists in this academy");
+    }
+
+    const student = this.studentRepo.create({
+      academyId,
+      email: dto.email,
+      name: dto.name,
+      cefrEstimate: dto.cefrEstimate ?? null,
+    });
+
+    return this.studentRepo.save(student);
+  }
 
   async listStudents(
     academyId: string,

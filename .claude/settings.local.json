@@ -45,7 +45,8 @@
       "Bash(reg query:*)",
       "Bash(adb devices:*)",
       "Bash(npx shadcn@latest:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(grep:*)"
     ]
   }
 }

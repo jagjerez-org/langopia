@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useApiKeyClient } from "@/hooks/use-api-client";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -84,6 +85,7 @@ export default function MediaLibraryPage() {
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
   const api = useApiKeyClient();
   const router = useRouter();
+  const { levelCodes } = useAcademyLevels();
 
   const [items, setItems] = useState<MediaItemData[]>([]);
   const [total, setTotal] = useState(0);
@@ -465,7 +467,7 @@ export default function MediaLibraryPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-500">CEFR Level *</label>
               <div className="grid grid-cols-6 gap-2">
-                {["A1", "A2", "B1", "B2", "C1", "C2"].map((lvl) => (
+                {levelCodes.map((lvl) => (
                   <button
                     key={lvl}
                     onClick={() => setUploadCefrLevel(lvl)}

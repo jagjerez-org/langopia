@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { BookOpen, Plus, Filter, ChevronRight, Search } from "lucide-react";
-import { CEFR_LEVELS, EXERCISE_LANGUAGES, CourseStatus } from "@langopia/shared/types";
+import { EXERCISE_LANGUAGES, CourseStatus } from "@langopia/shared/types";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useRouter } from "next/navigation";
@@ -41,6 +42,7 @@ export default function CoursesPage() {
   const { selectedAcademy, loading: academyLoading } = useAcademy();
   const router = useRouter();
   const api = useApiClient();
+  const { levelCodes } = useAcademyLevels();
   const [courses, setCourses] = useState<Course[]>([]);
   const [total, setTotal] = useState(0);
 
@@ -185,7 +187,7 @@ export default function CoursesPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {CEFR_LEVELS.map((l) => (
+                  {levelCodes.map((l) => (
                     <SelectItem key={l} value={l}>
                       {l}
                     </SelectItem>
@@ -246,7 +248,7 @@ export default function CoursesPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All levels</SelectItem>
-            {CEFR_LEVELS.map((l) => (
+            {levelCodes.map((l) => (
               <SelectItem key={l} value={l}>
                 {l}
               </SelectItem>

@@ -18,7 +18,8 @@ import {
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useApiKeyClient } from "@/hooks/use-api-client";
-import { CEFR_LEVELS, EXERCISE_LANGUAGES } from "@langopia/shared/types";
+import { EXERCISE_LANGUAGES } from "@langopia/shared/types";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,7 @@ export default function MediaDetailPage() {
   const router = useRouter();
   const { selectedAcademyData, loading: academyLoading } = useAcademy();
   const api = useApiKeyClient();
+  const { levelCodes } = useAcademyLevels();
 
   const [item, setItem] = useState<MediaItemDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -285,7 +287,7 @@ export default function MediaDetailPage() {
               onChange={(e) => setEditCefrLevel(e.target.value)}
               className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
             >
-              {CEFR_LEVELS.map((l) => (
+              {levelCodes.map((l) => (
                 <option key={l} value={l}>{l}</option>
               ))}
             </select>

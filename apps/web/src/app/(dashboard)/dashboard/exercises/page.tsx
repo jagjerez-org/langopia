@@ -20,7 +20,8 @@ import * as LucideIcons from "lucide-react";
 import { ExerciseWizard } from "@/components/exercise-wizard";
 import { RegenerateDialog } from "@/components/regenerate-dialog";
 import { ExerciseRenderer } from "@/components/exercises/exercise-renderer";
-import { CEFR_LEVELS, EXERCISE_TYPE_CONFIG, ExerciseType } from "@langopia/shared/types";
+import { EXERCISE_TYPE_CONFIG, ExerciseType } from "@langopia/shared/types";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
 import { useAcademy } from "@/components/academy-provider";
 import { useApiKeyClient } from "@/hooks/use-api-client";
 import type { UpdateExerciseRequest } from "@langopia/api-client";
@@ -75,6 +76,7 @@ function InlineEditForm({
   onSave,
   onCancel,
   saving,
+  levelCodes,
 }: {
   exercise: Exercise;
   draft: Partial<Exercise>;
@@ -82,6 +84,7 @@ function InlineEditForm({
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
+  levelCodes: string[];
 }) {
   const hasOptions = exercise.options && exercise.options.length > 0;
 
@@ -140,7 +143,7 @@ function InlineEditForm({
             onChange={(e) => onDraftChange({ ...draft, cefrLevel: e.target.value })}
             className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
           >
-            {CEFR_LEVELS.map((l) => (
+            {levelCodes.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
@@ -198,6 +201,7 @@ function InlineEditForm({
 export default function ExercisesPage() {
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
   const api = useApiKeyClient();
+  const { levelCodes } = useAcademyLevels();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [total, setTotal] = useState(0);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -350,13 +354,13 @@ export default function ExercisesPage() {
   // Group exercises
   const grouped = new Map<string, Exercise[]>();
   if (groupBy === "level") {
-    // Group by CEFR level in order
-    for (const level of CEFR_LEVELS) {
+    // Group by academy level in order
+    for (const level of levelCodes) {
       const matching = filtered.filter((ex) => ex.cefrLevel === level);
       if (matching.length > 0) grouped.set(level, matching);
     }
     // Any exercises without a recognized level
-    const uncategorized = filtered.filter((ex) => !(CEFR_LEVELS as readonly string[]).includes(ex.cefrLevel));
+    const uncategorized = filtered.filter((ex) => !levelCodes.includes(ex.cefrLevel));
     if (uncategorized.length > 0) grouped.set("Other", uncategorized);
   } else {
     for (const ex of filtered) {
@@ -451,6 +455,7 @@ export default function ExercisesPage() {
           open={wizardOpen}
           onOpenChange={setWizardOpen}
           apiKey={apiKey}
+          levelCodes={levelCodes}
           onComplete={() => {
             loadExercises();
             loadTokenUsage();
@@ -489,7 +494,7 @@ export default function ExercisesPage() {
           className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800"
         >
           <option value="all">All levels</option>
-          {CEFR_LEVELS.map((l) => (
+          {levelCodes.map((l) => (
             <option key={l} value={l}>{l}</option>
           ))}
         </select>
@@ -647,6 +652,7 @@ export default function ExercisesPage() {
                           onSave={() => handleSaveEdit(ex.id)}
                           onCancel={() => toggleEdit(ex.id)}
                           saving={savingEdits.has(ex.id)}
+                          levelCodes={levelCodes}
                         />
                       )}
                     </div>

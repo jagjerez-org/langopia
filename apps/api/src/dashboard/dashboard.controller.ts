@@ -1,9 +1,10 @@
 import {
   Controller,
   Get,
+  Query,
   UseGuards,
 } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard.js";
@@ -13,7 +14,7 @@ import { AcademyMember } from "../database/entities/academy-member.entity.js";
 import { Room } from "../database/entities/room.entity.js";
 import { ClassReport } from "../database/entities/class-report.entity.js";
 import { UsageRecord } from "../database/entities/usage-record.entity.js";
-import { UsageMetric } from "@langopia/shared/types";
+import { UsageMetric, PLAN_LIMITS, UserPlan } from "@langopia/shared/types";
 
 @ApiTags("Dashboard")
 @ApiBearerAuth()
@@ -92,6 +93,124 @@ export class DashboardController {
       totalReports,
       totalClassHours,
       totalTokens,
+    };
+  }
+
+  private getCurrentPeriod(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  @Get("activity")
+  @ApiOperation({ summary: "Get recent activity (classes & hours per day)" })
+  @ApiQuery({ name: "days", required: false, description: "Number of days (default 7)" })
+  async getActivity(
+    @CurrentUser() user: User,
+    @Query("days") daysParam?: string,
+  ) {
+    const days = Math.min(Math.max(parseInt(daysParam ?? "7", 10) || 7, 1), 90);
+
+    const memberships = await this.memberRepo.find({
+      where: { userId: user.id },
+      select: ["academyId"],
+    });
+    const academyIds = memberships.map((m) => m.academyId);
+
+    // Build date range
+    const now = new Date();
+    const since = new Date(now);
+    since.setDate(now.getDate() - days + 1);
+    since.setHours(0, 0, 0, 0);
+
+    // Generate all dates in range
+    const dateMap = new Map<string, { classes: number; hours: number }>();
+    for (let i = 0; i < days; i++) {
+      const d = new Date(since);
+      d.setDate(since.getDate() + i);
+      dateMap.set(d.toISOString().slice(0, 10), { classes: 0, hours: 0 });
+    }
+
+    if (academyIds.length > 0) {
+      const rows = await this.roomRepo
+        .createQueryBuilder("room")
+        .select("DATE(room.startedAt)", "day")
+        .addSelect("COUNT(room.id)", "classes")
+        .addSelect(
+          `COALESCE(SUM(report.classDuration), SUM(EXTRACT(EPOCH FROM (room.endedAt - room.startedAt)) / 60), 0)`,
+          "minutes",
+        )
+        .leftJoin("class_reports", "report", "report.roomId = room.id")
+        .where("room.academyId IN (:...ids)", { ids: academyIds })
+        .andWhere("room.startedAt IS NOT NULL")
+        .andWhere("room.startedAt >= :since", { since })
+        .groupBy("DATE(room.startedAt)")
+        .getRawMany();
+
+      for (const row of rows) {
+        const dateStr =
+          row.day instanceof Date
+            ? row.day.toISOString().slice(0, 10)
+            : String(row.day).slice(0, 10);
+        if (dateMap.has(dateStr)) {
+          dateMap.set(dateStr, {
+            classes: Number(row.classes),
+            hours: parseFloat((Number(row.minutes) / 60).toFixed(1)),
+          });
+        }
+      }
+    }
+
+    return Array.from(dateMap.entries()).map(([date, data]) => ({
+      date,
+      classes: data.classes,
+      hours: data.hours,
+    }));
+  }
+
+  @Get("usage")
+  @ApiOperation({ summary: "Get usage stats for an academy (JWT auth)" })
+  @ApiQuery({ name: "academyId", required: true, description: "Academy ID" })
+  @ApiQuery({ name: "period", required: false, description: "Period in YYYY-MM format" })
+  async getUsage(
+    @CurrentUser() user: User,
+    @Query("academyId") academyId: string,
+    @Query("period") periodParam: string | undefined,
+  ) {
+    // Verify user is a member of this academy
+    const membership = await this.memberRepo.findOne({
+      where: { userId: user.id, academyId },
+    });
+    if (!membership) {
+      return { period: periodParam ?? this.getCurrentPeriod(), plan: user.plan, usage: {}, limits: PLAN_LIMITS[user.plan] };
+    }
+
+    const period = periodParam ?? this.getCurrentPeriod();
+
+    const records = await this.usageRepo.find({
+      where: { userId: user.id, academyId, period },
+    });
+
+    const usage: Record<string, number> = {};
+    for (const metric of Object.values(UsageMetric)) {
+      const record = records.find((r) => r.metric === metric);
+      usage[metric] = Number(record?.value ?? 0);
+    }
+
+    const plan = user.plan ?? UserPlan.FREE;
+    const limits = PLAN_LIMITS[plan];
+
+    return {
+      period,
+      plan,
+      usage,
+      limits: {
+        maxClassesPerMonth: limits.maxClassesPerMonth,
+        maxClassHoursPerMonth: limits.maxClassHoursPerMonth,
+        maxReportsPerMonth: limits.maxReportsPerMonth,
+        maxStudentsPerRoom: limits.maxStudentsPerRoom,
+        maxStorageBytes: limits.maxStorageBytes,
+        maxAiTokensPerMonth: limits.maxAiTokensPerMonth,
+      },
     };
   }
 }

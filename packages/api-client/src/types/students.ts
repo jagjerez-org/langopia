@@ -7,6 +7,12 @@ export interface QueryStudentsParams extends PaginationParams {
   includeInactive?: boolean;
 }
 
+export interface CreateStudentRequest {
+  name: string;
+  email: string;
+  cefrEstimate?: string;
+}
+
 // ─── Responses ──────────────────────────────────────
 
 export interface StudentResponse {

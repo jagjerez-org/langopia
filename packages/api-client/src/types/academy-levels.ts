@@ -2,12 +2,12 @@
 
 export interface CreateAcademyLevelRequest {
   code: string;
-  name: string;
+  label: string;
   sortOrder?: number;
 }
 
 export interface UpdateAcademyLevelRequest {
-  name?: string;
+  label?: string;
   sortOrder?: number;
 }
 
@@ -16,7 +16,7 @@ export interface UpdateAcademyLevelRequest {
 export interface AcademyLevelResponse {
   id: string;
   code: string;
-  name: string;
+  label: string;
   sortOrder: number;
   academyId: string;
   createdAt: string;

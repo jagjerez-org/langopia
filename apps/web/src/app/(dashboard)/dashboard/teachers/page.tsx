@@ -79,8 +79,9 @@ export default function TeachersPage() {
   const fetchTeachers = useCallback(async () => {
     setLoadingTeachers(true);
     try {
-      const data = await apiKey.teachers.list();
-      setTeachers(data as unknown as Teacher[]);
+      const res = await apiKey.teachers.list();
+      const list = Array.isArray(res) ? res : (res as { data: Teacher[] }).data ?? [];
+      setTeachers(list as Teacher[]);
     } catch {
       /* ignore */
     } finally {

@@ -16,7 +16,7 @@ import {
   Library,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
-import { CEFR_LEVELS, EXERCISE_LANGUAGES, ExerciseType, EXERCISE_TYPE_CONFIG } from "@langopia/shared/types";
+import { EXERCISE_LANGUAGES, ExerciseType, EXERCISE_TYPE_CONFIG } from "@langopia/shared/types";
 import { ApiError } from "@langopia/api-client";
 import { toast } from "sonner";
 import { useApiKeyClient } from "@/hooks/use-api-client";
@@ -41,6 +41,7 @@ interface ExerciseWizardProps {
   lessonTitle?: string;
   lessonLanguage?: string;
   lessonCefrLevel?: string;
+  levelCodes?: string[];
   onComplete?: () => void;
 }
 
@@ -148,6 +149,7 @@ export function ExerciseWizard({
   lessonTitle,
   lessonLanguage,
   lessonCefrLevel,
+  levelCodes = [],
   onComplete,
 }: ExerciseWizardProps) {
   const api = useApiKeyClient();
@@ -414,7 +416,7 @@ export function ExerciseWizard({
                   disabled={!!lessonCefrLevel}
                   className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 disabled:opacity-60"
                 >
-                  {CEFR_LEVELS.map((l) => (
+                  {levelCodes.map((l) => (
                     <option key={l} value={l}>{l}</option>
                   ))}
                 </select>

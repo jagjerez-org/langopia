@@ -336,10 +336,10 @@ async function seed() {
     const planId = i < 3 ? ID.planBasic : i < 6 ? ID.planPremium : ID.planVip;
     const status = i === 7 ? "past_due" : "active";
     await ds.query(
-      `INSERT INTO student_subscriptions (id, "studentId", "academyPlanId", status, "startDate", "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-       ON CONFLICT (id) DO UPDATE SET "academyPlanId" = $3, status = $4, "updatedAt" = NOW()`,
-      [subId(i + 1), studentId(i + 1), planId, status, daysAgo(10 + i * 7)],
+      `INSERT INTO student_subscriptions (id, "studentId", "academyPlanId", "academyId", status, "currentPeriodStart", "currentPeriodEnd", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+       ON CONFLICT (id) DO UPDATE SET "academyPlanId" = $3, status = $5, "updatedAt" = NOW()`,
+      [subId(i + 1), studentId(i + 1), planId, ID.academy1, status, daysAgo(10 + i * 7), daysAgo(-(20 - i * 7))],
     );
   }
   console.log("  8 subscriptions upserted");
@@ -494,9 +494,9 @@ async function seed() {
     for (let j = 0; j < enrollCount; j++) {
       const csStatus = c.status === "completed" ? "attended" : c.status === "cancelled" ? "cancelled" : "enrolled";
       await ds.query(
-        `INSERT INTO class_students (id, "classId", "studentId", status, "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, NOW(), NOW())
-         ON CONFLICT (id) DO UPDATE SET status = $4, "updatedAt" = NOW()`,
+        `INSERT INTO class_students (id, "classId", "studentId", status, "createdAt")
+         VALUES ($1, $2, $3, $4, NOW())
+         ON CONFLICT (id) DO UPDATE SET status = $4`,
         [classStudentId(i + 1, j + 1), cId, studentId(j + 1), csStatus],
       );
     }
@@ -551,9 +551,9 @@ async function seed() {
   for (let i = 0; i < customFields.length; i++) {
     const cf = customFields[i];
     await ds.query(
-      `INSERT INTO application_custom_fields (id, "academyId", "fieldName", "fieldType", "isRequired", options, "sortOrder", "createdAt")
+      `INSERT INTO application_custom_fields (id, "academyId", label, "fieldType", "isRequired", options, "sortOrder", "createdAt")
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-       ON CONFLICT (id) DO UPDATE SET "fieldName" = $3, "fieldType" = $4, "isRequired" = $5, options = $6, "sortOrder" = $7`,
+       ON CONFLICT (id) DO UPDATE SET label = $3, "fieldType" = $4, "isRequired" = $5, options = $6, "sortOrder" = $7`,
       [cf.id, ID.academy1, cf.name, cf.type, cf.req, JSON.stringify(cf.opts), i],
     );
   }
@@ -575,9 +575,9 @@ async function seed() {
   for (let i = 0; i < metrics.length; i++) {
     const m = metrics[i];
     await ds.query(
-      `INSERT INTO usage_records (id, "userId", "academyId", metric, value, period, "createdAt")
-       VALUES ($1, $2, $3, $4, $5, $6, NOW())
-       ON CONFLICT (id) DO UPDATE SET value = $5`,
+      `INSERT INTO usage_records (id, "userId", "academyId", metric, value, period)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT ("userId", "academyId", period, metric) DO UPDATE SET value = $5`,
       [usageId(i + 1), ID.user1, ID.academy1, m.metric, m.value, currentMonth],
     );
   }

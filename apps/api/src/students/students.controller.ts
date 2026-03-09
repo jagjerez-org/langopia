@@ -1,10 +1,11 @@
-import { Controller, Get, Patch, Param, Query, UseGuards, HttpCode, HttpStatus } from "@nestjs/common";
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, HttpCode, HttpStatus } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { ApiKeyGuard } from "../auth/guards/api-key.guard.js";
 import { CurrentAcademy } from "../auth/decorators/current-academy.decorator.js";
 import { Academy } from "../database/entities/academy.entity.js";
 import { StudentsService } from "./students.service.js";
 import { QueryStudentsDto } from "./dto/query-students.dto.js";
+import { CreateStudentDto } from "./dto/create-student.dto.js";
 
 @ApiTags("Students")
 @ApiBearerAuth()
@@ -12,6 +13,15 @@ import { QueryStudentsDto } from "./dto/query-students.dto.js";
 @UseGuards(ApiKeyGuard)
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
+
+  @Post()
+  @ApiOperation({ summary: "Create a student manually" })
+  async createStudent(
+    @CurrentAcademy() academy: Academy,
+    @Body() dto: CreateStudentDto,
+  ) {
+    return this.studentsService.createStudent(academy.id, dto);
+  }
 
   @Get()
   @ApiOperation({ summary: "List students for the academy" })

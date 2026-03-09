@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useParams, useRouter } from "next/navigation";
 import { useApiClient, useApiKeyClient } from "@/hooks/use-api-client";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
 import type {
   CourseResponse,
   UpdateCourseRequest,
@@ -71,6 +72,7 @@ export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const api = useApiClient();
+  const { levelCodes } = useAcademyLevels();
   const apiKey = useApiKeyClient();
 
   const [course, setCourse] = useState<CourseResponse | null>(null);
@@ -295,7 +297,7 @@ export default function CourseDetailPage() {
                   onChange={(e) => setEditDraft((d) => ({ ...d, cefrLevel: e.target.value }))}
                   className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
                 >
-                  {["A1", "A2", "B1", "B2", "C1", "C2"].map((l) => (
+                  {levelCodes.map((l) => (
                     <option key={l} value={l}>{l}</option>
                   ))}
                 </select>

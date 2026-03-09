@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { useAcademy } from "@/components/academy-provider";
 import {
@@ -15,7 +15,7 @@ import {
   BookOpen,
   Route,
 } from "lucide-react";
-import type { DashboardOverview } from "@langopia/api-client";
+import type { DashboardOverview, DashboardActivityDay } from "@langopia/api-client";
 import { useApiClient } from "@/hooks/use-api-client";
 import { Badge } from "@/components/ui/badge";
 import { TutorialOverlay } from "@/components/tutorial-overlay";
@@ -30,34 +30,26 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-function generateMockActivityData() {
-  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const today = new Date();
-  const data = [];
-
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    data.push({
-      day: days[date.getDay()],
-      Classes: Math.floor(Math.random() * 8) + 1,
-      Hours: parseFloat((Math.random() * 6 + 0.5).toFixed(1)),
-    });
-  }
-
-  return data;
-}
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function DashboardOverviewPage() {
   const { user } = useAuth();
   const { academies, selectedAcademy } = useAcademy();
   const api = useApiClient();
   const [stats, setStats] = useState<DashboardOverview | null>(null);
-
-  const activityData = useMemo(() => generateMockActivityData(), []);
+  const [activityData, setActivityData] = useState<{ day: string; Classes: number; Hours: number }[]>([]);
 
   useEffect(() => {
     api.dashboard.overview().then(setStats).catch(() => {});
+    api.dashboard.activity(7).then((data) => {
+      setActivityData(
+        data.map((d) => ({
+          day: DAY_NAMES[new Date(d.date + "T00:00:00").getDay()],
+          Classes: d.classes,
+          Hours: d.hours,
+        })),
+      );
+    }).catch(() => {});
   }, [api]);
 
   const cards = [

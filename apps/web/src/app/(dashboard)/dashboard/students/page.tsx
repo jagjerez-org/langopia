@@ -1,12 +1,28 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Users, Search, UserX, UserCheck } from "lucide-react";
+import { Users, Search, UserX, UserCheck, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
-import { useApiKeyClient } from "@/hooks/use-api-client";
+import { useApiClient, useApiKeyClient } from "@/hooks/use-api-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Student {
   id: string;
@@ -23,10 +39,17 @@ interface Student {
 export default function StudentsPage() {
   const { selectedAcademy, selectedAcademyData, loading } = useAcademy();
   const api = useApiKeyClient();
+  const jwtApi = useApiClient();
   const [students, setStudents] = useState<Student[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState("");
   const [showInactive, setShowInactive] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newCefr, setNewCefr] = useState<string>("");
+  const [academyLevels, setAcademyLevels] = useState<{ code: string; label: string }[]>([]);
 
   const fetchStudents = useCallback(async () => {
     if (!selectedAcademy || !selectedAcademyData?.apiKey) return;
@@ -48,6 +71,34 @@ export default function StudentsPage() {
     setTotal(0);
     fetchStudents();
   }, [fetchStudents]);
+
+  useEffect(() => {
+    if (!selectedAcademy) return;
+    jwtApi.academyLevels.list(selectedAcademy).then(setAcademyLevels).catch(() => {});
+  }, [selectedAcademy, jwtApi]);
+
+  async function handleCreateStudent() {
+    if (!newName.trim() || !newEmail.trim()) return;
+    setCreating(true);
+    try {
+      await api.students.create({
+        name: newName.trim(),
+        email: newEmail.trim(),
+        cefrEstimate: newCefr || undefined,
+      });
+      toast.success("Student added successfully");
+      setDialogOpen(false);
+      setNewName("");
+      setNewEmail("");
+      setNewCefr("");
+      fetchStudents();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to add student";
+      toast.error(message);
+    } finally {
+      setCreating(false);
+    }
+  }
 
   async function toggleActive(student: Student) {
     try {
@@ -102,6 +153,10 @@ export default function StudentsPage() {
           <p className="text-sm text-zinc-500 dark:text-zinc-400">{total} students tracked</p>
         </div>
         <div className="flex items-center gap-3">
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            <Plus className="mr-1.5 h-3.5 w-3.5" />
+            Add Student
+          </Button>
           <Button
             variant={showInactive ? "default" : "outline"}
             size="sm"
@@ -217,11 +272,68 @@ export default function StudentsPage() {
             <Users className="mb-3 h-10 w-10 text-zinc-400" />
             <p className="font-medium text-zinc-500">No students yet</p>
             <p className="mt-1 text-sm text-zinc-400">
-              Students appear when they join rooms
+              Students appear when they join rooms or you add them manually
             </p>
           </div>
         )}
       </div>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Student</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="student-name">Name</Label>
+              <Input
+                id="student-name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Student name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="student-email">Email</Label>
+              <Input
+                id="student-email"
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="student@example.com"
+              />
+            </div>
+            {academyLevels.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="student-cefr">Level (optional)</Label>
+                <Select value={newCefr} onValueChange={setNewCefr}>
+                  <SelectTrigger id="student-cefr">
+                    <SelectValue placeholder="Select level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {academyLevels.map((level) => (
+                      <SelectItem key={level.code} value={level.code}>
+                        {level.code} — {level.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateStudent}
+              disabled={creating || !newName.trim() || !newEmail.trim()}
+            >
+              {creating ? "Adding..." : "Add Student"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

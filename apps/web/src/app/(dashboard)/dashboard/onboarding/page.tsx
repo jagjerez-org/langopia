@@ -186,7 +186,7 @@ export default function OnboardingPage() {
     for (let i = 0; i < levels.length; i++) {
       await api.academyLevels.create(selectedAcademy, {
         code: levels[i].code,
-        name: levels[i].name,
+        label: levels[i].name,
         sortOrder: i,
       });
     }
