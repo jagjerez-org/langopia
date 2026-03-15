@@ -302,6 +302,155 @@
             margin: 60px 0;
         }
 
+        /* AI Highlight section */
+        .ai-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 60px 40px;
+            color: white;
+            text-align: center;
+            margin: 48px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+            animation: pulse-bg 6s ease-in-out infinite;
+        }
+
+        @keyframes pulse-bg {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+
+        .ai-hero h2 {
+            color: white;
+            font-size: 2.2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .ai-hero p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.15rem;
+            max-width: 600px;
+            margin: 0 auto 16px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .ai-hero .stat-row {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 32px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .ai-hero .stat {
+            text-align: center;
+        }
+
+        .ai-hero .stat .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .ai-hero .stat .label {
+            font-size: 0.9rem;
+            opacity: 0.85;
+        }
+
+        /* AI feature cards */
+        .ai-features {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin: 32px 0;
+        }
+
+        .ai-feature-card {
+            border: 1px solid var(--notion-border);
+            border-radius: 12px;
+            padding: 28px;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            transition: all 0.3s ease;
+        }
+
+        .ai-feature-card:hover {
+            box-shadow: var(--shadow-large);
+            border-color: #667eea;
+        }
+
+        .ai-feature-card .ai-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            background: var(--notion-purple-light);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ai-feature-card h4 {
+            margin-bottom: 8px;
+            color: var(--notion-text);
+        }
+
+        .ai-feature-card p {
+            margin-bottom: 0;
+            font-size: 0.95rem;
+        }
+
+        /* AI comparison table */
+        .comparison {
+            margin: 40px 0;
+        }
+
+        .comparison-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0;
+            border-bottom: 1px solid var(--notion-border);
+            padding: 16px 0;
+        }
+
+        .comparison-row.header {
+            font-weight: 600;
+            color: var(--notion-text);
+            border-bottom: 2px solid var(--notion-text);
+        }
+
+        .comparison-row .cell {
+            padding: 4px 12px;
+            font-size: 0.95rem;
+            color: var(--notion-text-gray);
+        }
+
+        .comparison-row .cell:first-child {
+            font-weight: 500;
+            color: var(--notion-text);
+        }
+
+        .comparison-row .cell.highlight {
+            color: var(--notion-green);
+            font-weight: 600;
+        }
+
         /* Footer */
         .footer {
             text-align: center;
@@ -435,6 +584,148 @@
                     <div class="icon">📱</div>
                     <h4>Student Learning App</h4>
                     <p>Personalized learning experience with progress tracking and exercises</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- AI HERO BLOCK -->
+        <section class="section">
+            <div class="ai-hero">
+                <h2>🧠 AI-Powered Language Learning</h2>
+                <p>Artificial Intelligence is at the core of everything Langopia does. From the moment a class starts to the exercises a student practices at home — AI drives the entire learning experience.</p>
+                <div class="stat-row">
+                    <div class="stat">
+                        <span class="number">11+</span>
+                        <span class="label">AI Exercise Types</span>
+                    </div>
+                    <div class="stat">
+                        <span class="number">A1–C2</span>
+                        <span class="label">Auto CEFR Alignment</span>
+                    </div>
+                    <div class="stat">
+                        <span class="number">0s</span>
+                        <span class="label">Manual Report Writing</span>
+                    </div>
+                    <div class="stat">
+                        <span class="number">24/7</span>
+                        <span class="label">AI Tutor Available</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Deep Dive: How AI Works -->
+        <section class="section">
+            <h2>How AI Powers Every Stage</h2>
+            <p>Unlike tools that bolt AI on as an afterthought, Langopia's AI is deeply integrated into every layer of the platform — from class preparation to post-class analysis and student practice.</p>
+
+            <div class="ai-features">
+                <div class="ai-feature-card">
+                    <div class="ai-icon">📝</div>
+                    <div>
+                        <h4>AI Lesson Planning Assistant</h4>
+                        <p>Teachers describe what they want to teach (or upload a PDF, video, or article) and the AI generates a complete lesson plan — including timing, objectives, warm-up activities, and materials. Chat with the AI to refine the plan until it's perfect.</p>
+                    </div>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-icon">🎯</div>
+                    <div>
+                        <h4>Automatic Exercise Generation</h4>
+                        <p>From any content source — a YouTube video, a news article, a podcast — Langopia's AI generates CEFR-aligned exercises across 11+ types: tap-to-order, fill-in-the-blank, listen & repeat, complete the chat, watch & reflect, multiple choice, and more. Each exercise adapts to the student's level.</p>
+                    </div>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-icon">🎙️</div>
+                    <div>
+                        <h4>Real-Time Class Transcription</h4>
+                        <p>Every live class is transcribed in real-time using Whisper with speaker diarization. The AI identifies who said what, tracks speaking time per student, and captures every language interaction for later analysis.</p>
+                    </div>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-icon">🧠</div>
+                    <div>
+                        <h4>Post-Class AI Analysis (GPT-4o)</h4>
+                        <p>After each class, GPT-4o analyzes the full transcript to extract: vocabulary used (with CEFR tags), grammar patterns and errors, pronunciation observations, participation metrics, and personalized improvement suggestions for each student.</p>
+                    </div>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-icon">📊</div>
+                    <div>
+                        <h4>Automated Student Reports</h4>
+                        <p>Instead of teachers spending 20+ minutes writing reports after each class, Langopia generates detailed, professional reports automatically — including vocabulary highlights, grammar corrections, next steps, and CEFR progress indicators. Teachers just review and send.</p>
+                    </div>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-icon">🗣️</div>
+                    <div>
+                        <h4>AI Voice & Pronunciation (XTTS)</h4>
+                        <p>Langopia includes its own text-to-speech engine (XTTS) for listen & repeat exercises with natural-sounding voices in multiple languages. Students can practice pronunciation and receive instant feedback — no teacher required.</p>
+                    </div>
+                </div>
+                <div class="ai-feature-card">
+                    <div class="ai-icon">🔄</div>
+                    <div>
+                        <h4>Adaptive Learning Loop</h4>
+                        <p>The AI creates a continuous feedback loop: Class analysis → identifies gaps → generates targeted exercises → student practices → tracks improvement → informs next class plan. Every interaction makes the system smarter about each student's needs.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Before vs After AI -->
+        <section class="section">
+            <h2>Before vs. After Langopia AI</h2>
+            <p>See the difference AI makes in a teacher's daily workflow:</p>
+
+            <div class="comparison">
+                <div class="comparison-row header">
+                    <div class="cell">Task</div>
+                    <div class="cell">Without Langopia</div>
+                    <div class="cell">With Langopia AI</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="cell">Lesson planning</div>
+                    <div class="cell">45–90 min manual prep</div>
+                    <div class="cell highlight">2 min AI chat → ready</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="cell">Creating exercises</div>
+                    <div class="cell">30 min per exercise set</div>
+                    <div class="cell highlight">10 sec auto-generated</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="cell">Post-class reports</div>
+                    <div class="cell">20 min per student</div>
+                    <div class="cell highlight">Instant — auto-generated</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="cell">Track student vocabulary</div>
+                    <div class="cell">Impossible at scale</div>
+                    <div class="cell highlight">Automatic CEFR tagging</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="cell">Grammar error tracking</div>
+                    <div class="cell">Teacher's memory only</div>
+                    <div class="cell highlight">AI logs every pattern</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="cell">Student practice outside class</div>
+                    <div class="cell">Generic apps (Duolingo)</div>
+                    <div class="cell highlight">Personalized to their class</div>
+                </div>
+                <div class="comparison-row">
+                    <div class="cell">Pronunciation practice</div>
+                    <div class="cell">Only during class time</div>
+                    <div class="cell highlight">24/7 with AI voice</div>
+                </div>
+            </div>
+
+            <div class="callout purple">
+                <span class="emoji">⚡</span>
+                <div class="content">
+                    <p><strong>Result:</strong> Teachers save 5–10 hours per week on administrative tasks and content creation, while students get a dramatically more personalized learning experience. The AI handles the busywork — teachers focus on what humans do best: connect, motivate, and teach.</p>
                 </div>
             </div>
         </section>
