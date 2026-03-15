@@ -556,11 +556,38 @@
             
             <div class="screenshot-gallery" style="margin-top: 3rem;">
                 <div class="screenshot-item">
+                    <img src="screenshots/27-room-join.png" alt="Join Room" loading="lazy">
+                    <div class="screenshot-content">
+                        <h4>Room Entry</h4>
+                        <p>Clean join interface for teachers and students. Teachers get host controls; students join with a simple name entry. Token-based access ensures security.</p>
+                    </div>
+                </div>
+                <div class="screenshot-item">
                     <img src="screenshots/10-rooms.png" alt="Room Management" loading="lazy">
                     <div class="screenshot-content">
-                        <h4>Virtual Classroom Management</h4>
-                        <p>Create and manage virtual rooms with custom settings, participant controls, and scheduling integration.</p>
+                        <h4>Room Management</h4>
+                        <p>Create and manage virtual classrooms via the dashboard or API. Each room supports video, audio, chat, notes, slides, and an interactive whiteboard.</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Room Features Detail -->
+            <div class="features-grid" style="margin-top: 3rem;">
+                <div class="feature-card">
+                    <h3>💬 In-Room Chat</h3>
+                    <p>Real-time text chat during class. Students can ask questions without interrupting the flow of the lesson.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>📋 Teacher Notes</h3>
+                    <p>Teachers can take live notes during the session. Notes are saved and can be shared with students after class.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>🎙️ Live Transcription</h3>
+                    <p>Real-time speech-to-text during class using OpenAI Whisper. Students see subtitles live, and the full transcript is saved for review.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>💡 Smart Suggestions</h3>
+                    <p>5 minutes before class ends, AI suggests vocabulary review, homework topics, and next steps based on the conversation.</p>
                 </div>
             </div>
         </div>
@@ -571,25 +598,139 @@
         <div class="container">
             <div class="section-header">
                 <h2>AI-Powered Intelligence</h2>
-                <p>Advanced AI pipeline for automatic transcription, analysis, and intelligent insights</p>
+                <p>Three AI pillars: content creation, live class analysis, and personalized student learning</p>
             </div>
-            
-            <div class="features-grid">
-                <div class="feature-card">
-                    <h3>🎤 Whisper Transcription</h3>
-                    <p>State-of-the-art speech recognition technology that accurately transcribes class conversations in multiple languages.</p>
+
+            <!-- AI Pillar 1: Content Planning -->
+            <div style="margin-bottom: 4rem;">
+                <h3 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--accent); text-align: center;">📝 AI Content Planning</h3>
+                <p style="text-align: center; color: var(--text-secondary); max-width: 700px; margin: 0 auto 2rem;">Teachers describe what they want to teach, and AI generates complete lesson plans, courses, and exercises automatically.</p>
+                
+                <div class="screenshot-gallery">
+                    <div class="screenshot-item">
+                        <img src="screenshots/28-exercise-wizard.png" alt="Exercise Wizard" loading="lazy">
+                        <div class="screenshot-content">
+                            <h4>AI Exercise Generator</h4>
+                            <p>Upload a text, PDF, or describe a topic — AI generates exercises adapted to the target CEFR level. Supports 11+ exercise types: tap-to-order, listen & repeat, complete chat, watch & reflect, and more.</p>
+                        </div>
+                    </div>
+                    <div class="screenshot-item">
+                        <img src="screenshots/06-courses.png" alt="Course Wizard" loading="lazy">
+                        <div class="screenshot-content">
+                            <h4>Smart Course Builder</h4>
+                            <p>AI assists in structuring courses by suggesting lesson sequences, topics, and difficulty progression based on CEFR standards. Teachers can refine suggestions through a chat interface.</p>
+                        </div>
+                    </div>
+                    <div class="screenshot-item">
+                        <img src="screenshots/07-lessons.png" alt="Lesson Planning" loading="lazy">
+                        <div class="screenshot-content">
+                            <h4>Lesson Plan Chat</h4>
+                            <p>An AI chat assistant helps teachers plan lessons. Reference materials with # and exercise types with @. The AI suggests the optimal mix of exercises for each lesson.</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <h3>🧠 GPT-4o Analysis</h3>
-                    <p>Advanced language model analysis for generating detailed class reports, identifying learning patterns, and providing insights.</p>
+
+                <div class="features-grid" style="margin-top: 2rem;">
+                    <div class="feature-card">
+                        <h3>📄 Material Extraction</h3>
+                        <p>Upload PDFs, articles, or paste text. AI extracts key vocabulary, grammar points, and cultural topics to generate targeted exercises.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🔄 Regeneration & Refinement</h3>
+                        <p>Not happy with a generated exercise? Regenerate with different parameters, adjust difficulty, or tweak the prompt — all without starting over.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🎯 CEFR-Aligned Content</h3>
+                        <p>All AI-generated content is automatically aligned to CEFR levels (A1–C2), ensuring appropriate difficulty for each student group.</p>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <h3>📊 Automatic Reports</h3>
-                    <p>Class reports are automatically generated after each session, providing teachers and students with valuable feedback.</p>
+            </div>
+
+            <!-- AI Pillar 2: Live Class Analysis -->
+            <div style="margin-bottom: 4rem;">
+                <h3 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--accent); text-align: center;">🎙️ Live Class Analysis Pipeline</h3>
+                <p style="text-align: center; color: var(--text-secondary); max-width: 700px; margin: 0 auto 2rem;">Every class is recorded, transcribed, and analyzed automatically — zero teacher effort required.</p>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h3>Step 1: Recording</h3>
+                        <p>LiveKit Egress records the full class session (audio + video). Recordings are stored securely in S3-compatible storage (MinIO).</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Step 2: Transcription</h3>
+                        <p>OpenAI Whisper transcribes the recording with speaker diarization — identifying teacher vs. student speech with word-level timestamps.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>Step 3: Analysis</h3>
+                        <p>GPT-4o-mini analyzes the transcript: vocabulary used, grammar errors with corrections, speaking time distribution, and personalized suggestions.</p>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <h3>🎯 Learning Insights</h3>
-                    <p>AI-powered recommendations for curriculum improvements, student progress tracking, and personalized learning paths.</p>
+
+                <div class="screenshot-gallery" style="margin-top: 2rem;">
+                    <div class="screenshot-item">
+                        <img src="screenshots/09-reports.png" alt="AI Reports" loading="lazy">
+                        <div class="screenshot-content">
+                            <h4>Automatic Class Reports</h4>
+                            <p>After each class ends, a detailed AI report is generated: summary, vocabulary list with CEFR tags, grammar corrections with explanations, speaking metrics, and improvement suggestions.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Pillar 3: Student Learning -->
+            <div>
+                <h3 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--accent); text-align: center;">🧠 AI for Student Learning</h3>
+                <p style="text-align: center; color: var(--text-secondary); max-width: 700px; margin: 0 auto 2rem;">AI personalizes the learning experience for each student, adapting to their level, strengths, and areas for improvement.</p>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <h3>📈 Learning Profiles</h3>
+                        <p>AI builds a dynamic learning profile for each student based on class performance, exercise results, and speaking patterns. The profile evolves after every interaction.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🗣️ Speaking Metrics</h3>
+                        <p>Track student speaking time vs. teacher talking time. AI identifies students who need more practice and suggests activities to increase engagement.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📝 Vocabulary Tracking</h3>
+                        <p>Every new word used in class is tagged with its CEFR level. Students can see their vocabulary growth over time and review words in context.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>✏️ Grammar Analysis</h3>
+                        <p>AI identifies recurring grammar mistakes across sessions, tracks improvement over time, and suggests targeted exercises to address weak points.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>🏋️ Adaptive Exercises</h3>
+                        <p>11+ interactive exercise types (tap-to-order, listen & match, listen & repeat, complete chat, write to complete) adapt to the student's CEFR level and learning history.</p>
+                    </div>
+                    <div class="feature-card">
+                        <h3>📊 Progress Reports</h3>
+                        <p>Students see their own progress: CEFR advancement, class attendance, vocabulary growth, grammar improvement, and personalized next steps.</p>
+                    </div>
+                </div>
+
+                <div class="screenshot-gallery" style="margin-top: 2rem;">
+                    <div class="screenshot-item">
+                        <img src="screenshots/23-app-exercises.png" alt="Student Exercises" loading="lazy">
+                        <div class="screenshot-content">
+                            <h4>Interactive Exercise Library</h4>
+                            <p>Students practice with AI-generated exercises organized by CEFR level. Each exercise type uses different learning modalities: reading, listening, writing, and speaking.</p>
+                        </div>
+                    </div>
+                    <div class="screenshot-item">
+                        <img src="screenshots/24-app-reports.png" alt="Student Reports" loading="lazy">
+                        <div class="screenshot-content">
+                            <h4>Personal Progress Dashboard</h4>
+                            <p>Each student sees their own AI-generated reports: vocabulary learned, grammar progress, speaking confidence, and personalized recommendations for improvement.</p>
+                        </div>
+                    </div>
+                    <div class="screenshot-item">
+                        <img src="screenshots/12-learning-paths.png" alt="Learning Paths" loading="lazy">
+                        <div class="screenshot-content">
+                            <h4>AI-Guided Learning Paths</h4>
+                            <p>Structured learning journeys from A1 to C2. AI suggests the optimal sequence of lessons and exercises based on student performance and goals.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
