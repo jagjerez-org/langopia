@@ -3,17 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Langopia - SaaS Platform for Language Academies</title>
+    <title>Langopia - The Complete Platform for Language Academies</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
         :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --secondary-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-            --dark-bg: #0f0f23;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --text-primary: #ffffff;
-            --text-secondary: #b8b8b8;
-            --accent: #667eea;
-            --accent-hover: #5a6fd8;
+            --notion-bg: #ffffff;
+            --notion-text: #37352f;
+            --notion-text-gray: #787774;
+            --notion-border: #e9e9e7;
+            --notion-accent: #2383e2;
+            --notion-accent-light: #e6f3ff;
+            --notion-orange: #d9730d;
+            --notion-orange-light: #fdf2e9;
+            --notion-green: #0f7b6c;
+            --notion-green-light: #e6f7f5;
+            --notion-purple: #6940a5;
+            --notion-purple-light: #f2edfe;
+            --notion-red: #e03e3e;
+            --notion-red-light: #ffeaea;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-large: 0 8px 32px rgba(0,0,0,0.08);
+            --border-radius: 6px;
         }
 
         * {
@@ -23,131 +34,27 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: var(--dark-bg);
-            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--notion-bg);
+            color: var(--notion-text);
             line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* Smooth scrolling */
-        html {
+            font-size: 16px;
             scroll-behavior: smooth;
         }
 
-        /* Header */
-        .header {
-            position: fixed;
-            top: 0;
-            width: 100%;
-            background: rgba(15, 15, 35, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 1000;
-            padding: 1rem 0;
-            transition: all 0.3s ease;
-        }
-
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .nav-links {
-            display: flex;
-            list-style: none;
-            gap: 2rem;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            transition: color 0.3s ease;
-            font-weight: 500;
-        }
-
-        .nav-links a:hover {
-            color: var(--accent);
-        }
-
-        /* Hero Section */
-        .hero {
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--primary-gradient);
-            position: relative;
-            text-align: center;
-        }
-
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 1;
+        /* Container */
+        .container {
             max-width: 800px;
-            padding: 0 2rem;
+            margin: 0 auto;
+            padding: 0 24px;
         }
 
-        .hero h1 {
-            font-size: clamp(2.5rem, 5vw, 4rem);
-            font-weight: 800;
-            margin-bottom: 1.5rem;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
-        }
-
-        .hero p {
-            font-size: clamp(1.1rem, 2vw, 1.3rem);
-            margin-bottom: 2rem;
-            opacity: 0.9;
-        }
-
-        .cta-button {
-            display: inline-block;
-            padding: 1rem 2rem;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-
-        .cta-button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
-
-        /* Sections */
+        /* Section spacing */
         .section {
-            padding: 5rem 0;
+            margin-bottom: 80px;
             opacity: 0;
-            transform: translateY(50px);
-            transition: all 0.8s ease;
+            transform: translateY(20px);
+            transition: all 0.6s ease;
         }
 
         .section.visible {
@@ -155,173 +62,291 @@
             transform: translateY(0);
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
+        /* Typography - Notion style */
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--notion-text);
+            margin-bottom: 16px;
+            line-height: 1.2;
         }
 
-        .section-header {
+        h2 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: var(--notion-text);
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--notion-text);
+            margin-bottom: 16px;
+            line-height: 1.4;
+        }
+
+        h4 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--notion-text);
+            margin-bottom: 12px;
+        }
+
+        p {
+            color: var(--notion-text-gray);
+            margin-bottom: 16px;
+            line-height: 1.7;
+        }
+
+        /* Hero section */
+        .hero {
             text-align: center;
-            margin-bottom: 4rem;
+            padding: 120px 0 80px;
         }
 
-        .section-header h2 {
-            font-size: clamp(2rem, 4vw, 3rem);
-            margin-bottom: 1rem;
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .hero h1 {
+            font-size: 4rem;
+            margin-bottom: 24px;
         }
 
-        .section-header p {
+        .hero .subtitle {
+            font-size: 1.5rem;
+            color: var(--notion-text-gray);
+            margin-bottom: 16px;
+        }
+
+        .hero .date {
+            font-size: 1rem;
+            color: var(--notion-text-gray);
+            font-weight: 500;
+        }
+
+        /* Callout blocks - Notion style */
+        .callout {
+            background: var(--notion-accent-light);
+            border-left: 4px solid var(--notion-accent);
+            padding: 20px 24px;
+            margin: 32px 0;
+            border-radius: var(--border-radius);
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .callout.orange {
+            background: var(--notion-orange-light);
+            border-left-color: var(--notion-orange);
+        }
+
+        .callout.green {
+            background: var(--notion-green-light);
+            border-left-color: var(--notion-green);
+        }
+
+        .callout.purple {
+            background: var(--notion-purple-light);
+            border-left-color: var(--notion-purple);
+        }
+
+        .callout .emoji {
             font-size: 1.2rem;
-            color: var(--text-secondary);
-            max-width: 600px;
-            margin: 0 auto;
+            margin-top: 2px;
         }
 
-        /* Feature Grid */
-        .features-grid {
+        .callout .content {
+            flex: 1;
+        }
+
+        .callout p {
+            color: var(--notion-text);
+            margin-bottom: 0;
+        }
+
+        /* Pillars grid */
+        .pillars {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 24px;
+            margin: 32px 0;
         }
 
-        .feature-card {
-            background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 255, 255, 0.08);
-        }
-
-        .feature-card h3 {
-            font-size: 1.3rem;
-            margin-bottom: 1rem;
-            color: var(--accent);
-        }
-
-        /* Screenshot Gallery */
-        .screenshot-gallery {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-
-        .screenshot-item {
-            background: var(--card-bg);
-            border-radius: 15px;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .screenshot-item:hover {
-            transform: scale(1.02);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .screenshot-item img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-            border-radius: 15px 15px 0 0;
-        }
-
-        .screenshot-content {
-            padding: 1.5rem;
-        }
-
-        .screenshot-content h4 {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-            color: var(--accent);
-        }
-
-        .screenshot-content p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        /* Tech Stack */
-        .tech-stack {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-top: 3rem;
-        }
-
-        .tech-item {
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 15px;
+        .pillar {
             text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 24px 16px;
+            border: 1px solid var(--notion-border);
+            border-radius: var(--border-radius);
             transition: all 0.3s ease;
         }
 
-        .tech-item:hover {
-            background: rgba(255, 255, 255, 0.08);
-            transform: translateY(-3px);
+        .pillar:hover {
+            box-shadow: var(--shadow-large);
+            transform: translateY(-2px);
         }
 
-        .tech-item h4 {
-            color: var(--accent);
-            margin-bottom: 0.5rem;
+        .pillar .icon {
+            font-size: 2.5rem;
+            margin-bottom: 12px;
+        }
+
+        .pillar h4 {
+            font-size: 1rem;
+            margin-bottom: 8px;
+            color: var(--notion-text);
+        }
+
+        /* Screenshots */
+        .screenshot-container {
+            margin: 40px 0;
+            text-align: center;
+        }
+
+        .screenshot {
+            width: 100%;
+            max-width: 700px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-large);
+            border: 1px solid var(--notion-border);
+        }
+
+        .screenshot-caption {
+            margin-top: 16px;
+            font-size: 0.9rem;
+            color: var(--notion-text-gray);
+            font-style: italic;
+        }
+
+        /* Process flow */
+        .process-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin: 32px 0;
+            flex-wrap: wrap;
+        }
+
+        .process-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border-radius: 24px;
+            border: 1px solid var(--notion-border);
+        }
+
+        .process-arrow {
+            font-size: 1.5rem;
+            color: var(--notion-text-gray);
+        }
+
+        /* App screenshots grid */
+        .app-screenshots {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 24px;
+            margin: 32px 0;
+        }
+
+        .app-screenshot-item {
+            text-align: center;
+        }
+
+        .app-screenshot-item img {
+            width: 100%;
+            max-width: 200px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-large);
+            border: 1px solid var(--notion-border);
+        }
+
+        .app-screenshot-item h5 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 16px 0 8px;
+            color: var(--notion-text);
+        }
+
+        .app-screenshot-item p {
+            font-size: 0.9rem;
+            color: var(--notion-text-gray);
+            margin-bottom: 0;
+        }
+
+        /* Tech stack badges */
+        .tech-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            margin: 32px 0;
+        }
+
+        .tech-badge {
+            background: #f8f9fa;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--notion-text);
+            border: 1px solid var(--notion-border);
+        }
+
+        /* Section dividers */
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: var(--notion-border);
+            margin: 60px 0;
         }
 
         /* Footer */
         .footer {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 3rem 0 2rem;
             text-align: center;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 60px 0 40px;
+            color: var(--notion-text-gray);
+            border-top: 1px solid var(--notion-border);
+            margin-top: 80px;
         }
 
-        .footer p {
-            color: var(--text-secondary);
-        }
-
-        /* Mobile Responsive */
+        /* Responsive */
         @media (max-width: 768px) {
-            .nav-links {
-                display: none;
+            .container {
+                padding: 0 16px;
             }
-
-            .screenshot-gallery {
-                grid-template-columns: 1fr;
+            
+            .hero h1 {
+                font-size: 2.5rem;
             }
-
-            .features-grid {
-                grid-template-columns: 1fr;
+            
+            .hero .subtitle {
+                font-size: 1.2rem;
             }
-
-            .tech-stack {
+            
+            h2 {
+                font-size: 1.5rem;
+            }
+            
+            .pillars {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
+            
+            .process-flow {
+                flex-direction: column;
+            }
+            
+            .process-arrow {
+                transform: rotate(90deg);
+            }
+            
+            .app-screenshots {
                 grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             }
-
-            .hero {
-                height: 90vh;
-            }
-
-            .section {
-                padding: 3rem 0;
-            }
         }
 
-        /* Animations */
+        /* Scroll animations */
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -334,460 +359,335 @@
         }
 
         .animate-on-scroll {
-            animation: fadeInUp 0.8s ease forwards;
-        }
-
-        /* Loading animation for images */
-        .screenshot-item img {
-            transition: opacity 0.3s ease;
-        }
-
-        .screenshot-item img:not([src]) {
-            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="nav-container">
-            <div class="logo">Langopia</div>
-            <nav>
-                <ul class="nav-links">
-                    <li><a href="#overview">Overview</a></li>
-                    <li><a href="#admin">Admin Dashboard</a></li>
-                    <li><a href="#student-app">Student App</a></li>
-                    <li><a href="#live-rooms">Live Rooms</a></li>
-                    <li><a href="#ai-powered">AI Features</a></li>
-                    <li><a href="#technology">Technology</a></li>
-                </ul>
-            </nav>
-        </div>
-    </header>
-
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="hero-content">
+    <div class="container">
+        <!-- Title Block -->
+        <section class="hero section">
             <h1>Langopia</h1>
-            <p>The Complete SaaS Platform for Language Academies</p>
-            <a href="#overview" class="cta-button">Explore Platform</a>
-        </div>
-    </section>
+            <p class="subtitle">The Complete Platform for Language Academies</p>
+            <p class="date">March 2026</p>
+        </section>
 
-    <!-- Platform Overview -->
-    <section id="overview" class="section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Platform Overview</h2>
-                <p>Langopia provides everything language academies need to manage their business, teach students, and deliver exceptional learning experiences.</p>
+        <!-- What is Langopia? -->
+        <section class="section">
+            <h2>What is Langopia?</h2>
+            <div class="callout">
+                <span class="emoji">💡</span>
+                <div class="content">
+                    <p><strong>Langopia is the first complete SaaS platform designed specifically for language academies.</strong> It combines academy management, live video classrooms, AI-powered content creation, and student learning apps into one seamless experience. From scheduling classes to generating personalized reports, Langopia handles everything so teachers can focus on what matters most: teaching.</p>
+                </div>
             </div>
+        </section>
+
+        <!-- The Problem -->
+        <section class="section">
+            <h2>The Problem</h2>
+            <p>Language academies today face overwhelming operational challenges that drain time and energy from actual teaching:</p>
             
-            <div class="features-grid">
-                <div class="feature-card">
-                    <h3>🎯 Admin Dashboard</h3>
-                    <p>Complete academy management with classes, courses, students, teachers, rooms, billing, and comprehensive reporting systems.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>📱 Student & Teacher Apps</h3>
-                    <p>Personalized experiences with class schedules, exercise libraries, progress reports, and profile management.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>📹 Live Video Rooms</h3>
-                    <p>LiveKit-powered virtual classrooms with interactive whiteboards and real-time collaboration tools.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>🤖 AI-Powered Analytics</h3>
-                    <p>Automatic transcription with Whisper and GPT-4o analysis for detailed class reports and insights.</p>
+            <div class="callout orange">
+                <span class="emoji">📊</span>
+                <div class="content">
+                    <p><strong>Manual Management Chaos:</strong> Juggling spreadsheets for student tracking, calendars for class scheduling, and separate tools for billing creates endless administrative overhead.</p>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <!-- Admin Dashboard -->
-    <section id="admin" class="section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Admin Dashboard</h2>
-                <p>Comprehensive academy management tools designed for efficiency and growth</p>
+            <div class="callout orange">
+                <span class="emoji">📝</span>
+                <div class="content">
+                    <p><strong>Content Creation Bottleneck:</strong> Teachers spend hours manually creating exercises, lesson plans, and assessments instead of focusing on personalized instruction.</p>
+                </div>
             </div>
+
+            <div class="callout orange">
+                <span class="emoji">📈</span>
+                <div class="content">
+                    <p><strong>Invisible Progress:</strong> Without proper tracking systems, it's impossible to measure student progress, identify learning gaps, or demonstrate value to parents and students.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- The Solution -->
+        <section class="section">
+            <h2>The Solution</h2>
+            <p>Langopia solves these challenges through four integrated pillars that work together seamlessly:</p>
             
-            <div class="screenshot-gallery">
-                <div class="screenshot-item">
-                    <img src="screenshots/02-dashboard.png" alt="Dashboard Overview" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Dashboard Overview</h4>
-                        <p>Key metrics, activity charts, and quick access to all features with an integrated onboarding wizard.</p>
-                    </div>
+            <div class="pillars">
+                <div class="pillar">
+                    <div class="icon">🏫</div>
+                    <h4>Academy Management Dashboard</h4>
+                    <p>Complete control center for classes, students, teachers, and finances</p>
                 </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/03-classes.png" alt="Class Management" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Class Management</h4>
-                        <p>Weekly calendar view for scheduling and managing classes with drag-and-drop functionality.</p>
-                    </div>
+                <div class="pillar">
+                    <div class="icon">🎥</div>
+                    <h4>Live Video Classrooms</h4>
+                    <p>Professional virtual classrooms with interactive tools and recording</p>
                 </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/04-students.png" alt="Student Management" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Student Management</h4>
-                        <p>Comprehensive student database with CEFR levels, class history, and progress tracking.</p>
-                    </div>
+                <div class="pillar">
+                    <div class="icon">🤖</div>
+                    <h4>AI Content & Analysis Engine</h4>
+                    <p>Automated lesson planning, exercise generation, and class analysis</p>
                 </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/05-teachers.png" alt="Teacher Management" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Teacher Management</h4>
-                        <p>Teacher profiles, invite system, and performance analytics for academy staff.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/06-courses.png" alt="Course Management" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Course Management</h4>
-                        <p>Create and organize courses with language levels, status filters, and curriculum planning.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/08-exercises.png" alt="Exercise Bank" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>AI Exercise Generator</h4>
-                        <p>Smart exercise creation with AI-powered generation wizard and comprehensive exercise bank.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/09-reports.png" alt="AI Reports" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>AI-Generated Reports</h4>
-                        <p>Automatic class reports generated after each session with detailed insights and recommendations.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/11-settings.png" alt="Academy Settings" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Academy Settings</h4>
-                        <p>Complete configuration panel with Stripe Connect integration for payments and billing.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/15-financings.png" alt="Financial Analytics" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Financial Analytics</h4>
-                        <p>Revenue tracking, subscription analytics, and comprehensive financial dashboard.</p>
-                    </div>
+                <div class="pillar">
+                    <div class="icon">📱</div>
+                    <h4>Student Learning App</h4>
+                    <p>Personalized learning experience with progress tracking and exercises</p>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Student & Teacher Experience -->
-    <section id="student-app" class="section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Student & Teacher Experience</h2>
-                <p>Intuitive mobile-first applications designed for learners and educators</p>
-            </div>
+        <div class="divider"></div>
+
+        <!-- Dashboard Overview -->
+        <section class="section">
+            <h2>Dashboard Overview</h2>
+            <p>The heart of Langopia is the academy management dashboard. It provides a complete overview of your academy's operations with intuitive navigation and real-time insights.</p>
             
-            <div class="screenshot-gallery">
-                <div class="screenshot-item">
-                    <img src="screenshots/21-app-home.png" alt="Student Dashboard" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Personal Dashboard</h4>
-                        <p>Clean overview of upcoming classes, completed sessions, and progress reports count.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/22-app-classes.png" alt="My Classes" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>My Classes</h4>
-                        <p>Organized class tabs for upcoming, in progress, completed, and cancelled sessions.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/23-app-exercises.png" alt="Exercise Browser" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Exercise Library</h4>
-                        <p>Browse exercises organized by CEFR levels with interactive learning materials.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/24-app-reports.png" alt="Progress Reports" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Progress Reports</h4>
-                        <p>Personalized learning analytics and detailed progress tracking for continuous improvement.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/25-app-profile.png" alt="User Profile" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Profile Management</h4>
-                        <p>User profile with academy memberships, settings, and personal information management.</p>
-                    </div>
-                </div>
+            <div class="screenshot-container">
+                <img src="screenshots/02-dashboard.png" alt="Langopia Dashboard" class="screenshot">
+                <p class="screenshot-caption">Central dashboard with key metrics, recent activity, and quick access to all features</p>
             </div>
-        </div>
-    </section>
 
-    <!-- Live Rooms -->
-    <section id="live-rooms" class="section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Live Video Classrooms</h2>
-                <p>Powered by LiveKit technology for seamless virtual learning experiences</p>
+            <div class="callout green">
+                <span class="emoji">📈</span>
+                <div class="content">
+                    <p><strong>Key Features:</strong> Real-time analytics, upcoming class overview, student progress summaries, revenue tracking, and an integrated onboarding wizard for new academies.</p>
+                </div>
             </div>
+        </section>
+
+        <!-- Class Management -->
+        <section class="section">
+            <h2>Class Management</h2>
+            <p>Schedule and manage classes with a beautiful calendar interface that makes organization effortless.</p>
             
-            <div class="features-grid">
-                <div class="feature-card">
-                    <h3>🎥 HD Video & Audio</h3>
-                    <p>Crystal-clear video quality with adaptive streaming and noise cancellation for optimal learning conditions.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>🖱️ Interactive Whiteboard</h3>
-                    <p>Real-time collaborative whiteboard with drawing tools, text annotations, and screen sharing capabilities.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>👥 Multi-participant Support</h3>
-                    <p>Support for group classes with breakout rooms, participant management, and engagement tools.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>📝 Session Recording</h3>
-                    <p>Automatic recording of classes for review and AI analysis, with secure cloud storage.</p>
+            <div class="screenshot-container">
+                <img src="screenshots/03-classes.png" alt="Class Management Calendar" class="screenshot">
+                <p class="screenshot-caption">Weekly calendar view with drag-and-drop scheduling and real-time availability</p>
+            </div>
+
+            <div class="callout">
+                <span class="emoji">🗓️</span>
+                <div class="content">
+                    <p><strong>Smart Scheduling:</strong> Drag-and-drop class creation, teacher availability tracking, student conflict detection, automatic room assignment, and integrated video room generation.</p>
                 </div>
             </div>
+        </section>
+
+        <!-- Content Creation with AI -->
+        <section class="section">
+            <h2>Content Creation with AI</h2>
+            <p>Transform how you create educational content with our AI-powered content planning system:</p>
+
+            <div class="process-flow">
+                <div class="process-step">
+                    <span>📄</span>
+                    <span><strong>Step 1:</strong> Upload material or describe topic</span>
+                </div>
+                <div class="process-arrow">→</div>
+                <div class="process-step">
+                    <span>🤖</span>
+                    <span><strong>Step 2:</strong> AI generates exercises</span>
+                </div>
+                <div class="process-arrow">→</div>
+                <div class="process-step">
+                    <span>✅</span>
+                    <span><strong>Step 3:</strong> Review, refine, publish</span>
+                </div>
+            </div>
+
+            <div class="screenshot-container">
+                <img src="screenshots/28-exercise-wizard.png" alt="AI Exercise Wizard" class="screenshot">
+                <p class="screenshot-caption">AI Exercise Generator: Upload content and generate CEFR-aligned exercises automatically</p>
+            </div>
+
+            <div class="callout purple">
+                <span class="emoji">🎯</span>
+                <div class="content">
+                    <p><strong>AI Capabilities:</strong> 11+ exercise types including tap-to-order, listen & repeat, complete chat, and watch & reflect. All content is automatically CEFR-aligned (A1-C2) with intelligent lesson plan chat assistance.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Student Management -->
+        <section class="section">
+            <h2>Student Management</h2>
+            <p>Keep track of every student's journey with comprehensive profiles and progress tracking.</p>
             
-            <div class="screenshot-gallery" style="margin-top: 3rem;">
-                <div class="screenshot-item">
-                    <img src="screenshots/27-room-join.png" alt="Join Room" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Room Entry</h4>
-                        <p>Clean join interface for teachers and students. Teachers get host controls; students join with a simple name entry. Token-based access ensures security.</p>
-                    </div>
-                </div>
-                <div class="screenshot-item">
-                    <img src="screenshots/10-rooms.png" alt="Room Management" loading="lazy">
-                    <div class="screenshot-content">
-                        <h4>Room Management</h4>
-                        <p>Create and manage virtual classrooms via the dashboard or API. Each room supports video, audio, chat, notes, slides, and an interactive whiteboard.</p>
-                    </div>
-                </div>
+            <div class="screenshot-container">
+                <img src="screenshots/04-students.png" alt="Student Management" class="screenshot">
+                <p class="screenshot-caption">Student database with CEFR levels, enrollment status, and detailed progress tracking</p>
             </div>
 
-            <!-- Room Features Detail -->
-            <div class="features-grid" style="margin-top: 3rem;">
-                <div class="feature-card">
-                    <h3>💬 In-Room Chat</h3>
-                    <p>Real-time text chat during class. Students can ask questions without interrupting the flow of the lesson.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>📋 Teacher Notes</h3>
-                    <p>Teachers can take live notes during the session. Notes are saved and can be shared with students after class.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>🎙️ Live Transcription</h3>
-                    <p>Real-time speech-to-text during class using OpenAI Whisper. Students see subtitles live, and the full transcript is saved for review.</p>
-                </div>
-                <div class="feature-card">
-                    <h3>💡 Smart Suggestions</h3>
-                    <p>5 minutes before class ends, AI suggests vocabulary review, homework topics, and next steps based on the conversation.</p>
+            <div class="callout">
+                <span class="emoji">👥</span>
+                <div class="content">
+                    <p><strong>Complete Student Profiles:</strong> CEFR level tracking, class attendance history, payment status, progress reports, and personalized learning recommendations based on AI analysis.</p>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- AI-Powered Features -->
-    <section id="ai-powered" class="section">
-        <div class="container">
-            <div class="section-header">
-                <h2>AI-Powered Intelligence</h2>
-                <p>Three AI pillars: content creation, live class analysis, and personalized student learning</p>
-            </div>
-
-            <!-- AI Pillar 1: Content Planning -->
-            <div style="margin-bottom: 4rem;">
-                <h3 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--accent); text-align: center;">📝 AI Content Planning</h3>
-                <p style="text-align: center; color: var(--text-secondary); max-width: 700px; margin: 0 auto 2rem;">Teachers describe what they want to teach, and AI generates complete lesson plans, courses, and exercises automatically.</p>
-                
-                <div class="screenshot-gallery">
-                    <div class="screenshot-item">
-                        <img src="screenshots/28-exercise-wizard.png" alt="Exercise Wizard" loading="lazy">
-                        <div class="screenshot-content">
-                            <h4>AI Exercise Generator</h4>
-                            <p>Upload a text, PDF, or describe a topic — AI generates exercises adapted to the target CEFR level. Supports 11+ exercise types: tap-to-order, listen & repeat, complete chat, watch & reflect, and more.</p>
-                        </div>
-                    </div>
-                    <div class="screenshot-item">
-                        <img src="screenshots/06-courses.png" alt="Course Wizard" loading="lazy">
-                        <div class="screenshot-content">
-                            <h4>Smart Course Builder</h4>
-                            <p>AI assists in structuring courses by suggesting lesson sequences, topics, and difficulty progression based on CEFR standards. Teachers can refine suggestions through a chat interface.</p>
-                        </div>
-                    </div>
-                    <div class="screenshot-item">
-                        <img src="screenshots/07-lessons.png" alt="Lesson Planning" loading="lazy">
-                        <div class="screenshot-content">
-                            <h4>Lesson Plan Chat</h4>
-                            <p>An AI chat assistant helps teachers plan lessons. Reference materials with # and exercise types with @. The AI suggests the optimal mix of exercises for each lesson.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="features-grid" style="margin-top: 2rem;">
-                    <div class="feature-card">
-                        <h3>📄 Material Extraction</h3>
-                        <p>Upload PDFs, articles, or paste text. AI extracts key vocabulary, grammar points, and cultural topics to generate targeted exercises.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>🔄 Regeneration & Refinement</h3>
-                        <p>Not happy with a generated exercise? Regenerate with different parameters, adjust difficulty, or tweak the prompt — all without starting over.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>🎯 CEFR-Aligned Content</h3>
-                        <p>All AI-generated content is automatically aligned to CEFR levels (A1–C2), ensuring appropriate difficulty for each student group.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- AI Pillar 2: Live Class Analysis -->
-            <div style="margin-bottom: 4rem;">
-                <h3 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--accent); text-align: center;">🎙️ Live Class Analysis Pipeline</h3>
-                <p style="text-align: center; color: var(--text-secondary); max-width: 700px; margin: 0 auto 2rem;">Every class is recorded, transcribed, and analyzed automatically — zero teacher effort required.</p>
-
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <h3>Step 1: Recording</h3>
-                        <p>LiveKit Egress records the full class session (audio + video). Recordings are stored securely in S3-compatible storage (MinIO).</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Step 2: Transcription</h3>
-                        <p>OpenAI Whisper transcribes the recording with speaker diarization — identifying teacher vs. student speech with word-level timestamps.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Step 3: Analysis</h3>
-                        <p>GPT-4o-mini analyzes the transcript: vocabulary used, grammar errors with corrections, speaking time distribution, and personalized suggestions.</p>
-                    </div>
-                </div>
-
-                <div class="screenshot-gallery" style="margin-top: 2rem;">
-                    <div class="screenshot-item">
-                        <img src="screenshots/09-reports.png" alt="AI Reports" loading="lazy">
-                        <div class="screenshot-content">
-                            <h4>Automatic Class Reports</h4>
-                            <p>After each class ends, a detailed AI report is generated: summary, vocabulary list with CEFR tags, grammar corrections with explanations, speaking metrics, and improvement suggestions.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- AI Pillar 3: Student Learning -->
-            <div>
-                <h3 style="font-size: 1.8rem; margin-bottom: 1rem; color: var(--accent); text-align: center;">🧠 AI for Student Learning</h3>
-                <p style="text-align: center; color: var(--text-secondary); max-width: 700px; margin: 0 auto 2rem;">AI personalizes the learning experience for each student, adapting to their level, strengths, and areas for improvement.</p>
-
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <h3>📈 Learning Profiles</h3>
-                        <p>AI builds a dynamic learning profile for each student based on class performance, exercise results, and speaking patterns. The profile evolves after every interaction.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>🗣️ Speaking Metrics</h3>
-                        <p>Track student speaking time vs. teacher talking time. AI identifies students who need more practice and suggests activities to increase engagement.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>📝 Vocabulary Tracking</h3>
-                        <p>Every new word used in class is tagged with its CEFR level. Students can see their vocabulary growth over time and review words in context.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>✏️ Grammar Analysis</h3>
-                        <p>AI identifies recurring grammar mistakes across sessions, tracks improvement over time, and suggests targeted exercises to address weak points.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>🏋️ Adaptive Exercises</h3>
-                        <p>11+ interactive exercise types (tap-to-order, listen & match, listen & repeat, complete chat, write to complete) adapt to the student's CEFR level and learning history.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>📊 Progress Reports</h3>
-                        <p>Students see their own progress: CEFR advancement, class attendance, vocabulary growth, grammar improvement, and personalized next steps.</p>
-                    </div>
-                </div>
-
-                <div class="screenshot-gallery" style="margin-top: 2rem;">
-                    <div class="screenshot-item">
-                        <img src="screenshots/23-app-exercises.png" alt="Student Exercises" loading="lazy">
-                        <div class="screenshot-content">
-                            <h4>Interactive Exercise Library</h4>
-                            <p>Students practice with AI-generated exercises organized by CEFR level. Each exercise type uses different learning modalities: reading, listening, writing, and speaking.</p>
-                        </div>
-                    </div>
-                    <div class="screenshot-item">
-                        <img src="screenshots/24-app-reports.png" alt="Student Reports" loading="lazy">
-                        <div class="screenshot-content">
-                            <h4>Personal Progress Dashboard</h4>
-                            <p>Each student sees their own AI-generated reports: vocabulary learned, grammar progress, speaking confidence, and personalized recommendations for improvement.</p>
-                        </div>
-                    </div>
-                    <div class="screenshot-item">
-                        <img src="screenshots/12-learning-paths.png" alt="Learning Paths" loading="lazy">
-                        <div class="screenshot-content">
-                            <h4>AI-Guided Learning Paths</h4>
-                            <p>Structured learning journeys from A1 to C2. AI suggests the optimal sequence of lessons and exercises based on student performance and goals.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Technology Stack -->
-    <section id="technology" class="section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Technology Stack</h2>
-                <p>Built with modern, scalable technologies for enterprise-grade performance</p>
-            </div>
+        <!-- Live Video Rooms -->
+        <section class="section">
+            <h2>Live Video Rooms</h2>
+            <p>Professional-grade virtual classrooms powered by LiveKit technology, designed specifically for language education.</p>
             
-            <div class="tech-stack">
-                <div class="tech-item">
-                    <h4>Frontend</h4>
-                    <p>Next.js 16<br>React<br>TypeScript</p>
-                </div>
-                <div class="tech-item">
-                    <h4>Backend</h4>
-                    <p>NestJS<br>Node.js<br>TypeORM</p>
-                </div>
-                <div class="tech-item">
-                    <h4>Database</h4>
-                    <p>PostgreSQL<br>Redis<br>S3 Storage</p>
-                </div>
-                <div class="tech-item">
-                    <h4>Live Video</h4>
-                    <p>LiveKit<br>WebRTC<br>Media Server</p>
-                </div>
-                <div class="tech-item">
-                    <h4>Payments</h4>
-                    <p>Stripe Connect<br>Subscription Management<br>Financial Analytics</p>
-                </div>
-                <div class="tech-item">
-                    <h4>AI Services</h4>
-                    <p>OpenAI GPT-4o<br>Whisper API<br>Speech Recognition</p>
-                </div>
-                <div class="tech-item">
-                    <h4>DevOps</h4>
-                    <p>Turborepo<br>Docker<br>CI/CD Pipeline</p>
-                </div>
-                <div class="tech-item">
-                    <h4>Infrastructure</h4>
-                    <p>Cloud Native<br>Microservices<br>Auto Scaling</p>
+            <div class="screenshot-container">
+                <img src="screenshots/27-room-join.png" alt="Video Room Entry" class="screenshot">
+                <p class="screenshot-caption">Simple room entry interface with teacher host controls and secure token-based access</p>
+            </div>
+
+            <div class="callout green">
+                <span class="emoji">🎥</span>
+                <div class="content">
+                    <p><strong>Advanced Features:</strong> HD video/audio, interactive whiteboard, real-time chat, teacher notes, live transcription with Whisper, AI-powered suggestions, and automatic recording for later analysis.</p>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2026 Langopia. Empowering language academies worldwide.</p>
-            <p style="margin-top: 0.5rem; opacity: 0.7;">Presentation created for March 17, 2026</p>
-        </div>
-    </footer>
+        <!-- AI Analysis Pipeline -->
+        <section class="section">
+            <h2>AI Analysis Pipeline</h2>
+            <p>Every class is automatically processed through our intelligent analysis system:</p>
+
+            <div class="process-flow">
+                <div class="process-step">
+                    <span>🎙️</span>
+                    <span><strong>Record</strong></span>
+                </div>
+                <div class="process-arrow">→</div>
+                <div class="process-step">
+                    <span>📝</span>
+                    <span><strong>Transcribe</strong> (Whisper)</span>
+                </div>
+                <div class="process-arrow">→</div>
+                <div class="process-step">
+                    <span>🧠</span>
+                    <span><strong>Analyze</strong> (GPT-4o)</span>
+                </div>
+                <div class="process-arrow">→</div>
+                <div class="process-step">
+                    <span>📊</span>
+                    <span><strong>Report</strong></span>
+                </div>
+            </div>
+
+            <div class="screenshot-container">
+                <img src="screenshots/09-reports.png" alt="AI-Generated Reports" class="screenshot">
+                <p class="screenshot-caption">Automatic class reports with vocabulary analysis, grammar corrections, and improvement suggestions</p>
+            </div>
+
+            <div class="callout purple">
+                <span class="emoji">🤖</span>
+                <div class="content">
+                    <p><strong>Zero-Effort Analytics:</strong> Classes are automatically recorded, transcribed with speaker identification, analyzed for vocabulary and grammar usage, and converted into detailed reports with personalized improvement suggestions.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Student Learning Experience -->
+        <section class="section">
+            <h2>Student Learning Experience</h2>
+            <p>Students get a personalized, engaging learning experience through dedicated mobile and web applications:</p>
+            
+            <div class="app-screenshots">
+                <div class="app-screenshot-item">
+                    <img src="screenshots/21-app-home.png" alt="Student Dashboard">
+                    <h5>Student Dashboard</h5>
+                    <p>Clean overview of upcoming classes, completed sessions, and progress reports</p>
+                </div>
+                <div class="app-screenshot-item">
+                    <img src="screenshots/23-app-exercises.png" alt="Interactive Exercises">
+                    <h5>Interactive Exercises</h5>
+                    <p>11+ exercise types adapted to individual CEFR levels and learning history</p>
+                </div>
+                <div class="app-screenshot-item">
+                    <img src="screenshots/24-app-reports.png" alt="Progress Reports">
+                    <h5>Progress Reports</h5>
+                    <p>Personalized analytics showing vocabulary growth and grammar improvement</p>
+                </div>
+            </div>
+
+            <div class="callout">
+                <span class="emoji">🎯</span>
+                <div class="content">
+                    <p><strong>Personalized Learning:</strong> Adaptive exercises that adjust to student performance, vocabulary tracking with CEFR tags, grammar analysis with targeted improvement suggestions, and comprehensive learning profiles that evolve with each interaction.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Financial Management -->
+        <section class="section">
+            <h2>Financial Management</h2>
+            <p>Complete financial oversight with integrated Stripe Connect for seamless payment processing.</p>
+            
+            <div class="screenshot-container">
+                <img src="screenshots/15-financings.png" alt="Financial Analytics" class="screenshot">
+                <p class="screenshot-caption">Revenue tracking, subscription analytics, and comprehensive financial dashboard</p>
+            </div>
+
+            <div class="callout green">
+                <span class="emoji">💰</span>
+                <div class="content">
+                    <p><strong>Financial Intelligence:</strong> Real-time revenue tracking, subscription management, payment analytics, automated billing, and detailed financial reporting with profit margin analysis.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team & Academy Setup -->
+        <section class="section">
+            <h2>Team & Academy Setup</h2>
+            <p>Manage your academy team and configuration with comprehensive administrative tools.</p>
+            
+            <div class="screenshot-container">
+                <img src="screenshots/17-team.png" alt="Team Management" class="screenshot">
+                <p class="screenshot-caption">Team member management with role-based permissions and invite system</p>
+            </div>
+
+            <div class="callout">
+                <span class="emoji">👥</span>
+                <div class="content">
+                    <p><strong>Team Management:</strong> Role-based access control, teacher onboarding, performance analytics, and academy-wide settings configuration for complete operational control.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Technology Stack -->
+        <section class="section">
+            <h2>Technology Stack</h2>
+            <p>Built with modern, enterprise-grade technologies for scalability and reliability:</p>
+            
+            <div class="tech-badges">
+                <span class="tech-badge">Next.js 16</span>
+                <span class="tech-badge">NestJS</span>
+                <span class="tech-badge">PostgreSQL</span>
+                <span class="tech-badge">LiveKit</span>
+                <span class="tech-badge">OpenAI</span>
+                <span class="tech-badge">Stripe</span>
+                <span class="tech-badge">Turborepo</span>
+                <span class="tech-badge">Redis</span>
+                <span class="tech-badge">S3</span>
+            </div>
+
+            <div class="callout">
+                <span class="emoji">⚡</span>
+                <div class="content">
+                    <p><strong>Modern Architecture:</strong> Microservices design with auto-scaling infrastructure, real-time communication, enterprise security, and cloud-native deployment for maximum performance and reliability.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="divider"></div>
+
+        <!-- Footer -->
+        <footer class="footer section">
+            <h3>Langopia — Empowering Language Academies</h3>
+            <p>Presentation — March 2026</p>
+        </footer>
+    </div>
 
     <script>
         // Intersection Observer for scroll animations
@@ -809,58 +709,22 @@
             observer.observe(section);
         });
 
-        // Header scroll effect
-        window.addEventListener('scroll', () => {
-            const header = document.querySelector('.header');
-            if (window.scrollY > 100) {
-                header.style.background = 'rgba(15, 15, 35, 0.98)';
-                header.style.boxShadow = '0 2px 20px rgba(0,0,0,0.3)';
-            } else {
-                header.style.background = 'rgba(15, 15, 35, 0.95)';
-                header.style.boxShadow = 'none';
-            }
-        });
+        // Smooth scroll behavior
+        document.documentElement.style.scrollBehavior = 'smooth';
 
-        // Smooth scroll for navigation links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    const headerHeight = document.querySelector('.header').offsetHeight;
-                    const targetPosition = target.offsetTop - headerHeight - 20;
-                    window.scrollTo({
-                        top: targetPosition,
-                        behavior: 'smooth'
-                    });
-                }
+        // Performance optimization: Reduce animations on mobile
+        if (window.innerWidth <= 768) {
+            document.querySelectorAll('.pillar, .screenshot, .process-step').forEach(element => {
+                element.style.transition = 'all 0.2s ease';
             });
-        });
+        }
 
-        // Image lazy loading with fade effect
-        document.querySelectorAll('img[loading="lazy"]').forEach(img => {
+        // Image loading optimization
+        document.querySelectorAll('img').forEach(img => {
             img.addEventListener('load', function() {
                 this.style.opacity = '1';
             });
         });
-
-        // Add hover effects for screenshot items
-        document.querySelectorAll('.screenshot-item').forEach(item => {
-            item.addEventListener('mouseenter', function() {
-                this.style.transform = 'scale(1.02) translateZ(0)';
-            });
-            
-            item.addEventListener('mouseleave', function() {
-                this.style.transform = 'scale(1) translateZ(0)';
-            });
-        });
-
-        // Performance optimization: Reduce animations on mobile
-        if (window.innerWidth <= 768) {
-            document.querySelectorAll('.screenshot-item, .feature-card, .tech-item').forEach(element => {
-                element.style.transition = 'all 0.2s ease';
-            });
-        }
     </script>
 </body>
 </html>
