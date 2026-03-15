@@ -64,7 +64,7 @@ export async function runPostClassPipeline(roomId: string): Promise<void> {
       });
 
       // Save transcription segments
-      for (const seg of diarized) {
+      for (const seg of diarized.segments) {
         const t = new Transcription();
         t.roomId = roomId;
         t.speakerName =
