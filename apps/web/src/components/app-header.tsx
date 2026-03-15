@@ -1,0 +1,108 @@
+"use client";
+
+import Link from "next/link";
+import { useAuth } from "@/components/auth-provider";
+import { useSidebar } from "@/components/sidebar-context";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  LogOut,
+  ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
+  LayoutDashboard,
+  User,
+} from "lucide-react";
+
+export function AppHeader() {
+  const { user, logout } = useAuth();
+  const { collapsed, toggleCollapsed } = useSidebar();
+
+  const initials = user?.name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <header className="glass-strong flex h-16 items-center justify-between border-b border-zinc-200/40 px-6 dark:border-zinc-700/40">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleCollapsed}
+        className="rounded-lg text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+      >
+        {collapsed ? (
+          <PanelLeftOpen className="h-5 w-5" />
+        ) : (
+          <PanelLeftClose className="h-5 w-5" />
+        )}
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2.5 rounded-xl px-2 py-1.5 transition-all hover:bg-zinc-100/80 dark:hover:bg-zinc-800/60"
+          >
+            <Avatar className="h-8 w-8 ring-2 ring-violet-500/20">
+              <AvatarFallback className="bg-gradient-accent text-xs font-semibold text-white">
+                {initials || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <span className="hidden text-sm font-medium md:inline">
+              {user?.name}
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 text-zinc-400" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="end"
+          className="w-56 rounded-xl border-zinc-200/60 p-1.5 shadow-lg dark:border-zinc-700/60"
+        >
+          <DropdownMenuLabel className="rounded-lg px-3 py-2">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-semibold">{user?.name}</p>
+              <p className="text-xs text-muted-foreground">{user?.email}</p>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator className="mx-1.5 bg-zinc-200/60 dark:bg-zinc-700/60" />
+          <DropdownMenuItem
+            asChild
+            className="cursor-pointer rounded-lg px-3 py-2"
+          >
+            <Link href="/dashboard">
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              Dashboard
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            asChild
+            className="cursor-pointer rounded-lg px-3 py-2"
+          >
+            <Link href="/app/profile">
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="mx-1.5 bg-zinc-200/60 dark:bg-zinc-700/60" />
+          <DropdownMenuItem
+            onClick={logout}
+            className="cursor-pointer rounded-lg px-3 py-2 text-red-600 focus:text-red-600 dark:text-red-400"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </header>
+  );
+}

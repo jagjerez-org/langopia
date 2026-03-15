@@ -1,49 +1,59 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { CreditCard, Check, Zap } from "lucide-react";
+import { useAuth } from "@/components/auth-provider";
+import { CreditCard, Check, ExternalLink } from "lucide-react";
+import { useApiClient } from "@/hooks/use-api-client";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const plans = [
   {
     name: "Free",
-    price: "$0",
+    price: "€0",
     period: "forever",
     features: [
       "1 academy",
-      "10 rooms/month",
-      "5 hours of classes/month",
-      "5 AI reports/month",
+      "10 classes/month",
+      "10 hours of classes/month",
+      "Unlimited reports",
       "2 students per room",
-      "1 GB storage",
+      "5 GB storage",
+      "50K AI tokens/month",
+      "10K TTS chars/month",
     ],
     plan: "free",
   },
   {
     name: "Starter",
-    price: "$29",
+    price: "€29",
     period: "/month",
     features: [
       "3 academies",
-      "50 rooms/month",
+      "50 classes/month",
       "25 hours of classes/month",
-      "50 AI reports/month",
+      "Unlimited reports",
       "8 students per room",
       "10 GB storage",
+      "500K AI tokens/month",
+      "100K TTS chars/month",
     ],
     plan: "starter",
     popular: true,
   },
   {
     name: "Professional",
-    price: "$99",
+    price: "€99",
     period: "/month",
     features: [
       "10 academies",
-      "200 rooms/month",
+      "200 classes/month",
       "100 hours of classes/month",
-      "200 AI reports/month",
+      "Unlimited reports",
       "25 students per room",
       "50 GB storage",
+      "2M AI tokens/month",
+      "500K TTS chars/month",
+      "Integrations",
     ],
     plan: "professional",
   },
@@ -53,30 +63,62 @@ const plans = [
     period: "",
     features: [
       "Unlimited academies",
-      "Unlimited rooms",
+      "Unlimited classes",
       "Unlimited class hours",
       "Unlimited reports",
       "50 students per room",
       "500 GB storage",
+      "Unlimited AI tokens",
+      "Unlimited TTS chars",
+      "Integrations",
+      "Academy Landing",
     ],
     plan: "enterprise",
   },
 ];
 
 export default function BillingPage() {
-  const { data: session } = useSession();
-  const currentPlan = session?.user?.plan ?? "free";
+  const { user } = useAuth();
+  const api = useApiClient();
+  const currentPlan = user?.plan ?? "free";
+
+  async function handleUpgrade(plan: string) {
+    if (plan === "enterprise" || plan === "free") return;
+    try {
+      const { url } = await api.stripe.checkout({ plan });
+      if (url) window.location.href = url;
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handlePortal() {
+    try {
+      const { url } = await api.stripe.portal();
+      if (url) window.location.href = url;
+    } catch {
+      // ignore
+    }
+  }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Billing</h1>
-        <p className="text-sm text-zinc-500">
-          Current plan:{" "}
-          <span className="font-semibold capitalize text-violet-600 dark:text-violet-400">
-            {currentPlan}
-          </span>
-        </p>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Billing</h1>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            Current plan:{" "}
+            <span className="font-semibold capitalize text-violet-600 dark:text-violet-400">
+              {currentPlan}
+            </span>
+          </p>
+        </div>
+        {currentPlan !== "free" && (
+          <Button variant="outline" onClick={handlePortal}>
+            <ExternalLink className="mr-2 h-4 w-4" />
+            Manage Subscription
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -85,16 +127,16 @@ export default function BillingPage() {
           return (
             <div
               key={plan.plan}
-              className={`glass relative rounded-xl p-5 ${
+              className={`glass-subtle relative rounded-xl border p-5 transition-all ${
                 plan.popular
-                  ? "ring-2 ring-violet-500"
-                  : ""
+                  ? "border-violet-500 ring-2 ring-violet-500/20"
+                  : "border-zinc-200/40 dark:border-zinc-700/40"
               }`}
             >
               {plan.popular && (
-                <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-violet-600 px-3 py-0.5 text-xs font-medium text-white">
+                <Badge className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-violet-600 text-white">
                   Popular
-                </div>
+                </Badge>
               )}
               <h3 className="text-lg font-bold">{plan.name}</h3>
               <div className="mt-2">
@@ -107,46 +149,42 @@ export default function BillingPage() {
                     key={feature}
                     className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400"
                   >
-                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                    <Check className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
                     {feature}
                   </li>
                 ))}
               </ul>
-              <button
-                className={`mt-5 w-full rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+              <Button
+                className={`mt-5 w-full ${
                   isCurrent
-                    ? "cursor-default bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-                    : "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/25 hover:from-violet-500 hover:to-purple-500"
+                    ? ""
+                    : "bg-gradient-accent text-white"
                 }`}
+                variant={isCurrent ? "secondary" : "default"}
                 disabled={isCurrent}
-                onClick={async () => {
-                  if (isCurrent || plan.plan === "enterprise" || plan.plan === "free") return;
-                  const res = await fetch("/api/stripe/checkout", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ plan: plan.plan }),
-                  });
-                  if (res.ok) {
-                    const { url } = await res.json();
-                    if (url) window.location.href = url;
-                  }
-                }}
+                onClick={() => handleUpgrade(plan.plan)}
               >
-                {isCurrent ? "Current Plan" : plan.plan === "enterprise" ? "Contact Us" : "Upgrade"}
-              </button>
+                {isCurrent
+                  ? "Current Plan"
+                  : plan.plan === "enterprise"
+                    ? "Contact Us"
+                    : "Upgrade"}
+              </Button>
             </div>
           );
         })}
       </div>
 
-      <div className="glass rounded-xl p-5">
+      <div className="glass-subtle rounded-xl border border-zinc-200/40 p-5 dark:border-zinc-700/40">
         <div className="flex items-center gap-3">
           <CreditCard className="h-5 w-5 text-zinc-400" />
           <div>
             <h3 className="font-semibold">Payment Method</h3>
             <p className="text-sm text-zinc-500">
-              Billing is managed through Stripe. Click upgrade to set up or
-              change your payment method.
+              Billing is managed through Stripe.{" "}
+              {currentPlan !== "free"
+                ? "Click 'Manage Subscription' to update your payment method."
+                : "Click upgrade to set up your payment method."}
             </p>
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/components/auth-provider";
 import { initPostHog, posthog } from "@/lib/posthog";
 
 export function AnalyticsProvider({
@@ -9,21 +9,21 @@ export function AnalyticsProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { data: session } = useSession();
+  const { user } = useAuth();
 
   useEffect(() => {
     initPostHog();
   }, []);
 
   useEffect(() => {
-    if (session?.user?.id) {
-      posthog.identify(session.user.id, {
-        email: session.user.email,
-        name: session.user.name,
-        plan: session.user.plan,
+    if (user?.id) {
+      posthog.identify(user.id, {
+        email: user.email,
+        name: user.name,
+        plan: user.plan,
       });
     }
-  }, [session?.user]);
+  }, [user]);
 
   return <>{children}</>;
 }

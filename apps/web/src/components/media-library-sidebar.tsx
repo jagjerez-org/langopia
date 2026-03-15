@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   FolderOpen,
   Search,
@@ -10,8 +10,11 @@ import {
   File,
   Loader2,
   Check,
+  Upload,
 } from "lucide-react";
+import { useUpload } from "./upload-progress-context";
 import { toast } from "sonner";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 import {
   Sheet,
   SheetContent,
@@ -60,8 +63,8 @@ export interface MediaSelection {
 interface MediaLibrarySidebarProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  apiKey: string;
   onSelect: (media: MediaSelection[]) => void;
+  initialSelectedIds?: string[];
 }
 
 function getFileIcon(mimeType: string) {
@@ -74,39 +77,39 @@ function getFileIcon(mimeType: string) {
 export function MediaLibrarySidebar({
   open,
   onOpenChange,
-  apiKey,
   onSelect,
+  initialSelectedIds,
 }: MediaLibrarySidebarProps) {
+  const api = useApiKeyClient();
+  const { addFiles } = useUpload();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<MediaItemBrowse[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selecting, setSelecting] = useState(false);
 
+  const ACCEPTED_FORMATS = ".pdf,.pptx,.txt,.md,.csv,.jpg,.jpeg,.png,.webp";
+
   const fetchItems = useCallback(async () => {
-    if (!apiKey) return;
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: "50" });
-      if (search) params.set("search", search);
-      const res = await fetch(`/api/v1/media?${params}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.data);
-      }
+      const result = await api.media.list({ search: search || undefined, limit: 50 });
+      setItems(result.data as unknown as MediaItemBrowse[]);
+    } catch {
+      /* ignore */
     } finally {
       setLoading(false);
     }
-  }, [apiKey, search]);
+  }, [api, search]);
 
   useEffect(() => {
     if (open) {
       fetchItems();
-      setSelectedIds(new Set());
+      setSelectedIds(new Set(initialSelectedIds ?? []));
     }
-  }, [open, fetchItems]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   // Poll for any processing items in the list
   useEffect(() => {
@@ -117,34 +120,31 @@ export function MediaLibrarySidebar({
   }, [items, fetchItems]);
 
   async function handleSelect() {
-    if (selectedIds.size === 0 || !apiKey) return;
+    if (selectedIds.size === 0) return;
     setSelecting(true);
     try {
       const selections: MediaSelection[] = [];
       for (const id of selectedIds) {
-        const res = await fetch(`/api/v1/media/${id}`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        });
-        if (!res.ok) {
+        try {
+          const res = await api.media.get(id);
+          const item = ((res as unknown as { data?: MediaItemWithPages }).data ?? res) as unknown as MediaItemWithPages;
+
+          const extractedText = (item.pages ?? [])
+            .map((p) => p.extractedText)
+            .join("\n\n");
+
+          selections.push({
+            mediaItemId: item.id,
+            filename: item.filename,
+            extractedText,
+            detectedTopic: item.detectedTopic,
+            detectedLanguage: item.detectedLanguage,
+            detectedCefrLevel: item.detectedCefrLevel,
+            similarExerciseCount: item.similarExerciseCount,
+          });
+        } catch {
           toast.error("Failed to load a media item");
-          continue;
         }
-        const data = await res.json();
-        const item = data.data as MediaItemWithPages;
-
-        const extractedText = (item.pages ?? [])
-          .map((p) => p.extractedText)
-          .join("\n\n");
-
-        selections.push({
-          mediaItemId: item.id,
-          filename: item.filename,
-          extractedText,
-          detectedTopic: item.detectedTopic,
-          detectedLanguage: item.detectedLanguage,
-          detectedCefrLevel: item.detectedCefrLevel,
-          similarExerciseCount: item.similarExerciseCount,
-        });
       }
       if (selections.length > 0) {
         onSelect(selections);
@@ -156,8 +156,8 @@ export function MediaLibrarySidebar({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-[420px] flex-col sm:max-w-[420px]">
+    <Sheet open={open} onOpenChange={onOpenChange} modal>
+      <SheetContent className="z-[60] flex w-[420px] flex-col sm:max-w-[420px]" overlayClassName="z-[60]">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <FolderOpen className="h-5 w-5 text-violet-500" />
@@ -166,16 +166,39 @@ export function MediaLibrarySidebar({
         </SheetHeader>
 
         <div className="flex flex-1 flex-col gap-3 overflow-hidden">
-          {/* Search */}
-          <div className="relative shrink-0">
-            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && fetchItems()}
-              placeholder="Search media..."
-              className="h-8 pl-8 text-xs"
+          {/* Search + Upload */}
+          <div className="flex shrink-0 gap-1.5">
+            <div className="relative flex-1">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && fetchItems()}
+                placeholder="Search media..."
+                className="h-8 pl-8 text-xs"
+              />
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept={ACCEPTED_FORMATS}
+              className="hidden"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                if (files.length > 0) addFiles(files, api, fetchItems);
+                e.target.value = "";
+              }}
             />
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => fileInputRef.current?.click()}
+              title="Upload files"
+            >
+              <Upload className="h-3.5 w-3.5" />
+            </Button>
           </div>
 
           {/* Items list */}

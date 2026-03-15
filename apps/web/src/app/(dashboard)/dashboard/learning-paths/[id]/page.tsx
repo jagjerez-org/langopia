@@ -14,11 +14,13 @@ import {
   Clock,
   Pencil,
   ExternalLink,
+  Library,
 } from "lucide-react";
-import { CEFR_LEVELS, EXERCISE_LANGUAGES } from "@langopia/shared/types";
+import { EXERCISE_LANGUAGES } from "@langopia/shared/types";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useParams, useRouter } from "next/navigation";
+import { useApiClient, useApiKeyClient } from "@/hooks/use-api-client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +72,26 @@ interface AvailableLesson {
   exerciseCount: number;
 }
 
+interface PathCourse {
+  id: string;
+  title: string;
+  description: string | null;
+  language: string;
+  cefrLevel: string;
+  status: string;
+  lessonCount?: number;
+  sortOrder: number;
+}
+
+interface AvailableCourse {
+  id: string;
+  title: string;
+  language: string;
+  cefrLevel: string;
+  status: string;
+  lessonCount?: number;
+}
+
 const statusColors: Record<string, string> = {
   draft: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   published: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
@@ -83,9 +105,11 @@ const lessonStatusColors: Record<string, string> = {
 };
 
 export default function LearningPathDetailPage() {
-  const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
+  const { selectedAcademy, loading: academyLoading } = useAcademy();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const api = useApiKeyClient();
+  const jwtApi = useApiClient();
 
   const [path, setPath] = useState<LearningPath | null>(null);
   const [loadingPath, setLoadingPath] = useState(true);
@@ -106,45 +130,43 @@ export default function LearningPathDetailPage() {
 
   // Delete confirmations
   const [deleteLessonId, setDeleteLessonId] = useState<string | null>(null);
-  const [deletePathOpen, setDeletePathOpen] = useState(false);
 
-  const apiKey = selectedAcademyData?.apiKey;
+  // Course management
+  const [courses, setCourses] = useState<PathCourse[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(false);
+  const [addCourseOpen, setAddCourseOpen] = useState(false);
+  const [availableCourses, setAvailableCourses] = useState<AvailableCourse[]>([]);
+  const [loadingAvailableCourses, setLoadingAvailableCourses] = useState(false);
+  const [addingCourseId, setAddingCourseId] = useState<string | null>(null);
+  const [deleteCourseId, setDeleteCourseId] = useState<string | null>(null);
 
   const loadPath = useCallback(async () => {
-    if (!apiKey || !id) return;
+    if (!id) return;
     setLoadingPath(true);
     try {
-      const res = await fetch(`/api/v1/learning-paths/${id}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        setPath(await res.json());
-      } else {
-        toast.error("Learning path not found");
-        router.push("/dashboard/learning-paths");
-      }
+      setPath(await api.learningPaths.get(id) as unknown as LearningPath);
+    } catch {
+      toast.error("Learning path not found");
+      router.push("/dashboard/learning-paths");
     } finally {
       setLoadingPath(false);
     }
-  }, [apiKey, id, router]);
+  }, [api, id, router]);
 
   const loadAvailableLessons = useCallback(async () => {
-    if (!apiKey) return;
     setLoadingLessons(true);
     try {
-      const params = new URLSearchParams({ limit: "200" });
-      if (path?.language) params.set("language", path.language);
-      const res = await fetch(`/api/v1/lessons?${params}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
+      const data = await api.lessons.list({
+        language: path?.language || undefined,
+        limit: 200,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setAvailableLessons(data.data ?? []);
-      }
+      setAvailableLessons((data.data ?? []) as unknown as AvailableLesson[]);
+    } catch {
+      // ignore
     } finally {
       setLoadingLessons(false);
     }
-  }, [apiKey, path?.language]);
+  }, [api, path?.language]);
 
   useEffect(() => {
     if (selectedAcademy) loadPath();
@@ -154,16 +176,93 @@ export default function LearningPathDetailPage() {
     if (addLessonOpen) loadAvailableLessons();
   }, [addLessonOpen, loadAvailableLessons]);
 
+  const loadCourses = useCallback(async () => {
+    if (!id) return;
+    setLoadingCourses(true);
+    try {
+      const res = await api.learningPaths.listCourses(id) as { data?: unknown[] };
+      setCourses(((res as any)?.data ?? res ?? []) as unknown as PathCourse[]);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingCourses(false);
+    }
+  }, [api, id]);
+
+  const loadAvailableCourses = useCallback(async () => {
+    if (!selectedAcademy) return;
+    setLoadingAvailableCourses(true);
+    try {
+      const data = await jwtApi.courses.list(selectedAcademy, { limit: 100 });
+      setAvailableCourses((data.data ?? []) as unknown as AvailableCourse[]);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingAvailableCourses(false);
+    }
+  }, [jwtApi, selectedAcademy]);
+
+  useEffect(() => {
+    if (selectedAcademy && id) loadCourses();
+  }, [selectedAcademy, id, loadCourses]);
+
+  useEffect(() => {
+    if (addCourseOpen) loadAvailableCourses();
+  }, [addCourseOpen, loadAvailableCourses]);
+
+  async function handleAddCourse(courseId: string) {
+    setAddingCourseId(courseId);
+    try {
+      await api.learningPaths.addCourses(id, [courseId]);
+      toast.success("Course added");
+      setAddCourseOpen(false);
+      loadCourses();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to add course";
+      toast.error(message);
+    } finally {
+      setAddingCourseId(null);
+    }
+  }
+
+  async function handleRemoveCourse(courseId: string) {
+    try {
+      await api.learningPaths.removeCourse(id, courseId);
+      setDeleteCourseId(null);
+      toast.success("Course removed from path");
+      loadCourses();
+    } catch {
+      toast.error("Failed to remove course");
+    }
+  }
+
+  async function handleMoveCourse(courseId: string, direction: "up" | "down") {
+    const list = [...courses];
+    const idx = list.findIndex((c) => c.id === courseId);
+    if (idx < 0) return;
+
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= list.length) return;
+
+    [list[idx], list[swapIdx]] = [list[swapIdx], list[idx]];
+    const newOrder = list.map((c) => c.id);
+
+    // Optimistic update
+    setCourses(list.map((c, i) => ({ ...c, sortOrder: i })));
+
+    try {
+      await api.learningPaths.reorderCourses(id, newOrder);
+    } catch {
+      loadCourses();
+    }
+  }
+
   async function handleUpdateField(field: string, value: unknown) {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/learning-paths/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ [field]: value }),
-    });
-    if (res.ok) {
-      const updated = await res.json();
-      setPath((prev) => prev ? { ...prev, ...updated } : prev);
+    try {
+      const updated = await api.learningPaths.update(id, { [field]: value });
+      setPath((prev) => prev ? { ...prev, ...(updated as unknown as LearningPath) } : prev);
+    } catch {
+      toast.error("Failed to update");
     }
   }
 
@@ -188,50 +287,29 @@ export default function LearningPathDetailPage() {
     await handleUpdateField("status", status);
   }
 
-  async function handleDeletePath() {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/learning-paths/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
-      toast.success("Learning path deleted");
-      router.push("/dashboard/learning-paths");
-    }
-  }
-
   async function handleAddLesson(lessonId: string) {
-    if (!apiKey) return;
     setAddingLessonId(lessonId);
     try {
-      const res = await fetch(`/api/v1/learning-paths/${id}/lessons`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId }),
-      });
-      if (res.ok) {
-        toast.success("Lesson added");
-        setAddLessonOpen(false);
-        loadPath();
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Failed to add lesson");
-      }
+      await api.learningPaths.addLessons(id, { lessonId });
+      toast.success("Lesson added");
+      setAddLessonOpen(false);
+      loadPath();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to add lesson";
+      toast.error(message);
     } finally {
       setAddingLessonId(null);
     }
   }
 
   async function handleRemoveLesson(lessonId: string) {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/learning-paths/${id}/lessons?lessonId=${lessonId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.learningPaths.removeLesson(id, lessonId);
       setDeleteLessonId(null);
       toast.success("Lesson removed from path");
       loadPath();
+    } catch {
+      toast.error("Failed to remove lesson");
     }
   }
 
@@ -250,17 +328,21 @@ export default function LearningPathDetailPage() {
     // Optimistic update
     setPath((prev) => prev ? { ...prev, lessons: lessons.map((l, i) => ({ ...l, sortOrder: i })) } : prev);
 
-    if (!apiKey) return;
-    await fetch(`/api/v1/learning-paths/${id}/lessons`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ lessonIds: newOrder }),
-    });
+    try {
+      await api.learningPaths.reorderLessons(id, { lessonIds: newOrder });
+    } catch {
+      // revert on failure
+      loadPath();
+    }
   }
 
   // Filter out lessons already in the path
   const linkedIds = new Set(path?.lessons.map((l) => l.id) ?? []);
   const unlinkedLessons = availableLessons.filter((l) => !linkedIds.has(l.id));
+
+  // Filter out courses already in the path
+  const linkedCourseIds = new Set(courses.map((c) => c.id));
+  const unlinkedCourses = availableCourses.filter((c) => !linkedCourseIds.has(c.id));
 
   if (academyLoading || loadingPath) {
     return (
@@ -344,13 +426,6 @@ export default function LearningPathDetailPage() {
               <option value="published">Published</option>
               <option value="archived">Archived</option>
             </select>
-            <button
-              onClick={() => setDeletePathOpen(true)}
-              className="rounded-lg border border-red-200 p-2 text-red-500 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20"
-              title="Delete learning path"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
           </div>
         </div>
       </div>
@@ -527,6 +602,114 @@ export default function LearningPathDetailPage() {
         )}
       </div>
 
+      {/* Courses Section */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-lg font-semibold">
+            <Library className="h-5 w-5 text-violet-500" />
+            Courses ({courses.length})
+          </h3>
+          <button
+            onClick={() => setAddCourseOpen(true)}
+            className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-medium text-white hover:bg-violet-500"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Course
+          </button>
+        </div>
+
+        {loadingCourses ? (
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="glass h-20 animate-pulse rounded-xl" />
+            ))}
+          </div>
+        ) : courses.length === 0 ? (
+          <div className="glass flex flex-col items-center justify-center rounded-xl py-12 text-center">
+            <Library className="mb-3 h-8 w-8 text-zinc-400" />
+            <p className="font-medium text-zinc-500">No courses in this path</p>
+            <p className="mt-1 text-sm text-zinc-400">Add existing courses to build your curriculum</p>
+            <button
+              onClick={() => setAddCourseOpen(true)}
+              className="mt-4 flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-violet-500"
+            >
+              <Plus className="h-4 w-4" />
+              Add Course
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {courses.map((course, idx) => (
+              <div
+                key={course.id}
+                className="glass flex items-center gap-3 rounded-xl p-4"
+              >
+                {/* Sort order number */}
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-sm font-bold text-zinc-500 dark:bg-zinc-800">
+                  {idx + 1}
+                </div>
+
+                {/* Move buttons */}
+                <div className="flex shrink-0 flex-col gap-0.5">
+                  <button
+                    onClick={() => handleMoveCourse(course.id, "up")}
+                    disabled={idx === 0}
+                    className="rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-20 dark:hover:bg-zinc-800"
+                    title="Move up"
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleMoveCourse(course.id, "down")}
+                    disabled={idx === courses.length - 1}
+                    className="rounded p-0.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-20 dark:hover:bg-zinc-800"
+                    title="Move down"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                {/* Course info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-medium truncate">{course.title}</h4>
+                    <span className="rounded-md bg-violet-100 px-1.5 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                      {course.cefrLevel}
+                    </span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${statusColors[course.status] ?? "bg-zinc-100 text-zinc-600"}`}>
+                      {course.status}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-3 text-xs text-zinc-500">
+                    {course.lessonCount != null && (
+                      <span>{course.lessonCount} lesson{course.lessonCount !== 1 ? "s" : ""}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex shrink-0 items-center gap-1">
+                  <button
+                    onClick={() => router.push(`/dashboard/courses/${course.id}`)}
+                    className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+                    title="View course"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setDeleteCourseId(course.id)}
+                    className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
+                    title="Remove from path"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Add Lesson Dialog */}
       <Dialog open={addLessonOpen} onOpenChange={setAddLessonOpen}>
         <DialogContent className="sm:max-w-lg max-h-[70vh] overflow-hidden flex flex-col">
@@ -587,19 +770,61 @@ export default function LearningPathDetailPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete path confirmation */}
-      <AlertDialog open={deletePathOpen} onOpenChange={setDeletePathOpen}>
+      {/* Add Course Dialog */}
+      <Dialog open={addCourseOpen} onOpenChange={setAddCourseOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[70vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Add Course to Path</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto space-y-2 py-2">
+            {loadingAvailableCourses ? (
+              <div className="space-y-2">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-14 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+                ))}
+              </div>
+            ) : unlinkedCourses.length === 0 ? (
+              <div className="py-8 text-center text-sm text-zinc-500">
+                {availableCourses.length === 0 ? "No courses available. Create courses first." : "All courses are already in this path."}
+              </div>
+            ) : (
+              unlinkedCourses.map((course) => (
+                <button
+                  key={course.id}
+                  onClick={() => handleAddCourse(course.id)}
+                  disabled={addingCourseId === course.id}
+                  className="flex w-full items-center gap-3 rounded-lg border border-zinc-200 p-3 text-left transition hover:border-violet-300 hover:bg-violet-50/50 disabled:opacity-50 dark:border-zinc-700 dark:hover:border-violet-600 dark:hover:bg-violet-900/10"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-violet-500 to-purple-600 text-xs font-bold text-white">
+                    {course.cefrLevel}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{course.title}</p>
+                    <p className="text-xs text-zinc-500">
+                      {course.lessonCount != null ? `${course.lessonCount} lesson${course.lessonCount !== 1 ? "s" : ""}` : course.status}
+                    </p>
+                  </div>
+                  <Plus className="h-4 w-4 shrink-0 text-violet-500" />
+                </button>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove course confirmation */}
+      <AlertDialog open={!!deleteCourseId} onOpenChange={() => setDeleteCourseId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Learning Path</AlertDialogTitle>
+            <AlertDialogTitle>Remove Course</AlertDialogTitle>
             <AlertDialogDescription>
-              This will delete the learning path. All lessons within will be preserved, only the path structure will be removed.
+              This will remove the course from this learning path. The course itself will not be deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeletePath} className="bg-red-600 text-white hover:bg-red-500">
-              Delete
+            <AlertDialogAction onClick={() => deleteCourseId && handleRemoveCourse(deleteCourseId)} className="bg-red-600 text-white hover:bg-red-500">
+              Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

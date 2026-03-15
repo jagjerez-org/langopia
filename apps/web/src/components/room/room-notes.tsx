@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useDataChannel } from "@livekit/components-react";
 import { Plus, Trash2, BookOpen, PenLine, CheckCircle, Target } from "lucide-react";
+import { createPublicClient } from "@/hooks/use-api-client";
 
 interface VocabularyItem {
   word: string;
@@ -32,6 +33,7 @@ const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
 export function RoomNotes({ roomId, isTeacher }: RoomNotesProps) {
+  const api = useMemo(() => createPublicClient(), []);
   const [notes, setNotes] = useState<NotesData>({
     vocabulary: [],
     corrections: [],
@@ -55,8 +57,8 @@ export function RoomNotes({ roomId, isTeacher }: RoomNotesProps) {
 
   // Load existing notes
   useEffect(() => {
-    fetch(`/api/v1/rooms/${roomId}/notes`)
-      .then((r) => (r.ok ? r.json() : null))
+    api.rooms
+      .getNotes(roomId)
       .then((data) => {
         if (data) {
           setNotes({
@@ -68,7 +70,7 @@ export function RoomNotes({ roomId, isTeacher }: RoomNotesProps) {
         }
       })
       .catch(() => {});
-  }, [roomId]);
+  }, [roomId, api]);
 
   function broadcastAndSave(updated: NotesData) {
     setNotes(updated);
@@ -78,11 +80,7 @@ export function RoomNotes({ roomId, isTeacher }: RoomNotesProps) {
     send(payload, { reliable: true });
 
     // Persist
-    fetch(`/api/room/${roomId}/notes`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updated),
-    }).catch(() => {});
+    api.roomInternal.saveNotes(roomId, updated).catch(() => {});
   }
 
   function addVocabulary() {

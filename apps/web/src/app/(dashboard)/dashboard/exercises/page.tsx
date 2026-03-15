@@ -11,17 +11,34 @@ import {
   Filter,
   Eye,
   EyeOff,
-  RefreshCw,
   Headphones,
   Pencil,
   Save,
+  Plus,
+  Loader2,
+  Search,
+  CheckSquare,
+  Square,
+  RefreshCw,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
-import { ExerciseWizard } from "@/components/exercise-wizard";
-import { RegenerateDialog } from "@/components/regenerate-dialog";
 import { ExerciseRenderer } from "@/components/exercises/exercise-renderer";
-import { CEFR_LEVELS, EXERCISE_TYPE_CONFIG, ExerciseType } from "@langopia/shared/types";
+import { EXERCISE_TYPE_CONFIG, ExerciseType, TargetSkill } from "@langopia/shared/types";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiKeyClient } from "@/hooks/use-api-client";
+import { useTokenUsage } from "@/hooks/use-token-usage";
+import type { UpdateExerciseRequest, CreateSingleExerciseRequest, RegenerateExerciseRequest } from "@langopia/api-client";
+import { PageHeader, PageSkeleton, EmptyState, PrimaryAction, ListItem } from "@/components/dashboard-list";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface Exercise {
   id: string;
@@ -40,6 +57,7 @@ interface Exercise {
   audioUrl?: string | null;
   videoUrl?: string | null;
   imageUrl?: string | null;
+  lesson?: { id: string; title: string } | null;
   createdAt: string;
 }
 
@@ -64,6 +82,8 @@ const skillColors: Record<string, string> = {
   listening: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400",
 };
 
+const exerciseTypes = Object.values(ExerciseType);
+const targetSkills = Object.values(TargetSkill);
 
 // ─── Inline Edit Form ───────────────────────────────────────
 function InlineEditForm({
@@ -73,6 +93,7 @@ function InlineEditForm({
   onSave,
   onCancel,
   saving,
+  levelCodes,
 }: {
   exercise: Exercise;
   draft: Partial<Exercise>;
@@ -80,6 +101,7 @@ function InlineEditForm({
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
+  levelCodes: string[];
 }) {
   const hasOptions = exercise.options && exercise.options.length > 0;
 
@@ -138,7 +160,7 @@ function InlineEditForm({
             onChange={(e) => onDraftChange({ ...draft, cefrLevel: e.target.value })}
             className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
           >
-            {CEFR_LEVELS.map((l) => (
+            {levelCodes.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}
           </select>
@@ -192,12 +214,249 @@ function InlineEditForm({
   );
 }
 
+// ─── Create Single Exercise Dialog ──────────────────────────
+function CreateExerciseDialog({
+  open,
+  onClose,
+  onCreated,
+  levelCodes,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: (ex: Exercise) => void;
+  levelCodes: string[];
+}) {
+  const api = useApiKeyClient();
+  const [mode, setMode] = useState<"prompt" | "manual">("prompt");
+  const [creating, setCreating] = useState(false);
+
+  // Shared fields
+  const [language, setLanguage] = useState("en");
+  const [cefrLevel, setCefrLevel] = useState(levelCodes[0] ?? "B1");
+  const [topic, setTopic] = useState("");
+  const [type, setType] = useState<string>(ExerciseType.TAP_TO_COMPLETE);
+  const [targetSkill, setTargetSkill] = useState<string>(TargetSkill.VOCABULARY);
+
+  // Prompt mode
+  const [prompt, setPrompt] = useState("");
+
+  // Manual mode
+  const [title, setTitle] = useState("");
+  const [instruction, setInstruction] = useState("");
+  const [content, setContent] = useState("");
+  const [options, setOptions] = useState("");
+  const [correctAnswer, setCorrectAnswer] = useState("");
+  const [explanation, setExplanation] = useState("");
+
+  function resetForm() {
+    setMode("prompt");
+    setLanguage("en");
+    setCefrLevel(levelCodes[0] ?? "B1");
+    setTopic("");
+    setType(ExerciseType.TAP_TO_COMPLETE);
+    setTargetSkill(TargetSkill.VOCABULARY);
+    setPrompt("");
+    setTitle("");
+    setInstruction("");
+    setContent("");
+    setOptions("");
+    setCorrectAnswer("");
+    setExplanation("");
+  }
+
+  async function handleCreate() {
+    setCreating(true);
+    try {
+      const body: CreateSingleExerciseRequest = {
+        mode,
+        language,
+        cefrLevel,
+        topic: topic || undefined,
+        type: type || undefined,
+        targetSkill: targetSkill || undefined,
+      };
+
+      if (mode === "prompt") {
+        if (!prompt.trim()) {
+          toast.error("Please enter a prompt");
+          return;
+        }
+        body.prompt = prompt;
+      } else {
+        if (!instruction.trim() || !content.trim()) {
+          toast.error("Instruction and content are required");
+          return;
+        }
+        body.title = title || undefined;
+        body.instruction = instruction;
+        body.content = content;
+        body.options = options.trim() ? options.split("\n").filter(Boolean) : undefined;
+        body.correctAnswer = correctAnswer || undefined;
+        body.explanation = explanation || undefined;
+      }
+
+      const result = await api.exercises.createSingle(body);
+      onCreated(result.data as unknown as Exercise);
+      toast.success("Exercise created");
+      resetForm();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create exercise");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  if (!open) return null;
+
+  const inputClass = "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800";
+  const labelClass = "text-xs font-medium text-zinc-500";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-bold">Create Exercise</h2>
+          <button onClick={() => { resetForm(); onClose(); }} className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="mb-5 flex rounded-lg border border-zinc-200 dark:border-zinc-700">
+          <button
+            onClick={() => setMode("prompt")}
+            className={`flex-1 rounded-l-lg px-4 py-2 text-sm font-medium transition ${
+              mode === "prompt"
+                ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400"
+                : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            }`}
+          >
+            <Sparkles className="mr-1.5 inline h-3.5 w-3.5" />
+            AI Prompt
+          </button>
+          <button
+            onClick={() => setMode("manual")}
+            className={`flex-1 rounded-r-lg px-4 py-2 text-sm font-medium transition ${
+              mode === "manual"
+                ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400"
+                : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            }`}
+          >
+            <Pencil className="mr-1.5 inline h-3.5 w-3.5" />
+            Manual
+          </button>
+        </div>
+
+        {/* Shared fields */}
+        <div className="mb-4 grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label className={labelClass}>Language</label>
+            <input value={language} onChange={(e) => setLanguage(e.target.value)} className={inputClass} placeholder="en" />
+          </div>
+          <div className="space-y-1">
+            <label className={labelClass}>CEFR Level</label>
+            <select value={cefrLevel} onChange={(e) => setCefrLevel(e.target.value)} className={inputClass}>
+              {levelCodes.map((l) => <option key={l} value={l}>{l}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className={labelClass}>Type</label>
+            <select value={type} onChange={(e) => setType(e.target.value)} className={inputClass}>
+              {exerciseTypes.map((t) => <option key={t} value={t}>{getTypeLabel(t)}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className={labelClass}>Target Skill</label>
+            <select value={targetSkill} onChange={(e) => setTargetSkill(e.target.value)} className={inputClass}>
+              {targetSkills.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <label className={labelClass}>Topic (optional)</label>
+            <input value={topic} onChange={(e) => setTopic(e.target.value)} className={inputClass} placeholder="e.g. Food & restaurants" />
+          </div>
+        </div>
+
+        {/* Prompt mode */}
+        {mode === "prompt" && (
+          <div className="space-y-1">
+            <label className={labelClass}>Describe the exercise you want to generate</label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={4}
+              className={inputClass}
+              placeholder="e.g. Create a tap-to-complete exercise about ordering food at a restaurant, with 4 sentences that have missing words..."
+            />
+          </div>
+        )}
+
+        {/* Manual mode */}
+        {mode === "manual" && (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className={labelClass}>Title (optional)</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
+            </div>
+            <div className="space-y-1">
+              <label className={labelClass}>Instruction *</label>
+              <input value={instruction} onChange={(e) => setInstruction(e.target.value)} className={inputClass} placeholder="e.g. Complete the sentences..." />
+            </div>
+            <div className="space-y-1">
+              <label className={labelClass}>Content *</label>
+              <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={3} className={inputClass} placeholder="The main content of the exercise" />
+            </div>
+            <div className="space-y-1">
+              <label className={labelClass}>Options (one per line)</label>
+              <textarea value={options} onChange={(e) => setOptions(e.target.value)} rows={3} className={inputClass} placeholder={"Option A\nOption B\nOption C"} />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <label className={labelClass}>Correct Answer</label>
+                <input value={correctAnswer} onChange={(e) => setCorrectAnswer(e.target.value)} className={inputClass} />
+              </div>
+              <div className="space-y-1">
+                <label className={labelClass}>Explanation</label>
+                <input value={explanation} onChange={(e) => setExplanation(e.target.value)} className={inputClass} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="mt-6 flex items-center justify-end gap-3">
+          <button
+            onClick={() => { resetForm(); onClose(); }}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            className="flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2 text-sm font-semibold text-white hover:bg-violet-500 disabled:opacity-50"
+          >
+            {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : mode === "prompt" ? <Sparkles className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            {creating ? "Creating..." : mode === "prompt" ? "Generate" : "Create"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ──────────────────────────────────────────────
 export default function ExercisesPage() {
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
+  const api = useApiKeyClient();
+  const { levelCodes } = useAcademyLevels();
+  const tokenUsage = useTokenUsage();
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [total, setTotal] = useState(0);
-  const [wizardOpen, setWizardOpen] = useState(false);
+
+  // Create dialog
+  const [createOpen, setCreateOpen] = useState(false);
 
   // Per-exercise preview and editing
   const [previewingIds, setPreviewingIds] = useState<Set<string>>(new Set());
@@ -205,81 +464,76 @@ export default function ExercisesPage() {
   const [editDrafts, setEditDrafts] = useState<Record<string, Partial<Exercise>>>({});
   const [savingEdits, setSavingEdits] = useState<Set<string>>(new Set());
 
-  // AI token usage
-  const [tokenUsage, setTokenUsage] = useState<{ used: number; limit: number } | null>(null);
+  // Regenerate
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+  const [regenPrompt, setRegenPrompt] = useState("");
+  const [regenLoading, setRegenLoading] = useState(false);
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deletingBulk, setDeletingBulk] = useState(false);
 
   // Filters
   const [filterSkill, setFilterSkill] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterCefrLevel, setFilterCefrLevel] = useState<string>("all");
-  const [groupBy, setGroupBy] = useState<"topic" | "level">("topic");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [groupBy, setGroupBy] = useState<"lesson" | "level">("lesson");
 
   // Collapsed groups
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
-  // Regenerate dialog
-  const [regenerateExercise, setRegenerateExercise] = useState<Exercise | null>(null);
-
   const apiKey = selectedAcademyData?.apiKey;
-
-  const loadTokenUsage = useCallback(async () => {
-    if (!apiKey) return;
-    try {
-      const res = await fetch("/api/v1/usage", {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setTokenUsage({
-          used: data.usage?.ai_tokens ?? 0,
-          limit: data.limits?.maxAiTokensPerMonth ?? 0,
-        });
-      }
-    } catch { /* ignore */ }
-  }, [apiKey]);
-
-  useEffect(() => {
-    if (selectedAcademy) {
-      loadTokenUsage();
-    }
-  }, [selectedAcademy, loadTokenUsage]);
 
   const loadExercises = useCallback(async () => {
     if (!apiKey) return;
-
-    const params = new URLSearchParams({ limit: "100" });
-    const res = await fetch(`/api/v1/exercises?${params}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setExercises(data.data ?? []);
+    try {
+      const data = await api.exercises.list({ limit: 100 });
+      setExercises((data.data ?? []) as unknown as Exercise[]);
       setTotal(data.total ?? 0);
-    }
-  }, [apiKey]);
+    } catch { /* ignore */ }
+  }, [apiKey, api]);
 
   useEffect(() => {
     setExercises([]);
     setTotal(0);
-    setTokenUsage(null);
+    setSelectedIds(new Set());
     if (selectedAcademy) loadExercises();
   }, [selectedAcademy, loadExercises]);
 
   async function handleDelete(id: string) {
     if (!apiKey) return;
-
-    const res = await fetch(`/api/v1/exercises/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.exercises.delete(id);
       setExercises((prev) => prev.filter((ex) => ex.id !== id));
       setTotal((t) => t - 1);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      toast.success("Exercise deleted");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete exercise";
+      toast.error(message);
     }
   }
 
-  function handleRegenerateClick(exercise: Exercise) {
-    setRegenerateExercise(exercise);
+  async function handleBulkDelete() {
+    if (selectedIds.size === 0) return;
+    setDeletingBulk(true);
+    try {
+      const ids = [...selectedIds];
+      await Promise.all(ids.map((id) => api.exercises.delete(id)));
+      setExercises((prev) => prev.filter((ex) => !selectedIds.has(ex.id)));
+      setTotal((t) => t - ids.length);
+      toast.success(`Deleted ${ids.length} exercise${ids.length !== 1 ? "s" : ""}`);
+      setSelectedIds(new Set());
+    } catch {
+      toast.error("Failed to delete some exercises");
+    } finally {
+      setDeletingBulk(false);
+    }
   }
 
   async function handleSaveEdit(id: string) {
@@ -289,36 +543,49 @@ export default function ExercisesPage() {
 
     setSavingEdits((prev) => new Set(prev).add(id));
     try {
-      const res = await fetch(`/api/v1/exercises/${id}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(draft),
+      const updated = await api.exercises.update(id, draft as unknown as UpdateExerciseRequest);
+      setExercises((prev) =>
+        prev.map((ex) => (ex.id === id ? { ...ex, ...(updated as unknown as Exercise) } : ex))
+      );
+      setEditingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
       });
-      if (res.ok) {
-        const updated = await res.json();
-        setExercises((prev) =>
-          prev.map((ex) => (ex.id === id ? { ...ex, ...updated } : ex))
-        );
-        setEditingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-        setEditDrafts((prev) => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-      }
+      setEditDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      toast.success("Exercise updated");
+    } catch {
+      toast.error("Failed to update exercise");
     } finally {
       setSavingEdits((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
+    }
+  }
+
+  async function handleRegenerate(id: string) {
+    setRegenLoading(true);
+    try {
+      const body: RegenerateExerciseRequest = regenPrompt.trim()
+        ? { customPrompt: regenPrompt.trim() }
+        : {};
+      const updated = await api.exercises.regenerate(id, body);
+      setExercises((prev) =>
+        prev.map((ex) => (ex.id === id ? { ...ex, ...(updated as unknown as Exercise) } : ex))
+      );
+      toast.success("Exercise regenerated");
+      setRegeneratingId(null);
+      setRegenPrompt("");
+    } catch {
+      toast.error("Failed to regenerate exercise");
+    } finally {
+      setRegenLoading(false);
     }
   }
 
@@ -358,30 +625,54 @@ export default function ExercisesPage() {
     });
   }
 
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((e) => e.id)));
+    }
+  }
+
   // Apply client-side filters
   const filtered = exercises.filter((ex) => {
     if (filterSkill !== "all" && ex.targetSkill !== filterSkill) return false;
     if (filterType !== "all" && ex.type !== filterType) return false;
     if (filterCefrLevel !== "all" && ex.cefrLevel !== filterCefrLevel) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matches =
+        (ex.topic?.toLowerCase().includes(q)) ||
+        ex.instruction.toLowerCase().includes(q) ||
+        ex.content.toLowerCase().includes(q) ||
+        (ex.title?.toLowerCase().includes(q));
+      if (!matches) return false;
+    }
     return true;
   });
 
   // Group exercises
   const grouped = new Map<string, Exercise[]>();
   if (groupBy === "level") {
-    // Group by CEFR level in order
-    for (const level of CEFR_LEVELS) {
+    for (const level of levelCodes) {
       const matching = filtered.filter((ex) => ex.cefrLevel === level);
       if (matching.length > 0) grouped.set(level, matching);
     }
-    // Any exercises without a recognized level
-    const uncategorized = filtered.filter((ex) => !(CEFR_LEVELS as readonly string[]).includes(ex.cefrLevel));
+    const uncategorized = filtered.filter((ex) => !levelCodes.includes(ex.cefrLevel));
     if (uncategorized.length > 0) grouped.set("Other", uncategorized);
   } else {
     for (const ex of filtered) {
-      const topic = ex.topic || "Uncategorized";
-      if (!grouped.has(topic)) grouped.set(topic, []);
-      grouped.get(topic)!.push(ex);
+      const lessonLabel = ex.lesson?.title ?? "Sin lección";
+      if (!grouped.has(lessonLabel)) grouped.set(lessonLabel, []);
+      grouped.get(lessonLabel)!.push(ex);
     }
   }
 
@@ -389,141 +680,123 @@ export default function ExercisesPage() {
   const skills = [...new Set(exercises.map((e) => e.targetSkill))];
   const types = [...new Set(exercises.map((e) => e.type))];
 
-  const hasActiveFilters = filterSkill !== "all" || filterType !== "all" || filterCefrLevel !== "all";
+  const hasActiveFilters = filterSkill !== "all" || filterType !== "all" || filterCefrLevel !== "all" || searchQuery.trim() !== "";
 
   if (academyLoading) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="h-8 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="glass h-32 animate-pulse rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!selectedAcademy) {
     return (
-      <div className="mx-auto max-w-5xl">
-        <div className="glass flex flex-col items-center justify-center rounded-xl py-16 text-center">
-          <BookOpen className="mb-3 h-10 w-10 text-zinc-400" />
-          <p className="font-medium text-zinc-500">No academy selected</p>
-          <p className="mt-1 text-sm text-zinc-400">Select an academy from the sidebar to view exercises</p>
-        </div>
+      <div className="mx-auto max-w-6xl">
+        <EmptyState icon={BookOpen} title="No academy selected" description="Select an academy from the sidebar to view exercises" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Exercises</h1>
-          <p className="text-sm text-zinc-500">
-            {filtered.length} of {total} exercises &middot; {grouped.size} {groupBy === "level" ? "level" : "topic"}{grouped.size !== 1 ? "s" : ""}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Exercise Bank"
+        subtitle={`${filtered.length} of ${total} exercises \u00b7 ${grouped.size} ${groupBy === "level" ? "level" : "lesson"}${grouped.size !== 1 ? "s" : ""}`}
+        extra={
+          !tokenUsage.loading ? (
+            <p className={`mt-1 text-xs font-medium ${tokenUsage.limit > 0 && tokenUsage.used / tokenUsage.limit > 0.8 ? "text-red-500" : "text-pink-500 dark:text-pink-400"}`}>
+              <Sparkles className="mr-1 inline h-3 w-3" />
+              AI Tokens: {tokenUsage.formatted}
+            </p>
+          ) : undefined
+        }
+        action={
+          <PrimaryAction onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Create Exercise
+          </PrimaryAction>
+        }
+      />
 
-      {/* AI Token Credits */}
-      {tokenUsage && (
-        <div className="glass rounded-xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-violet-500" />
-              <span className="text-sm font-medium">AI Token Credits</span>
-            </div>
-            <span className="text-sm text-zinc-500">
-              {tokenUsage.used.toLocaleString()} / {tokenUsage.limit.toLocaleString()} tokens
-            </span>
+      {/* Bulk actions bar */}
+      {selectedIds.size > 0 && (
+        <div className="glass flex items-center justify-between rounded-xl p-3">
+          <span className="text-sm font-medium">
+            {selectedIds.size} exercise{selectedIds.size !== 1 ? "s" : ""} selected
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              Deselect all
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              disabled={deletingBulk}
+              className="flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
+            >
+              {deletingBulk ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+              Delete selected
+            </button>
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-            <div
-              className={`h-full rounded-full transition-all ${
-                tokenUsage.used >= tokenUsage.limit
-                  ? "bg-red-500"
-                  : tokenUsage.used / tokenUsage.limit > 0.8
-                  ? "bg-amber-500"
-                  : "bg-violet-500"
-              }`}
-              style={{ width: `${Math.min((tokenUsage.used / tokenUsage.limit) * 100, 100)}%` }}
-            />
-          </div>
         </div>
-      )}
-
-      {/* Generate button */}
-      <button
-        onClick={() => setWizardOpen(true)}
-        className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition hover:shadow-lg"
-      >
-        <Sparkles className="h-4 w-4" />
-        Generate Exercises
-      </button>
-
-      {/* Exercise Wizard */}
-      {apiKey && (
-        <ExerciseWizard
-          open={wizardOpen}
-          onOpenChange={setWizardOpen}
-          apiKey={apiKey}
-          onComplete={() => {
-            loadExercises();
-            loadTokenUsage();
-          }}
-        />
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1.5 text-xs text-zinc-500">
-          <Filter className="h-3.5 w-3.5" /> Filters:
+      <div className="flex flex-wrap items-center gap-2">
+        <Filter className="h-4 w-4 text-zinc-400" />
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search..."
+            className="h-8 w-48 pl-8 text-xs"
+          />
         </div>
-        <select
-          value={filterSkill}
-          onChange={(e) => setFilterSkill(e.target.value)}
-          className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800"
-        >
-          <option value="all">All skills</option>
-          {skills.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-        <select
-          value={filterType}
-          onChange={(e) => setFilterType(e.target.value)}
-          className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800"
-        >
-          <option value="all">All types</option>
-          {types.map((t) => (
-            <option key={t} value={t}>{getTypeLabel(t)}</option>
-          ))}
-        </select>
-        <select
-          value={filterCefrLevel}
-          onChange={(e) => setFilterCefrLevel(e.target.value)}
-          className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800"
-        >
-          <option value="all">All levels</option>
-          {CEFR_LEVELS.map((l) => (
-            <option key={l} value={l}>{l}</option>
-          ))}
-        </select>
+        <Select value={filterSkill} onValueChange={setFilterSkill}>
+          <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs">
+            <SelectValue placeholder="All skills" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All skills</SelectItem>
+            {skills.map((s) => (
+              <SelectItem key={s} value={s}>{s}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All types</SelectItem>
+            {types.map((t) => (
+              <SelectItem key={t} value={t}>{getTypeLabel(t)}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterCefrLevel} onValueChange={setFilterCefrLevel}>
+          <SelectTrigger className="h-8 w-auto min-w-[100px] text-xs">
+            <SelectValue placeholder="All levels" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All levels</SelectItem>
+            {levelCodes.map((l) => (
+              <SelectItem key={l} value={l}>{l}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Group toggle */}
         <div className="ml-auto flex rounded-lg border border-zinc-200 dark:border-zinc-700">
           <button
-            onClick={() => setGroupBy("topic")}
+            onClick={() => setGroupBy("lesson")}
             className={`rounded-l-lg px-2.5 py-1.5 text-xs font-medium transition ${
-              groupBy === "topic"
+              groupBy === "lesson"
                 ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400"
                 : "text-zinc-500 hover:bg-zinc-50 dark:hover:bg-zinc-800"
             }`}
           >
-            By Topic
+            By Lesson
           </button>
           <button
             onClick={() => setGroupBy("level")}
@@ -539,13 +812,28 @@ export default function ExercisesPage() {
 
         {hasActiveFilters && (
           <button
-            onClick={() => { setFilterSkill("all"); setFilterType("all"); setFilterCefrLevel("all"); }}
-            className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            onClick={() => { setFilterSkill("all"); setFilterType("all"); setFilterCefrLevel("all"); setSearchQuery(""); }}
+            className="text-xs text-violet-600 hover:text-violet-500"
           >
-            <X className="h-3 w-3" /> Clear
+            Clear filters
           </button>
         )}
       </div>
+
+      {/* Select all toggle */}
+      {filtered.length > 0 && (
+        <button
+          onClick={toggleSelectAll}
+          className="flex items-center gap-2 text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+        >
+          {selectedIds.size === filtered.length ? (
+            <CheckSquare className="h-3.5 w-3.5 text-violet-500" />
+          ) : (
+            <Square className="h-3.5 w-3.5" />
+          )}
+          {selectedIds.size === filtered.length ? "Deselect all" : "Select all"}
+        </button>
+      )}
 
       {/* Exercise groups */}
       <div className="space-y-6">
@@ -575,10 +863,23 @@ export default function ExercisesPage() {
               {!isCollapsed && (
                 <div className="space-y-3">
                   {groupExercises.map((ex) => (
-                    <div key={ex.id} className="overflow-hidden rounded-xl border border-zinc-200/60 bg-white shadow-sm dark:border-zinc-700/60 dark:bg-zinc-900">
-                      {/* Manage row */}
-                      <div className="flex items-center gap-3 p-4">
-                        <div className="flex-1">
+                    <ListItem
+                      key={ex.id}
+                      chevron={false}
+                      avatar={
+                        <button
+                          onClick={() => toggleSelect(ex.id)}
+                          className="shrink-0 text-zinc-400 hover:text-violet-500"
+                        >
+                          {selectedIds.has(ex.id) ? (
+                            <CheckSquare className="h-4 w-4 text-violet-500" />
+                          ) : (
+                            <Square className="h-4 w-4" />
+                          )}
+                        </button>
+                      }
+                      title={
+                        <div>
                           <div className="mb-1.5 flex flex-wrap items-center gap-2">
                             <span className="text-zinc-500">{getTypeIcon(ex.type)}</span>
                             <span
@@ -599,15 +900,20 @@ export default function ExercisesPage() {
                             <p className="text-sm font-semibold">{ex.title}</p>
                           )}
                           <p className="text-sm font-medium">{ex.instruction}</p>
-                          <p className="mt-0.5 text-sm text-zinc-500 line-clamp-1">{ex.content}</p>
-                          {ex.audioUrl && (
-                            <div className="mt-1 flex items-center gap-1 text-xs text-violet-500">
-                              <Headphones className="h-3 w-3" /> Audio available
-                            </div>
-                          )}
                         </div>
-                        <div className="flex shrink-0 items-center gap-1">
-                          {/* Preview toggle */}
+                      }
+                      subtitle={
+                        <>
+                          <span className="line-clamp-1">{ex.content}</span>
+                          {ex.audioUrl && (
+                            <span className="flex items-center gap-1 text-violet-500">
+                              <Headphones className="h-3 w-3" /> Audio
+                            </span>
+                          )}
+                        </>
+                      }
+                      actions={
+                        <>
                           <button
                             onClick={() => togglePreview(ex.id)}
                             className={`rounded-md p-1.5 transition ${
@@ -619,7 +925,6 @@ export default function ExercisesPage() {
                           >
                             {previewingIds.has(ex.id) ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                           </button>
-                          {/* Edit toggle */}
                           <button
                             onClick={() => toggleEdit(ex.id)}
                             className={`rounded-md p-1.5 transition ${
@@ -631,15 +936,16 @@ export default function ExercisesPage() {
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
-                          {/* Regenerate */}
                           <button
-                            onClick={() => handleRegenerateClick(ex)}
-                            className="rounded-md p-1.5 text-zinc-400 hover:bg-violet-50 hover:text-violet-500 dark:hover:bg-violet-900/20"
+                            onClick={() => {
+                              setRegeneratingId(ex.id);
+                              setRegenPrompt("");
+                            }}
+                            className="rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
                             title="Regenerate"
                           >
                             <RefreshCw className="h-3.5 w-3.5" />
                           </button>
-                          {/* Delete */}
                           <button
                             onClick={() => handleDelete(ex.id)}
                             className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20"
@@ -647,17 +953,14 @@ export default function ExercisesPage() {
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
-                        </div>
-                      </div>
-
-                      {/* Inline preview */}
+                        </>
+                      }
+                    >
                       {previewingIds.has(ex.id) && (
                         <div className="border-t border-zinc-100 p-5 dark:border-zinc-800">
                           <ExerciseRenderer exercise={ex} mode="interactive" />
                         </div>
                       )}
-
-                      {/* Inline edit form */}
                       {editingIds.has(ex.id) && (
                         <InlineEditForm
                           exercise={ex}
@@ -666,9 +969,10 @@ export default function ExercisesPage() {
                           onSave={() => handleSaveEdit(ex.id)}
                           onCancel={() => toggleEdit(ex.id)}
                           saving={savingEdits.has(ex.id)}
+                          levelCodes={levelCodes}
                         />
                       )}
-                    </div>
+                    </ListItem>
                   ))}
                 </div>
               )}
@@ -682,7 +986,7 @@ export default function ExercisesPage() {
             <Filter className="mb-3 h-8 w-8 text-zinc-400" />
             <p className="font-medium text-zinc-500">No exercises match your filters</p>
             <button
-              onClick={() => { setFilterSkill("all"); setFilterType("all"); setFilterCefrLevel("all"); }}
+              onClick={() => { setFilterSkill("all"); setFilterType("all"); setFilterCefrLevel("all"); setSearchQuery(""); }}
               className="mt-2 text-sm text-violet-600 hover:underline dark:text-violet-400"
             >
               Clear filters
@@ -691,39 +995,83 @@ export default function ExercisesPage() {
         )}
 
         {exercises.length === 0 && (
-          <div className="glass flex flex-col items-center justify-center rounded-xl py-16 text-center">
-            <BookOpen className="mb-3 h-10 w-10 text-zinc-400" />
-            <p className="font-medium text-zinc-500">No exercises yet</p>
-            <p className="mt-1 text-sm text-zinc-400">
-              Use the wizard to generate exercises from your material
-            </p>
-            <button
-              onClick={() => setWizardOpen(true)}
-              className="mt-4 flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-violet-500"
-            >
-              <Sparkles className="h-4 w-4" />
-              Generate Exercises
-            </button>
-          </div>
+          <EmptyState
+            icon={BookOpen}
+            title="No exercises yet"
+            description="Create your first exercise or generate exercises from a lesson"
+            action={
+              <div className="mt-4">
+                <PrimaryAction onClick={() => setCreateOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Create Exercise
+                </PrimaryAction>
+              </div>
+            }
+          />
         )}
       </div>
 
-      {/* Regenerate dialog */}
-      {regenerateExercise && apiKey && (
-        <RegenerateDialog
-          exerciseId={regenerateExercise.id}
-          exerciseType={regenerateExercise.type}
-          exerciseTargetSkill={regenerateExercise.targetSkill}
-          exerciseInstruction={regenerateExercise.instruction}
-          apiKey={apiKey}
-          open={!!regenerateExercise}
-          onOpenChange={(open) => { if (!open) setRegenerateExercise(null); }}
-          onRegenerated={(newEx) => {
-            setExercises((prev) =>
-              prev.map((ex) => (ex.id === regenerateExercise.id ? { ...ex, ...newEx } as Exercise : ex))
-            );
-          }}
-        />
+      {/* Create Exercise Dialog */}
+      <CreateExerciseDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={(ex) => {
+          setExercises((prev) => [ex, ...prev]);
+          setTotal((t) => t + 1);
+        }}
+        levelCodes={levelCodes}
+      />
+
+      {/* Regenerate Modal */}
+      {regeneratingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-zinc-900">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-bold">Regenerar ejercicio</h2>
+              <button
+                onClick={() => { setRegeneratingId(null); setRegenPrompt(""); }}
+                className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="mb-3 text-sm text-zinc-500">
+              {exercises.find((e) => e.id === regeneratingId)?.title
+                ?? exercises.find((e) => e.id === regeneratingId)?.instruction
+                ?? "Exercise"}
+            </p>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-zinc-500">
+                  Instrucciones adicionales (opcional)
+                </label>
+                <textarea
+                  value={regenPrompt}
+                  onChange={(e) => setRegenPrompt(e.target.value)}
+                  rows={3}
+                  placeholder="Ej: Hazlo más difícil, añade más distractores..."
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+                  autoFocus
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  onClick={() => { setRegeneratingId(null); setRegenPrompt(""); }}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => handleRegenerate(regeneratingId)}
+                  disabled={regenLoading}
+                  className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {regenLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  {regenLoading ? "Regenerando..." : "Regenerar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

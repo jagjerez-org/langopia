@@ -14,13 +14,19 @@ import {
   Save,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
-import { ExerciseWizard } from "@/components/exercise-wizard";
+import { useWizard } from "@/components/exercise-wizard-context";
 import { RegenerateDialog } from "@/components/regenerate-dialog";
 import { ExerciseRenderer } from "@/components/exercises/exercise-renderer";
+import { LessonKpis } from "@/components/lesson-kpis";
+import { LessonVersionHistory } from "@/components/lesson-version-history";
+import { LessonWizard } from "@/components/lesson-wizard";
 import { EXERCISE_TYPE_CONFIG, ExerciseType } from "@langopia/shared/types";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useParams, useRouter } from "next/navigation";
+import { useApiKeyClient } from "@/hooks/use-api-client";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
+import type { UpdateExerciseRequest, UpdateLessonRequest } from "@langopia/api-client";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,6 +95,9 @@ export default function LessonDetailPage() {
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const api = useApiKeyClient();
+  const { levelCodes } = useAcademyLevels();
+  const { openWizard } = useWizard();
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -97,9 +106,6 @@ export default function LessonDetailPage() {
   // Lesson editing
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
-
-  // Exercise generation wizard
-  const [wizardOpen, setWizardOpen] = useState(false);
 
   // Per-exercise state
   const [previewingIds, setPreviewingIds] = useState<Set<string>>(new Set());
@@ -112,92 +118,85 @@ export default function LessonDetailPage() {
   const [deleteExerciseId, setDeleteExerciseId] = useState<string | null>(null);
   const [deleteLessonOpen, setDeleteLessonOpen] = useState(false);
 
+  // Lesson wizard
+  const [lessonWizardOpen, setLessonWizardOpen] = useState(false);
+
   const apiKey = selectedAcademyData?.apiKey;
 
   const loadLesson = useCallback(async () => {
-    if (!apiKey || !id) return;
+    if (!id) return;
     setLoadingLesson(true);
     try {
-      const res = await fetch(`/api/v1/lessons/${id}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (res.ok) {
-        setLesson(await res.json());
-      } else {
-        toast.error("Lesson not found");
-        router.push("/dashboard/lessons");
-      }
+      setLesson(await api.lessons.get(id) as unknown as Lesson);
+    } catch {
+      toast.error("Lesson not found");
+      router.push("/dashboard/lessons");
     } finally {
       setLoadingLesson(false);
     }
-  }, [apiKey, id, router]);
+  }, [api, id, router]);
 
   const loadExercises = useCallback(async () => {
-    if (!apiKey || !id) return;
-    const res = await fetch(`/api/v1/lessons/${id}/exercises`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setExercises(data.data ?? []);
+    if (!id) return;
+    try {
+      const data = await api.lessons.listExercises(id);
+      setExercises((data.data ?? []) as unknown as Exercise[]);
+    } catch {
+      // ignore
     }
-  }, [apiKey, id]);
+  }, [api, id]);
+
+  const handleReload = useCallback(() => {
+    loadLesson();
+    loadExercises();
+  }, [loadLesson, loadExercises]);
 
   useEffect(() => {
     if (selectedAcademy) {
-      loadLesson();
-      loadExercises();
+      handleReload();
     }
-  }, [selectedAcademy, loadLesson, loadExercises]);
+  }, [selectedAcademy, handleReload]);
 
   async function handleUnlinkExercise(exerciseId: string) {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/lessons/${id}/exercises?exerciseId=${exerciseId}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.lessons.unlinkExercise(id, exerciseId);
       setExercises((prev) => prev.filter((e) => e.id !== exerciseId));
       setDeleteExerciseId(null);
       toast.success("Exercise removed from lesson");
       loadLesson();
+    } catch {
+      toast.error("Failed to remove exercise");
     }
   }
 
   async function handleDeleteLesson() {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/lessons/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
+    try {
+      await api.lessons.delete(id);
       toast.success("Lesson deleted");
       router.push("/dashboard/lessons");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete lesson";
+      toast.error(message);
     }
   }
 
   async function handleUpdateTitle() {
-    if (!apiKey || !titleDraft.trim()) return;
-    const res = await fetch(`/api/v1/lessons/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ title: titleDraft }),
-    });
-    if (res.ok) {
+    if (!titleDraft.trim()) return;
+    try {
+      await api.lessons.update(id, { title: titleDraft });
       setLesson((prev) => prev ? { ...prev, title: titleDraft } : prev);
       setEditingTitle(false);
+    } catch {
+      toast.error("Failed to update title");
     }
   }
 
   async function handleUpdateStatus(status: string) {
-    if (!apiKey) return;
-    const res = await fetch(`/api/v1/lessons/${id}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (res.ok) {
+    try {
+      await api.lessons.update(id, { status } as unknown as UpdateLessonRequest);
       setLesson((prev) => prev ? { ...prev, status } : prev);
+    } catch {
+      toast.error("Failed to update status");
     }
   }
 
@@ -206,22 +205,14 @@ export default function LessonDetailPage() {
   }
 
   async function handleSaveEdit(exerciseId: string) {
-    if (!apiKey) return;
     const draft = editDrafts[exerciseId];
     if (!draft) return;
     setSavingEdits((prev) => new Set(prev).add(exerciseId));
     try {
-      const res = await fetch(`/api/v1/exercises/${exerciseId}`, {
-        method: "PATCH",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify(draft),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setExercises((prev) => prev.map((ex) => (ex.id === exerciseId ? { ...ex, ...updated } : ex)));
-        setEditingIds((prev) => { const next = new Set(prev); next.delete(exerciseId); return next; });
-        setEditDrafts((prev) => { const next = { ...prev }; delete next[exerciseId]; return next; });
-      }
+      const updated = await api.exercises.update(exerciseId, draft as unknown as UpdateExerciseRequest);
+      setExercises((prev) => prev.map((ex) => (ex.id === exerciseId ? { ...ex, ...(updated as unknown as Exercise) } : ex)));
+      setEditingIds((prev) => { const next = new Set(prev); next.delete(exerciseId); return next; });
+      setEditDrafts((prev) => { const next = { ...prev }; delete next[exerciseId]; return next; });
     } finally {
       setSavingEdits((prev) => { const next = new Set(prev); next.delete(exerciseId); return next; });
     }
@@ -332,6 +323,9 @@ export default function LessonDetailPage() {
         )}
       </div>
 
+      {/* KPIs */}
+      <LessonKpis lessonId={id} />
+
       {/* Exercise Generator */}
       <div className="glass flex items-center justify-between rounded-xl p-5">
         <div className="flex items-center gap-2">
@@ -339,31 +333,30 @@ export default function LessonDetailPage() {
           <h3 className="font-semibold">Generate Exercises</h3>
           <span className="text-sm text-zinc-500">Upload material and let AI suggest exercises</span>
         </div>
-        <button
-          onClick={() => setWizardOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:shadow-lg"
-        >
-          <Sparkles className="h-4 w-4" />
-          Generate
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLessonWizardOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-violet-500 hover:shadow-lg"
+          >
+            <Sparkles className="h-4 w-4" />
+            Lesson Wizard
+          </button>
+          <button
+            onClick={() => openWizard({
+              lessonId: id,
+              lessonTitle: lesson.title,
+              language: lesson.language,
+              cefrLevel: lesson.cefrLevel,
+              levelCodes,
+              onComplete: () => { handleReload(); },
+            })}
+            className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          >
+            <Sparkles className="h-4 w-4" />
+            Quick Generate
+          </button>
+        </div>
       </div>
-
-      {/* Exercise Wizard */}
-      {apiKey && lesson && (
-        <ExerciseWizard
-          open={wizardOpen}
-          onOpenChange={setWizardOpen}
-          apiKey={apiKey}
-          lessonId={id}
-          lessonTitle={lesson.title}
-          lessonLanguage={lesson.language}
-          lessonCefrLevel={lesson.cefrLevel}
-          onComplete={() => {
-            loadExercises();
-            loadLesson();
-          }}
-        />
-      )}
 
       {/* Exercise List */}
       <div>
@@ -518,6 +511,9 @@ export default function LessonDetailPage() {
         )}
       </div>
 
+      {/* Version History */}
+      <LessonVersionHistory lessonId={id} onRestore={handleReload} />
+
       {/* Delete exercise confirmation */}
       <AlertDialog open={!!deleteExerciseId} onOpenChange={() => setDeleteExerciseId(null)}>
         <AlertDialogContent>
@@ -561,7 +557,6 @@ export default function LessonDetailPage() {
           exerciseType={regenerateExercise.type}
           exerciseTargetSkill={regenerateExercise.targetSkill}
           exerciseInstruction={regenerateExercise.instruction}
-          apiKey={apiKey}
           open={!!regenerateExercise}
           onOpenChange={(open) => { if (!open) setRegenerateExercise(null); }}
           onRegenerated={(newEx) => {
@@ -571,6 +566,22 @@ export default function LessonDetailPage() {
           }}
         />
       )}
+
+      {/* Lesson Wizard */}
+      <LessonWizard
+        open={lessonWizardOpen}
+        onOpenChange={setLessonWizardOpen}
+        editingLesson={{
+          id: lesson.id,
+          title: lesson.title,
+          description: lesson.description,
+          language: lesson.language,
+          cefrLevel: lesson.cefrLevel,
+          status: lesson.status,
+        }}
+        editingExercises={exercises}
+        onComplete={handleReload}
+      />
     </div>
   );
 }

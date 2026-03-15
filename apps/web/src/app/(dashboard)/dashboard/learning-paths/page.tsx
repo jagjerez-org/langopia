@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Route, Plus, Filter, ChevronRight, Clock, BookOpen } from "lucide-react";
-import { CEFR_LEVELS, EXERCISE_LANGUAGES } from "@langopia/shared/types";
-import { toast } from "sonner";
+import { Route, Filter, ChevronRight, Clock, BookOpen } from "lucide-react";
+import { EXERCISE_LANGUAGES } from "@langopia/shared/types";
+import { useAcademyLevels } from "@/hooks/use-academy-levels";
 import { useAcademy } from "@/components/academy-provider";
 import { useRouter } from "next/navigation";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 
 interface LearningPath {
   id: string;
@@ -28,85 +29,38 @@ const statusColors: Record<string, string> = {
 };
 
 export default function LearningPathsPage() {
-  const { selectedAcademy, selectedAcademyData, loading: academyLoading } = useAcademy();
+  const { selectedAcademy, loading: academyLoading } = useAcademy();
   const router = useRouter();
+  const api = useApiKeyClient();
+  const { levelCodes } = useAcademyLevels();
   const [paths, setPaths] = useState<LearningPath[]>([]);
   const [total, setTotal] = useState(0);
-
-  // Create form
-  const [creating, setCreating] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newLanguage, setNewLanguage] = useState("en");
-  const [newCefrLevel, setNewCefrLevel] = useState("B1");
-  const [newDescription, setNewDescription] = useState("");
-  const [saving, setSaving] = useState(false);
 
   // Filters
   const [filterLanguage, setFilterLanguage] = useState<string>("all");
   const [filterCefr, setFilterCefr] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
-  const apiKey = selectedAcademyData?.apiKey;
-
   const loadPaths = useCallback(async () => {
-    if (!apiKey) return;
-
-    const params = new URLSearchParams({ limit: "100" });
-    if (filterLanguage !== "all") params.set("language", filterLanguage);
-    if (filterCefr !== "all") params.set("cefrLevel", filterCefr);
-    if (filterStatus !== "all") params.set("status", filterStatus);
-
-    const res = await fetch(`/api/v1/learning-paths?${params}`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setPaths(data.data ?? []);
+    try {
+      const data = await api.learningPaths.list({
+        language: filterLanguage !== "all" ? filterLanguage : undefined,
+        cefrLevel: filterCefr !== "all" ? filterCefr : undefined,
+        status: filterStatus !== "all" ? filterStatus : undefined,
+        limit: 100,
+      });
+      setPaths((data.data ?? []) as unknown as LearningPath[]);
       setTotal(data.total ?? 0);
+    } catch {
+      // ignore
     }
-  }, [apiKey, filterLanguage, filterCefr, filterStatus]);
+  }, [api, filterLanguage, filterCefr, filterStatus]);
 
   useEffect(() => {
     setPaths([]);
     setTotal(0);
     if (selectedAcademy) loadPaths();
   }, [selectedAcademy, loadPaths]);
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!apiKey || !newTitle.trim()) return;
-
-    setSaving(true);
-    try {
-      const res = await fetch("/api/v1/learning-paths", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: newTitle,
-          language: newLanguage,
-          cefrLevel: newCefrLevel,
-          description: newDescription || undefined,
-        }),
-      });
-
-      if (res.ok) {
-        const lp = await res.json();
-        setCreating(false);
-        setNewTitle("");
-        setNewDescription("");
-        toast.success("Learning path created");
-        router.push(`/dashboard/learning-paths/${lp.id}`);
-      } else {
-        const err = await res.json();
-        toast.error(err.error || "Failed to create learning path");
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
 
   const hasActiveFilters = filterLanguage !== "all" || filterCefr !== "all" || filterStatus !== "all";
 
@@ -153,83 +107,7 @@ export default function LearningPathsPage() {
             {paths.length} of {total} path{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <button
-          onClick={() => setCreating(!creating)}
-          className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-violet-500 hover:shadow-lg"
-        >
-          <Plus className="h-4 w-4" />
-          New Path
-        </button>
       </div>
-
-      {/* Create form */}
-      {creating && (
-        <form onSubmit={handleCreate} className="glass space-y-4 rounded-xl p-5">
-          <h3 className="font-semibold">Create New Learning Path</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs font-medium text-zinc-500">Title *</label>
-              <input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="e.g. Business English B1 Course"
-                required
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-violet-500"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-500">Language</label>
-              <select
-                value={newLanguage}
-                onChange={(e) => setNewLanguage(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-              >
-                {EXERCISE_LANGUAGES.map((l) => (
-                  <option key={l.code} value={l.code}>{l.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-500">CEFR Level *</label>
-              <select
-                value={newCefrLevel}
-                onChange={(e) => setNewCefrLevel(e.target.value)}
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
-              >
-                {CEFR_LEVELS.map((l) => (
-                  <option key={l} value={l}>{l}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs font-medium text-zinc-500">Description</label>
-              <textarea
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Optional description of the learning path..."
-                rows={2}
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-violet-500"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="submit"
-              disabled={saving || !newTitle.trim()}
-              className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
-            >
-              {saving ? "Creating..." : "Create Path"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setCreating(false)}
-              className="rounded-lg px-4 py-2 text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
@@ -250,7 +128,7 @@ export default function LearningPathsPage() {
           className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-800"
         >
           <option value="all">All levels</option>
-          {CEFR_LEVELS.map((l) => (
+          {levelCodes.map((l) => (
             <option key={l} value={l}>{l}</option>
           ))}
         </select>
@@ -279,14 +157,7 @@ export default function LearningPathsPage() {
         <div className="glass flex flex-col items-center justify-center rounded-xl py-16 text-center">
           <Route className="mb-3 h-10 w-10 text-zinc-400" />
           <p className="font-medium text-zinc-500">No learning paths yet</p>
-          <p className="mt-1 text-sm text-zinc-400">Create your first learning path to organize lessons into a curriculum</p>
-          <button
-            onClick={() => setCreating(true)}
-            className="mt-4 flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-violet-500"
-          >
-            <Plus className="h-4 w-4" />
-            New Path
-          </button>
+          <p className="mt-1 text-sm text-zinc-400">Learning paths can only be created via the API</p>
         </div>
       ) : (
         <div className="space-y-6">

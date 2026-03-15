@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FileText, ChevronRight } from "lucide-react";
 import { useAcademy } from "@/components/academy-provider";
+import { useApiKeyClient } from "@/hooks/use-api-client";
 
 interface ReportSummary {
   roomId: string;
@@ -16,44 +17,44 @@ interface ReportSummary {
 
 export default function ReportsPage() {
   const { selectedAcademy, selectedAcademyData, loading } = useAcademy();
+  const api = useApiKeyClient();
   const [reports, setReports] = useState<ReportSummary[]>([]);
 
   useEffect(() => {
     setReports([]);
     if (!selectedAcademy || !selectedAcademyData?.apiKey) return;
-    const apiKey = selectedAcademyData.apiKey;
 
-    fetch("/api/v1/rooms?status=completed&limit=50", {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    })
-      .then((r) => r.json())
-      .then(async (data) => {
-        const rooms = data.data ?? [];
-        const reportPromises = rooms.map(async (room: { id: string; title: string; createdAt: string }) => {
+    api.rooms.list({ status: "completed", limit: 50 })
+      .then(async (result) => {
+        const rooms = result.data ?? [];
+        const reportPromises = rooms.map(async (room) => {
           try {
-            const res = await fetch(`/api/v1/rooms/${room.id}/report`, {
-              headers: { Authorization: `Bearer ${apiKey}` },
-            });
-            if (res.ok) {
-              const report = await res.json();
-              return {
-                roomId: room.id,
-                roomTitle: room.title,
-                status: report.status,
-                summary: report.summary,
-                classDuration: report.classDuration ?? 0,
-                studentCount: report.students?.length ?? 0,
-                createdAt: report.createdAt,
-              };
-            }
-          } catch {}
-          return null;
+            const report = await api.rooms.getReport(room.id) as unknown as {
+              status: string;
+              summary: string | null;
+              classDuration?: number;
+              students?: unknown[];
+              createdAt: string;
+            };
+            return {
+              roomId: room.id,
+              roomTitle: room.title,
+              status: report.status,
+              summary: report.summary,
+              classDuration: report.classDuration ?? 0,
+              studentCount: report.students?.length ?? 0,
+              createdAt: report.createdAt,
+            };
+          } catch {
+            return null;
+          }
         });
 
         const results = (await Promise.all(reportPromises)).filter(Boolean);
         setReports(results as ReportSummary[]);
-      });
-  }, [selectedAcademy, selectedAcademyData]);
+      })
+      .catch(() => {});
+  }, [selectedAcademy, selectedAcademyData, api]);
 
   if (loading) {
     return (
