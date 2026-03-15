@@ -23,6 +23,6 @@ WORKDIR /app
 # Pre-download XTTS v2 model during build so cold starts are fast
 RUN python3 -c "from TTS.api import TTS; TTS('tts_models/multilingual/multi-dataset/xtts_v2')" || true
 
-COPY handler.py /app/handler.py
+COPY infra/xtts-serverless/handler.py /app/handler.py
 
 CMD ["python3", "handler.py"]
