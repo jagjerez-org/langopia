@@ -42,7 +42,7 @@ export default function AppProfilePage() {
   }, [api, name, user?.name, updateUser]);
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-6xl space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
 
       {/* Name edit */}

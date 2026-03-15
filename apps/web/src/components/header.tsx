@@ -11,11 +11,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, ChevronDown, CreditCard, Settings } from "lucide-react";
+import { LogOut, ChevronDown, CreditCard, Settings, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import Link from "next/link";
+import { useSidebar } from "@/components/sidebar-context";
 
 export function Header() {
   const { user, logout } = useAuth();
+  const { collapsed, toggleCollapsed } = useSidebar();
 
   const initials = user?.name
     ?.split(" ")
@@ -26,7 +28,18 @@ export function Header() {
 
   return (
     <header className="glass-strong flex h-16 items-center justify-between border-b border-zinc-200/40 px-6 dark:border-zinc-700/40">
-      <div />
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={toggleCollapsed}
+        className="rounded-lg text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white"
+      >
+        {collapsed ? (
+          <PanelLeftOpen className="h-5 w-5" />
+        ) : (
+          <PanelLeftClose className="h-5 w-5" />
+        )}
+      </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

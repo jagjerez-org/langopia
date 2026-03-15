@@ -4,7 +4,10 @@ import type {
   UpdateCourseRequest,
   QueryCoursesParams,
   ManageCourseLessonsRequest,
+  GenerateCourseRequest,
+  RefineCourseRequest,
   CourseResponse,
+  GenerateCourseResponse,
   Paginated,
 } from "../types";
 
@@ -58,6 +61,24 @@ export class CoursesResource {
     return this.client.request({
       method: "PUT",
       path: `/academies/${academyId}/courses/${courseId}/lessons`,
+      auth: "jwt",
+      body: data,
+    });
+  }
+
+  generate(academyId: string, data: GenerateCourseRequest): Promise<GenerateCourseResponse> {
+    return this.client.request({
+      method: "POST",
+      path: `/academies/${academyId}/courses/generate`,
+      auth: "jwt",
+      body: data,
+    });
+  }
+
+  refinePlan(academyId: string, data: RefineCourseRequest): Promise<GenerateCourseResponse & { aiResponse: string }> {
+    return this.client.request({
+      method: "POST",
+      path: `/academies/${academyId}/courses/generate/refine`,
       auth: "jwt",
       body: data,
     });

@@ -2,17 +2,22 @@ import {
   Controller,
   Post,
   Put,
+  Get,
   Delete,
   Body,
   Param,
   HttpCode,
   HttpStatus,
+  UploadedFile,
+  UseInterceptors,
 } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from "@nestjs/swagger";
 import { RoomInternalService } from "./room-internal.service.js";
 import { JoinRoomDto } from "./dto/join-room.dto.js";
 import { SendChatDto } from "./dto/send-chat.dto.js";
 import { SaveNotesDto } from "./dto/save-notes.dto.js";
+import { TranscribeChunkDto } from "./dto/transcribe-chunk.dto.js";
 
 @ApiTags("Room")
 @Controller("room")
@@ -81,5 +86,44 @@ export class RoomInternalController {
   @ApiResponse({ status: 404, description: "Room not found" })
   async endSession(@Param("roomId") roomId: string) {
     return this.roomService.endSession(roomId);
+  }
+
+  @Post(":roomId/transcribe")
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor("audio"))
+  @ApiConsumes("multipart/form-data")
+  @ApiOperation({ summary: "Transcribe an audio chunk from a participant" })
+  @ApiResponse({ status: 200, description: "Chunk transcribed" })
+  @ApiResponse({ status: 400, description: "Rate limit or invalid data" })
+  @ApiResponse({ status: 404, description: "Room not found" })
+  async transcribeChunk(
+    @Param("roomId") roomId: string,
+    @UploadedFile() audio: Express.Multer.File,
+    @Body() dto: TranscribeChunkDto,
+  ) {
+    return this.roomService.transcribeChunk(
+      roomId,
+      dto.participantId,
+      dto.participantRole,
+      audio,
+    );
+  }
+
+  @Post(":roomId/suggestions")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Trigger content suggestions for end of class" })
+  @ApiResponse({ status: 200, description: "Suggestions triggered" })
+  @ApiResponse({ status: 404, description: "Room not found" })
+  async triggerSuggestions(@Param("roomId") roomId: string) {
+    return this.roomService.triggerSuggestions(roomId);
+  }
+
+  @Get(":roomId/suggestions")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Poll content suggestions status" })
+  @ApiResponse({ status: 200, description: "Suggestions status" })
+  @ApiResponse({ status: 404, description: "Room not found" })
+  async getSuggestions(@Param("roomId") roomId: string) {
+    return this.roomService.getSuggestions(roomId);
   }
 }

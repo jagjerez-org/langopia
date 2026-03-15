@@ -28,6 +28,7 @@ import { TeamModule } from "./team/team.module.js";
 import { FinancingsModule } from "./financings/financings.module.js";
 import { OnboardingModule } from "./onboarding/onboarding.module.js";
 import { AcademyLandingModule } from "./academy-landing/academy-landing.module.js";
+import { StudentAppModule } from "./student-app/student-app.module.js";
 import { HealthController } from "./health/health.controller.js";
 
 @Module({
@@ -64,6 +65,7 @@ import { HealthController } from "./health/health.controller.js";
     FinancingsModule,
     OnboardingModule,
     AcademyLandingModule,
+    StudentAppModule,
   ],
   controllers: [HealthController],
 })

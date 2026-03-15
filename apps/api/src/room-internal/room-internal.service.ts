@@ -22,6 +22,7 @@ import { Student } from "../database/entities/student.entity.js";
 import { RoomParticipant } from "../database/entities/room-participant.entity.js";
 import { RoomNotes } from "../database/entities/room-notes.entity.js";
 import { ChatMessage } from "../database/entities/chat-message.entity.js";
+import { Transcription } from "../database/entities/transcription.entity.js";
 import { LiveKitService } from "../livekit/livekit.service.js";
 import { RecordingService } from "../recording/recording.service.js";
 import { PostClassPipelineService } from "../post-class-pipeline/post-class-pipeline.service.js";
@@ -46,6 +47,8 @@ export class RoomInternalService {
     private readonly notesRepo: Repository<RoomNotes>,
     @InjectRepository(ChatMessage)
     private readonly chatRepo: Repository<ChatMessage>,
+    @InjectRepository(Transcription)
+    private readonly transcriptionRepo: Repository<Transcription>,
     private readonly livekit: LiveKitService,
     private readonly recording: RecordingService,
     private readonly pipeline: PostClassPipelineService,
@@ -86,6 +89,17 @@ export class RoomInternalService {
       }
 
       isTeacher = token === cls.teacherToken;
+
+      // 5-minute join rule: can only enter 5 min before scheduled time
+      if (cls.scheduledAt) {
+        const now = new Date();
+        const fiveMinBefore = new Date(cls.scheduledAt.getTime() - 5 * 60_000);
+        if (now < fiveMinBefore) {
+          throw new ForbiddenException(
+            "You can join 5 minutes before the scheduled time",
+          );
+        }
+      }
 
       // If Class has a Room already, use it
       if (cls.roomId) {
@@ -224,16 +238,24 @@ export class RoomInternalService {
       this.config.get<string>("NEXT_PUBLIC_LIVEKIT_URL") ??
       "ws://localhost:7880";
 
+    // Find linked class for scheduledAt + durationMinutes
+    const linkedClass = await this.classRepo.findOne({
+      where: { roomId: room.id },
+    });
+
     return {
       roomId: room.id,
       title: room.title,
       language: room.language,
       role,
       participantId: participant.id,
+      participantName: participant.name,
       livekitToken,
       livekitUrl,
       slides: room.slides,
       status: room.status,
+      scheduledAt: linkedClass?.scheduledAt?.toISOString() ?? room.scheduledAt?.toISOString() ?? null,
+      durationMinutes: linkedClass?.durationMinutes ?? null,
     };
   }
 
@@ -397,5 +419,116 @@ export class RoomInternalService {
     );
 
     return { id: room.id, status: room.status };
+  }
+
+  // ─── POST /room/:roomId/transcribe ─────────────────────
+  private readonly transcribeRateLimit = new Map<string, number>();
+
+  async transcribeChunk(
+    roomId: string,
+    participantId: string,
+    participantRole: string,
+    audioFile: Express.Multer.File,
+  ) {
+    // Rate limit: 6 req/min per participant
+    const key = `${roomId}:${participantId}`;
+    const now = Date.now();
+    const lastTime = this.transcribeRateLimit.get(key) ?? 0;
+    if (now - lastTime < 10000) {
+      throw new BadRequestException("Rate limit exceeded (max 6/min)");
+    }
+    this.transcribeRateLimit.set(key, now);
+
+    const room = await this.roomRepo.findOne({ where: { id: roomId } });
+    if (!room) throw new NotFoundException("Room not found");
+    if (room.status !== "active") {
+      throw new BadRequestException("Room is not active");
+    }
+
+    // Find participant for speaker name
+    const participant = await this.participantRepo.findOne({
+      where: { id: participantId },
+    });
+
+    const { transcribeChunk: transcribeAudioChunk } = await import(
+      "@langopia/ai-pipeline"
+    );
+
+    const file = new File([audioFile.buffer], "chunk.webm", {
+      type: audioFile.mimetype,
+    });
+    const text = await transcribeAudioChunk(file);
+
+    if (!text || text.trim().length === 0) {
+      return { text: "" };
+    }
+
+    const transcription = new Transcription();
+    transcription.roomId = roomId;
+    transcription.speakerName = participant?.name ?? "Student";
+    transcription.speakerRole =
+      participantRole === "student"
+        ? ParticipantRole.STUDENT
+        : ParticipantRole.TEACHER;
+    transcription.text = text.trim();
+    transcription.timestampStart = 0;
+    transcription.timestampEnd = 0;
+    transcription.isLive = true;
+    transcription.languageDetected = room.language;
+
+    await this.transcriptionRepo.save(transcription);
+    return { text: text.trim() };
+  }
+
+  // ─── POST /room/:roomId/suggestions ────────────────────
+  async triggerSuggestions(roomId: string) {
+    const room = await this.roomRepo.findOne({ where: { id: roomId } });
+    if (!room) throw new NotFoundException("Room not found");
+
+    if (room.suggestions) {
+      return { status: "already_generated" };
+    }
+
+    // Collect live transcriptions
+    const transcriptions = await this.transcriptionRepo.find({
+      where: { roomId, isLive: true },
+      order: { createdAt: "ASC" },
+    });
+
+    // Collect chat messages
+    const chatMessages = await this.chatRepo.find({
+      where: { roomId },
+      order: { createdAt: "ASC" },
+    });
+
+    const transcriptText = transcriptions.map((t) => `[${t.speakerRole}] ${t.text}`).join("\n");
+    const chatText = chatMessages.map((m) => `[${m.senderRole} - ${m.senderName}] ${m.message}`).join("\n");
+
+    const { generateContentSuggestions } = await import(
+      "@langopia/ai-pipeline"
+    );
+
+    const suggestions = await generateContentSuggestions({
+      transcriptText,
+      chatText,
+      language: room.language,
+      academyId: room.academyId,
+    });
+
+    room.suggestions = suggestions;
+    await this.roomRepo.save(room);
+
+    return { status: "completed", suggestions };
+  }
+
+  // ─── GET /room/:roomId/suggestions ─────────────────────
+  async getSuggestions(roomId: string) {
+    const room = await this.roomRepo.findOne({ where: { id: roomId } });
+    if (!room) throw new NotFoundException("Room not found");
+
+    return {
+      status: room.suggestions ? "completed" : "pending",
+      suggestions: room.suggestions ?? null,
+    };
   }
 }

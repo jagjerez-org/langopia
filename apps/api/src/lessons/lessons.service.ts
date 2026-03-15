@@ -3,14 +3,18 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { Lesson } from "../database/entities/lesson.entity.js";
 import { LessonExercise } from "../database/entities/lesson-exercise.entity.js";
+import { LessonVersion } from "../database/entities/lesson-version.entity.js";
 import { Exercise } from "../database/entities/exercise.entity.js";
 import { User } from "../database/entities/user.entity.js";
+import { CourseLesson } from "../database/entities/course-lesson.entity.js";
+import { LearningPathLesson } from "../database/entities/learning-path-lesson.entity.js";
 import {
   LessonStatus,
   ExerciseSource,
@@ -56,10 +60,16 @@ export class LessonsService {
     private readonly lessonRepo: Repository<Lesson>,
     @InjectRepository(LessonExercise)
     private readonly lessonExerciseRepo: Repository<LessonExercise>,
+    @InjectRepository(LessonVersion)
+    private readonly lessonVersionRepo: Repository<LessonVersion>,
     @InjectRepository(Exercise)
     private readonly exerciseRepo: Repository<Exercise>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(CourseLesson)
+    private readonly courseLessonRepo: Repository<CourseLesson>,
+    @InjectRepository(LearningPathLesson)
+    private readonly learningPathLessonRepo: Repository<LearningPathLesson>,
     private readonly embeddingService: EmbeddingService,
     private readonly ttsService: TTSService,
     private readonly fileExtractService: FileExtractService,
@@ -211,6 +221,18 @@ export class LessonsService {
 
     if (!lesson) {
       throw new NotFoundException("Lesson not found");
+    }
+
+    const courseLinkCount = await this.courseLessonRepo.count({
+      where: { lessonId: id },
+    });
+    const lpLinkCount = await this.learningPathLessonRepo.count({
+      where: { lessonId: id },
+    });
+    if (courseLinkCount > 0 || lpLinkCount > 0) {
+      throw new ConflictException(
+        "Cannot delete lesson: it is linked to a course or learning path. Remove it from all courses and learning paths first.",
+      );
     }
 
     // LessonExercise has CASCADE on delete, so links are removed automatically
@@ -595,5 +617,266 @@ export class LessonsService {
     }
 
     await this.lessonExerciseRepo.remove(link);
+  }
+
+  // ─── Versioning ──────────────────────────────────────────
+
+  async createVersion(academyId: string, lessonId: string) {
+    const lesson = await this.lessonRepo.findOne({
+      where: { id: lessonId, academyId },
+    });
+    if (!lesson) {
+      throw new NotFoundException("Lesson not found");
+    }
+
+    // Load exercises for snapshot
+    const links = await this.lessonExerciseRepo.find({
+      where: { lessonId },
+      relations: ["exercise"],
+      order: { sortOrder: "ASC", createdAt: "ASC" },
+    });
+
+    const exerciseSnapshot = links.map((le) => ({
+      ...serializeExercise(le.exercise, le.sortOrder),
+    }));
+
+    // Get next version number
+    const maxVersion = await this.lessonVersionRepo
+      .createQueryBuilder("v")
+      .select("COALESCE(MAX(v.version), 0)", "maxVersion")
+      .where("v.lessonId = :lessonId", { lessonId })
+      .getRawOne();
+    const nextVersion = (maxVersion?.maxVersion ?? 0) + 1;
+
+    const version = new LessonVersion();
+    version.lessonId = lessonId;
+    version.version = nextVersion;
+    version.title = lesson.title;
+    version.description = lesson.description;
+    version.language = lesson.language;
+    version.cefrLevel = lesson.cefrLevel;
+    version.status = lesson.status;
+    version.exerciseSnapshot = exerciseSnapshot;
+
+    const saved = await this.lessonVersionRepo.save(version);
+
+    return {
+      id: saved.id,
+      lessonId: saved.lessonId,
+      version: saved.version,
+      title: saved.title,
+      status: saved.status,
+      exerciseCount: exerciseSnapshot.length,
+      createdAt: saved.createdAt,
+    };
+  }
+
+  async listVersions(academyId: string, lessonId: string) {
+    const lesson = await this.lessonRepo.findOne({
+      where: { id: lessonId, academyId },
+    });
+    if (!lesson) {
+      throw new NotFoundException("Lesson not found");
+    }
+
+    const versions = await this.lessonVersionRepo.find({
+      where: { lessonId },
+      order: { version: "DESC" },
+      select: ["id", "lessonId", "version", "title", "status", "createdAt"],
+    });
+
+    return {
+      data: versions.map((v) => ({
+        id: v.id,
+        lessonId: v.lessonId,
+        version: v.version,
+        title: v.title,
+        status: v.status,
+        createdAt: v.createdAt,
+      })),
+    };
+  }
+
+  async getVersion(academyId: string, lessonId: string, versionId: string) {
+    const lesson = await this.lessonRepo.findOne({
+      where: { id: lessonId, academyId },
+    });
+    if (!lesson) {
+      throw new NotFoundException("Lesson not found");
+    }
+
+    const version = await this.lessonVersionRepo.findOne({
+      where: { id: versionId, lessonId },
+    });
+    if (!version) {
+      throw new NotFoundException("Version not found");
+    }
+
+    return {
+      id: version.id,
+      lessonId: version.lessonId,
+      version: version.version,
+      title: version.title,
+      description: version.description,
+      language: version.language,
+      cefrLevel: version.cefrLevel,
+      status: version.status,
+      exerciseSnapshot: version.exerciseSnapshot,
+      createdAt: version.createdAt,
+    };
+  }
+
+  async restoreVersion(
+    academyId: string,
+    lessonId: string,
+    versionId: string,
+  ) {
+    const lesson = await this.lessonRepo.findOne({
+      where: { id: lessonId, academyId },
+    });
+    if (!lesson) {
+      throw new NotFoundException("Lesson not found");
+    }
+
+    const version = await this.lessonVersionRepo.findOne({
+      where: { id: versionId, lessonId },
+    });
+    if (!version) {
+      throw new NotFoundException("Version not found");
+    }
+
+    // Update lesson fields
+    lesson.title = version.title;
+    lesson.description = version.description;
+    lesson.language = version.language;
+    lesson.cefrLevel = version.cefrLevel;
+    lesson.status = version.status as LessonStatus;
+    await this.lessonRepo.save(lesson);
+
+    // Delete all current exercise links
+    await this.lessonExerciseRepo.delete({ lessonId });
+
+    // Recreate exercises from snapshot
+    let sortOrder = 0;
+    for (const snap of version.exerciseSnapshot) {
+      const exercise = new Exercise();
+      exercise.academyId = academyId;
+      exercise.type = String(snap.type ?? "");
+      exercise.title = snap.title ? String(snap.title) : null;
+      exercise.targetSkill = String(snap.targetSkill ?? "vocabulary");
+      exercise.topic = snap.topic ? String(snap.topic) : null;
+      exercise.language = String(snap.language ?? lesson.language);
+      exercise.instruction = String(snap.instruction ?? "");
+      exercise.content = String(snap.content ?? "");
+      exercise.options = Array.isArray(snap.options)
+        ? snap.options.map(String)
+        : null;
+      exercise.correctAnswer = String(snap.correctAnswer ?? "");
+      exercise.explanation = String(snap.explanation ?? "");
+      exercise.cefrLevel = String(snap.cefrLevel ?? lesson.cefrLevel);
+      exercise.source = (snap.source as ExerciseSource) ?? ExerciseSource.AI_LIVE;
+      exercise.audioUrl = snap.audioUrl ? String(snap.audioUrl) : null;
+      exercise.videoUrl = snap.videoUrl ? String(snap.videoUrl) : null;
+      exercise.imageUrl = snap.imageUrl ? String(snap.imageUrl) : null;
+
+      const savedExercise = await this.exerciseRepo.save(exercise);
+
+      const link = new LessonExercise();
+      link.lessonId = lessonId;
+      link.exerciseId = savedExercise.id;
+      link.sortOrder = sortOrder++;
+      await this.lessonExerciseRepo.save(link);
+    }
+
+    return this.getLessonDetail(academyId, lessonId);
+  }
+
+  // ─── KPIs ────────────────────────────────────────────────
+
+  async getLessonKpis(academyId: string, lessonId: string) {
+    const lesson = await this.lessonRepo.findOne({
+      where: { id: lessonId, academyId },
+    });
+    if (!lesson) {
+      throw new NotFoundException("Lesson not found");
+    }
+
+    // Get exercise IDs linked to this lesson
+    const exerciseLinks = await this.lessonExerciseRepo.find({
+      where: { lessonId },
+      select: ["exerciseId"],
+    });
+    const exerciseIds = exerciseLinks.map((l) => l.exerciseId);
+
+    if (exerciseIds.length === 0) {
+      return {
+        classCount: 0,
+        studentCount: 0,
+        completionRate: 0,
+        averageScore: 0,
+      };
+    }
+
+    // Query ReportExercise for exercise-level metrics
+    let averageScore = 0;
+    let completionRate = 0;
+    try {
+      const scoreResult = await this.exerciseRepo.manager.query(
+        `SELECT
+          COALESCE(AVG(CASE WHEN re."isCorrect" THEN 1.0 ELSE 0.0 END) * 100, 0) as "averageScore",
+          COUNT(DISTINCT re."classReportId") as "reportCount"
+        FROM report_exercises re
+        WHERE re."exerciseId" = ANY($1)`,
+        [exerciseIds],
+      );
+      averageScore = Math.round(Number(scoreResult[0]?.averageScore ?? 0));
+
+      // Completion rate: reports that have all exercises answered / total reports
+      const totalReports = Number(scoreResult[0]?.reportCount ?? 0);
+      if (totalReports > 0) {
+        const completedResult = await this.exerciseRepo.manager.query(
+          `SELECT COUNT(*) as "completed"
+          FROM (
+            SELECT re."classReportId"
+            FROM report_exercises re
+            WHERE re."exerciseId" = ANY($1)
+            GROUP BY re."classReportId"
+            HAVING COUNT(DISTINCT re."exerciseId") = $2
+          ) sub`,
+          [exerciseIds, exerciseIds.length],
+        );
+        completionRate = Math.round(
+          (Number(completedResult[0]?.completed ?? 0) / totalReports) * 100,
+        );
+      }
+    } catch (err) {
+      this.logger.warn("Failed to query exercise metrics:", err);
+    }
+
+    // Class and student counts via class_reports
+    let classCount = 0;
+    let studentCount = 0;
+    try {
+      const classResult = await this.exerciseRepo.manager.query(
+        `SELECT
+          COUNT(DISTINCT cr."classId") as "classCount",
+          COUNT(DISTINCT cr."studentId") as "studentCount"
+        FROM class_reports cr
+        INNER JOIN report_exercises re ON re."classReportId" = cr."id"
+        WHERE re."exerciseId" = ANY($1)`,
+        [exerciseIds],
+      );
+      classCount = Number(classResult[0]?.classCount ?? 0);
+      studentCount = Number(classResult[0]?.studentCount ?? 0);
+    } catch (err) {
+      this.logger.warn("Failed to query class/student metrics:", err);
+    }
+
+    return {
+      classCount,
+      studentCount,
+      completionRate,
+      averageScore,
+    };
   }
 }

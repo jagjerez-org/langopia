@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 2600",
+    "dev": "wait-on tcp:2501 --timeout 60000 && next dev --port 2600",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useJwtClient } from "@/hooks/use-jwt-client";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import {
   BookOpen,
   AlertTriangle,
   Lightbulb,
+  Users,
 } from "lucide-react";
 import type { MyReportDetail } from "@langopia/api-client";
 
@@ -20,6 +21,8 @@ export default function AppReportDetailPage() {
   const api = useJwtClient();
   const [report, setReport] = useState<MyReportDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const searchParams = useSearchParams();
+  const filterStudentId = searchParams.get("student");
 
   useEffect(() => {
     api.me
@@ -39,7 +42,7 @@ export default function AppReportDetailPage() {
 
   if (!report) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto max-w-6xl space-y-4">
         <Link href="/app/reports" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-zinc-900 dark:hover:text-white">
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
@@ -49,7 +52,7 @@ export default function AppReportDetailPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-6xl space-y-5">
       <Link href="/app/reports" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-zinc-900 dark:hover:text-white">
         <ArrowLeft className="h-4 w-4" /> Back to reports
       </Link>
@@ -91,8 +94,38 @@ export default function AppReportDetailPage() {
         </div>
       </div>
 
+      {/* Student filter */}
+      {report.studentReports.length > 1 && (
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <select
+            value={filterStudentId ?? ""}
+            onChange={(e) => {
+              const url = new URL(window.location.href);
+              if (e.target.value) {
+                url.searchParams.set("student", e.target.value);
+              } else {
+                url.searchParams.delete("student");
+              }
+              window.history.replaceState({}, "", url.toString());
+              window.location.reload();
+            }}
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-800"
+          >
+            <option value="">All Students</option>
+            {report.studentReports.map((sr) => (
+              <option key={sr.studentId} value={sr.studentId}>
+                {sr.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Student breakdowns */}
-      {report.studentReports.map((sr) => (
+      {report.studentReports
+        .filter((sr) => !filterStudentId || sr.studentId === filterStudentId)
+        .map((sr) => (
         <div key={sr.studentId} className="glass rounded-2xl p-5">
           <div className="flex items-center justify-between">
             <div>

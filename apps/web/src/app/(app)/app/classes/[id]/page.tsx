@@ -14,6 +14,7 @@ import {
   Globe,
   BookOpen,
   Video,
+  FileText,
 } from "lucide-react";
 import type { MyClassDetail } from "@langopia/api-client";
 
@@ -22,6 +23,7 @@ export default function AppClassDetailPage() {
   const api = useJwtClient();
   const [cls, setCls] = useState<MyClassDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [countdown, setCountdown] = useState("");
 
   useEffect(() => {
     api.me
@@ -30,6 +32,44 @@ export default function AppClassDetailPage() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [api, id]);
+
+  // 5-minute join rule with countdown
+  const now = new Date();
+  const scheduledAt = cls ? new Date(cls.scheduledAt) : null;
+  const fiveMinBefore = scheduledAt
+    ? new Date(scheduledAt.getTime() - 5 * 60_000)
+    : null;
+  const classEnd = scheduledAt && cls
+    ? new Date(scheduledAt.getTime() + cls.durationMinutes * 60_000)
+    : null;
+
+  const isActiveStatus =
+    cls?.status === "scheduled" ||
+    cls?.status === "confirmed" ||
+    cls?.status === "in_progress";
+  const canJoin =
+    isActiveStatus && fiveMinBefore && classEnd && now >= fiveMinBefore && now <= classEnd;
+  const isTooEarly = isActiveStatus && fiveMinBefore && now < fiveMinBefore;
+
+  useEffect(() => {
+    if (!isTooEarly || !fiveMinBefore) return;
+
+    const update = () => {
+      const diff = fiveMinBefore.getTime() - Date.now();
+      if (diff <= 0) {
+        setCountdown("");
+        return;
+      }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1000);
+      setCountdown(h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`);
+    };
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [isTooEarly, fiveMinBefore]);
 
   if (loading) {
     return (
@@ -41,7 +81,7 @@ export default function AppClassDetailPage() {
 
   if (!cls) {
     return (
-      <div className="space-y-4">
+      <div className="mx-auto max-w-6xl space-y-4">
         <Link href="/app/classes" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-zinc-900 dark:hover:text-white">
           <ArrowLeft className="h-4 w-4" /> Back
         </Link>
@@ -50,10 +90,8 @@ export default function AppClassDetailPage() {
     );
   }
 
-  const canEnter = cls.status === "scheduled" || cls.status === "confirmed" || cls.status === "in_progress";
-
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-6xl space-y-5">
       <Link href="/app/classes" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-zinc-900 dark:hover:text-white">
         <ArrowLeft className="h-4 w-4" /> Back to classes
       </Link>
@@ -104,11 +142,27 @@ export default function AppClassDetailPage() {
           </div>
         )}
 
-        {canEnter && (
+        {canJoin && (
           <Button asChild className="mt-5 w-full" size="lg">
             <Link href={cls.teacherUrl}>
               <Video className="mr-2 h-4 w-4" />
               Enter Classroom
+            </Link>
+          </Button>
+        )}
+
+        {isTooEarly && countdown && (
+          <Button disabled className="mt-5 w-full" size="lg">
+            <Clock className="mr-2 h-4 w-4" />
+            Opens in {countdown}
+          </Button>
+        )}
+
+        {cls.status === "completed" && cls.reportId && (
+          <Button asChild variant="outline" className="mt-5 w-full" size="lg">
+            <Link href={`/app/reports/${cls.reportId}`}>
+              <FileText className="mr-2 h-4 w-4" />
+              View Report
             </Link>
           </Button>
         )}

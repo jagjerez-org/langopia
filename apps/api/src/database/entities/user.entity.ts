@@ -7,7 +7,7 @@ import {
   OneToMany,
   Relation,
 } from "typeorm";
-import { UserPlan } from "@langopia/shared/types";
+import { UserPlan, UserType } from "@langopia/shared/types";
 import type { AcademyMember } from "./academy-member.entity.js";
 import type { TeamMember } from "./team-member.entity.js";
 
@@ -36,6 +36,9 @@ export class User {
 
   @Column({ type: "varchar", length: 255, nullable: true })
   stripeSubscriptionId!: string | null;
+
+  @Column({ type: "varchar", length: 20, default: UserType.STAFF })
+  userType!: string;
 
   @Column({ type: "boolean", default: true })
   isActive!: boolean;

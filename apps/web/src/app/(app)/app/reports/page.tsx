@@ -21,7 +21,7 @@ export default function AppReportsPage() {
   }, [api]);
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-6xl space-y-5">
       <h1 className="text-2xl font-bold tracking-tight">My Reports</h1>
 
       {loading ? (

@@ -12,10 +12,10 @@ import type {
 export class MediaResource {
   constructor(private client: LangopiaClient) {}
 
-  upload(file: File | Blob, cefrLevel: string, tags?: string): Promise<MediaResponse> {
+  upload(file: File | Blob, cefrLevel?: string, tags?: string): Promise<MediaResponse> {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("cefrLevel", cefrLevel);
+    if (cefrLevel) formData.append("cefrLevel", cefrLevel);
     if (tags) formData.append("tags", tags);
 
     return this.client.request({
@@ -23,6 +23,30 @@ export class MediaResource {
       path: "/v1/media",
       auth: "apikey",
       formData,
+    });
+  }
+
+  uploadWithProgress(
+    file: File | Blob,
+    options?: {
+      cefrLevel?: string;
+      tags?: string;
+      onProgress?: (loaded: number, total: number) => void;
+      signal?: AbortSignal;
+    },
+  ): Promise<MediaResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (options?.cefrLevel) formData.append("cefrLevel", options.cefrLevel);
+    if (options?.tags) formData.append("tags", options.tags);
+
+    return this.client.uploadWithProgress({
+      method: "POST",
+      path: "/v1/media",
+      auth: "apikey",
+      formData,
+      onProgress: options?.onProgress,
+      signal: options?.signal,
     });
   }
 
@@ -44,12 +68,12 @@ export class MediaResource {
     });
   }
 
-  uploadBulk(files: (File | Blob)[], cefrLevel: string): Promise<MediaResponse[]> {
+  uploadBulk(files: (File | Blob)[], cefrLevel?: string): Promise<MediaResponse[]> {
     const formData = new FormData();
     for (const file of files) {
       formData.append("files", file);
     }
-    formData.append("cefrLevel", cefrLevel);
+    if (cefrLevel) formData.append("cefrLevel", cefrLevel);
 
     return this.client.request({
       method: "POST",

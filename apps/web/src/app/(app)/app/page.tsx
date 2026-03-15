@@ -7,7 +7,7 @@ import { useJwtClient } from "@/hooks/use-jwt-client";
 import {
   CalendarDays,
   CheckCircle2,
-  Dumbbell,
+  Users,
   FileText,
   ArrowRight,
   Sparkles,
@@ -45,7 +45,7 @@ export default function AppHomePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
@@ -121,11 +121,11 @@ export default function AppHomePage() {
           Classes
         </Link>
         <Link
-          href="/app/exercises"
+          href="/app/students"
           className="glass flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-medium transition-all hover:bg-zinc-100 dark:hover:bg-zinc-800"
         >
-          <Dumbbell className="h-4 w-4" />
-          Exercises
+          <Users className="h-4 w-4" />
+          Students
         </Link>
         <Link
           href="/app/reports"

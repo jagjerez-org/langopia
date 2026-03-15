@@ -10,6 +10,8 @@ import { Room } from "../database/entities/room.entity.js";
 import { Transcription } from "../database/entities/transcription.entity.js";
 import { ClassReport } from "../database/entities/class-report.entity.js";
 import { Student } from "../database/entities/student.entity.js";
+import { ChatMessage } from "../database/entities/chat-message.entity.js";
+import { ReviewItem } from "../database/entities/review-item.entity.js";
 import { UsageService } from "../usage/usage.service.js";
 import { PushNotificationService } from "../push-notification/push-notification.service.js";
 
@@ -26,6 +28,10 @@ export class PostClassPipelineService {
     private readonly reportRepo: Repository<ClassReport>,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
+    @InjectRepository(ChatMessage)
+    private readonly chatRepo: Repository<ChatMessage>,
+    @InjectRepository(ReviewItem)
+    private readonly reviewItemRepo: Repository<ReviewItem>,
     private readonly usage: UsageService,
     private readonly pushService: PushNotificationService,
   ) {}
@@ -65,12 +71,21 @@ export class PostClassPipelineService {
             (p) => p.role === ParticipantRole.STUDENT,
           ) ?? [];
 
-        const diarized = await diarizeSpeakers(result.segments, {
+        const diarizeResult = await diarizeSpeakers(result.segments, {
           teacherName: teacherParticipant?.name ?? "Teacher",
           studentNames: studentParticipants.map((p) => p.name),
         });
 
-        for (const seg of diarized) {
+        if (diarizeResult.tokensUsed > 0) {
+          await this.usage.incrementUsage(
+            room.createdByUserId,
+            room.academyId,
+            UsageMetric.AI_TOKENS,
+            diarizeResult.tokensUsed,
+          );
+        }
+
+        for (const seg of diarizeResult.segments) {
           const t = new Transcription();
           t.roomId = roomId;
           t.speakerName =
@@ -92,7 +107,7 @@ export class PostClassPipelineService {
           );
         }
 
-        transcriptionText = diarized
+        transcriptionText = diarizeResult.segments
           .map((s) => `[${s.speaker}] ${s.text}`)
           .join("\n");
       }
@@ -113,13 +128,24 @@ export class PostClassPipelineService {
             )
           : 0;
 
-      if (transcriptionText) {
+      // Load chat messages for analysis
+      const chatMessages = await this.chatRepo.find({
+        where: { roomId },
+        order: { createdAt: "ASC" },
+      });
+      const chatText = chatMessages.length > 0
+        ? chatMessages
+            .map((m) => `[${m.senderRole} - ${m.senderName}] ${m.message}`)
+            .join("\n")
+        : undefined;
+
+      if (transcriptionText || chatText) {
         const { analyzeSession } = await import(
           "@langopia/ai-pipeline"
         );
 
         const analysisResult = await analyzeSession({
-          text: transcriptionText,
+          text: transcriptionText || "",
           segments: transcriptions.map((t) => ({
             speaker:
               t.speakerRole === ParticipantRole.TEACHER
@@ -142,7 +168,17 @@ export class PostClassPipelineService {
             })),
           })),
           language: room.language,
+          chatText,
         });
+
+        if (analysisResult.tokensUsed > 0) {
+          await this.usage.incrementUsage(
+            room.createdByUserId,
+            room.academyId,
+            UsageMetric.AI_TOKENS,
+            analysisResult.tokensUsed,
+          );
+        }
 
         report.teacher = teacherP
           ? {
@@ -217,6 +253,11 @@ export class PostClassPipelineService {
 
       await this.reportRepo.save(report);
 
+      // Ingest vocabulary + grammar errors as review items for spaced repetition
+      if (report.status === ReportStatus.COMPLETED && report.studentReports?.length) {
+        await this.ingestReviewItems(room.academyId, roomId, report.studentReports);
+      }
+
       // Fire-and-forget: push notification to teacher when report is ready
       if (
         report.status === ReportStatus.COMPLETED &&
@@ -262,6 +303,77 @@ export class PostClassPipelineService {
       report.status = ReportStatus.FAILED;
       report.summary = `Pipeline failed: ${err instanceof Error ? err.message : "Unknown error"}`;
       await this.reportRepo.save(report);
+    }
+  }
+
+  /**
+   * Creates ReviewItem records (spaced repetition flashcards) from class report data.
+   * This works independently of whether the academy has any courses/lessons/exercises.
+   * Vocabulary and grammar errors from AI analysis become review items for students.
+   */
+  private async ingestReviewItems(
+    academyId: string,
+    roomId: string,
+    studentReports: Array<{
+      email: string;
+      studentId: string;
+      vocabulary?: Array<{ word: string; cefrLevel?: string; context?: string }>;
+      grammarErrors?: Array<{ text: string; correction?: string; rule?: string; explanation?: string }>;
+    }>,
+  ): Promise<void> {
+    const today = new Date().toISOString().split("T")[0];
+
+    for (const report of studentReports) {
+      if (!report.email && !report.studentId) continue;
+
+      // Find the student — by studentId first, fallback to email
+      let student: Student | null = null;
+      if (report.studentId) {
+        student = await this.studentRepo.findOne({ where: { id: report.studentId } });
+      }
+      if (!student && report.email) {
+        student = await this.studentRepo.findOne({
+          where: { academyId, email: report.email },
+        });
+      }
+      if (!student) continue;
+
+      const items: ReviewItem[] = [];
+
+      // Vocabulary → review items
+      if (report.vocabulary?.length) {
+        for (const v of report.vocabulary) {
+          const item = new ReviewItem();
+          item.studentId = student.id;
+          item.itemType = "vocabulary";
+          item.content = v as Record<string, unknown>;
+          item.sourceType = "class_report";
+          item.sourceId = roomId;
+          item.nextReviewDate = today;
+          items.push(item);
+        }
+      }
+
+      // Grammar errors → review items
+      if (report.grammarErrors?.length) {
+        for (const g of report.grammarErrors) {
+          const item = new ReviewItem();
+          item.studentId = student.id;
+          item.itemType = "grammar";
+          item.content = g as Record<string, unknown>;
+          item.sourceType = "class_report";
+          item.sourceId = roomId;
+          item.nextReviewDate = today;
+          items.push(item);
+        }
+      }
+
+      if (items.length > 0) {
+        await this.reviewItemRepo.save(items);
+        this.logger.log(
+          `Created ${items.length} review items for student ${student.id} from room ${roomId}`,
+        );
+      }
     }
   }
 }

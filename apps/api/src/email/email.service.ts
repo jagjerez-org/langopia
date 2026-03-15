@@ -68,6 +68,33 @@ export class EmailService {
     }
   }
 
+  async sendTeacherInvitation(opts: {
+    to: string;
+    teacherName: string;
+    academyName: string;
+  }) {
+    if (!this.resend) return;
+
+    try {
+      await this.resend.emails.send({
+        from: this.fromEmail,
+        to: opts.to,
+        subject: `You've been invited to teach at ${opts.academyName}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #7c3aed;">Welcome to ${opts.academyName}!</h2>
+            <p>Hi ${opts.teacherName},</p>
+            <p>You have been added as a <strong>teacher</strong> at <strong>${opts.academyName}</strong> on Langopia.</p>
+            <p>You can now be assigned to classes and your students will be able to see your profile.</p>
+            <p style="color: #999; font-size: 12px; margin-top: 32px;">Langopia - Language Learning Platform</p>
+          </div>
+        `,
+      });
+    } catch (err) {
+      this.logger.error("Failed to send teacher invitation email:", err);
+    }
+  }
+
   async sendClassCancelled(opts: {
     to: string;
     classTitle: string;

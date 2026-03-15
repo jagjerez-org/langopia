@@ -3,21 +3,9 @@
 import { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { JoinForm } from "@/components/room/join-form";
-import { RoomView } from "@/components/room/room-view";
+import { RoomView, type RoomSession } from "@/components/room/room-view";
 import { createPublicClient } from "@/hooks/use-api-client";
 import { ApiError } from "@langopia/api-client";
-
-interface RoomSession {
-  roomId: string;
-  title: string;
-  language: string;
-  role: "teacher" | "student";
-  participantId: string;
-  livekitToken: string;
-  livekitUrl: string;
-  slides: string[];
-  status: string;
-}
 
 export default function ClassPage() {
   const params = useParams();

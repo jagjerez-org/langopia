@@ -30,7 +30,31 @@ export interface QueryCoursesParams extends PaginationParams {
 }
 
 export interface ManageCourseLessonsRequest {
-  lessons: Array<{ lessonId: string; sortOrder: number }>;
+  lessons: Array<{
+    lessonId: string;
+    sortOrder: number;
+    moduleTitle?: string;
+    moduleOrder?: number;
+  }>;
+}
+
+export interface GenerateCourseRequest {
+  prompt: string;
+  language?: string;
+  cefrLevel?: string;
+}
+
+export interface RefineCourseRequest {
+  currentPlan: {
+    suggestedTitle: string;
+    modules: Array<{
+      title: string;
+      lessons: Array<{ suggestedTitle: string; matchedLessonId?: string }>;
+    }>;
+  };
+  userMessage: string;
+  language?: string;
+  cefrLevel?: string;
 }
 
 // ─── Responses ──────────────────────────────────────
@@ -49,6 +73,8 @@ export interface CourseResponse {
   courseLessons?: Array<{
     id: string;
     sortOrder: number;
+    moduleTitle?: string | null;
+    moduleOrder?: number;
     lesson: {
       id: string;
       title: string;
@@ -57,4 +83,31 @@ export interface CourseResponse {
   }>;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CourseLessonSuggestion {
+  suggestedTitle: string;
+  matchedLesson: {
+    id: string;
+    title: string;
+    status: string;
+    exerciseCount: number;
+  } | null;
+  matchScore: number;
+}
+
+export interface CourseModuleSuggestion {
+  title: string;
+  lessons: CourseLessonSuggestion[];
+}
+
+export interface GenerateCourseResponse {
+  suggestedTitle: string;
+  suggestedDescription: string;
+  language: string;
+  cefrLevel: string;
+  estimatedHours: number;
+  noLessonsAvailable: boolean;
+  modules: CourseModuleSuggestion[];
+  aiResponse?: string;
 }

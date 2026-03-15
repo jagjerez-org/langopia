@@ -90,16 +90,6 @@ export class LearningPathsController {
     });
   }
 
-  @Delete(":id")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: "Delete a learning path" })
-  async deleteLearningPath(
-    @CurrentAcademy() academy: Academy,
-    @Param("id") id: string,
-  ) {
-    await this.learningPathsService.deleteLearningPath(academy.id, id);
-  }
-
   @Get(":id/lessons")
   @ApiOperation({ summary: "List lessons in this learning path (ordered by sortOrder)" })
   async listLessons(

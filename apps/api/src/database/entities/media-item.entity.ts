@@ -13,6 +13,7 @@ import {
 import type { Academy } from "./academy.entity.js";
 import type { User } from "./user.entity.js";
 import type { MediaPage } from "./media-page.entity.js";
+import type { MediaChunk } from "./media-chunk.entity.js";
 
 @Entity("media_items")
 @Unique(["academyId", "contentHash"])
@@ -90,6 +91,9 @@ export class MediaItem {
 
   @OneToMany("MediaPage", "mediaItem")
   pages!: Relation<MediaPage[]>;
+
+  @OneToMany("MediaChunk", "mediaItem")
+  chunks!: Relation<MediaChunk[]>;
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;

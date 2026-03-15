@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 2500",
+    "dev": "wait-on tcp:2501 --timeout 60000 && next dev --port 2500",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -13,6 +13,9 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1000.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@fullcalendar/core": "^6.1.20",
     "@fullcalendar/daygrid": "^6.1.20",
     "@fullcalendar/interaction": "^6.1.20",

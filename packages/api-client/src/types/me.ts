@@ -75,6 +75,7 @@ export interface MyClassDetail {
   studentUrl: string;
   createdAt: string;
   updatedAt: string;
+  reportId: string | null;
 }
 
 export interface MyReportListItem {
@@ -217,4 +218,54 @@ export interface MyNotificationsList {
   total: number;
   limit: number;
   offset: number;
+}
+
+// ─── Student query params ───────────────────────────
+
+export interface QueryMyStudentsParams {
+  academyId?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+// ─── Student responses ──────────────────────────────
+
+export interface MyStudentListItem {
+  id: string;
+  name: string;
+  email: string;
+  academyId: string;
+  academyName: string;
+  cefrEstimate: string | null;
+  isActive: boolean;
+  totalClasses: number;
+  lastClassAt: string | null;
+}
+
+export interface MyStudentsList {
+  data: MyStudentListItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface MyStudentDetail {
+  id: string;
+  name: string;
+  email: string;
+  academyName: string;
+  cefrEstimate: string | null;
+  isActive: boolean;
+  totalClasses: number;
+  totalMinutes: number;
+  classes: {
+    id: string;
+    title: string;
+    scheduledAt: string;
+    durationMinutes: number;
+    status: string;
+    classType: string;
+    reportId: string | null;
+  }[];
 }

@@ -24,3 +24,4 @@ export { TeamResource } from "./team";
 export { FinancingsResource } from "./financings";
 export { OnboardingResource } from "./onboarding";
 export { AcademyLandingResource } from "./academy-landing";
+export { StudentAppResource } from "./student-app";

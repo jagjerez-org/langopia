@@ -12,7 +12,7 @@ import { ConfigService } from "@nestjs/config";
 import { UsageMetric } from "@langopia/shared/types";
 import { Class } from "../database/entities/class.entity.js";
 import { ClassStudent } from "../database/entities/class-student.entity.js";
-import { AcademyMember } from "../database/entities/academy-member.entity.js";
+import { Teacher } from "../database/entities/teacher.entity.js";
 import { Student } from "../database/entities/student.entity.js";
 import { Lesson } from "../database/entities/lesson.entity.js";
 import { User } from "../database/entities/user.entity.js";
@@ -33,8 +33,8 @@ export class ClassesService {
     private readonly classRepo: Repository<Class>,
     @InjectRepository(ClassStudent)
     private readonly classStudentRepo: Repository<ClassStudent>,
-    @InjectRepository(AcademyMember)
-    private readonly memberRepo: Repository<AcademyMember>,
+    @InjectRepository(Teacher)
+    private readonly teacherRepo: Repository<Teacher>,
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
     @InjectRepository(Lesson)
@@ -86,27 +86,23 @@ export class ClassesService {
     let resolvedTeacherId: string | null = dto.teacherId ?? null;
 
     if (dto.teacherId) {
-      // Validate teacherId is an AcademyMember with teacher role
-      const teacherMember = await this.memberRepo
-        .createQueryBuilder("m")
-        .where("m.id = :id", { id: dto.teacherId })
-        .andWhere("m.academyId = :academyId", { academyId: academy.id })
-        .andWhere("m.roles @> :roles", { roles: JSON.stringify(["teacher"]) })
-        .getOne();
-      if (!teacherMember) {
+      // Validate teacherId is a Teacher in this academy
+      const teacher = await this.teacherRepo.findOne({
+        where: { id: dto.teacherId, academyId: academy.id, isActive: true },
+      });
+      if (!teacher) {
         throw new BadRequestException(
-          "Teacher not found or not a teacher in this academy",
+          "Teacher not found or not active in this academy",
         );
       }
     } else if (academy.academyType === "freelance") {
-      // Freelance: auto-assign owner as teacher
-      const ownerMember = await this.memberRepo
-        .createQueryBuilder("m")
-        .where("m.academyId = :academyId", { academyId: academy.id })
-        .andWhere("m.roles @> :roles", { roles: JSON.stringify(["owner"]) })
-        .getOne();
-      if (ownerMember) {
-        resolvedTeacherId = ownerMember.id;
+      // Freelance: auto-assign first active teacher
+      const firstTeacher = await this.teacherRepo.findOne({
+        where: { academyId: academy.id, isActive: true },
+        order: { createdAt: "ASC" },
+      });
+      if (firstTeacher) {
+        resolvedTeacherId = firstTeacher.id;
       }
     }
 
@@ -177,13 +173,12 @@ export class ClassesService {
     let teacherInfo: { id: string; name: string; email: string } | null = null;
     let teacherUserId: string | null = null;
     if (resolvedTeacherId) {
-      const tm = await this.memberRepo.findOne({
+      const tm = await this.teacherRepo.findOne({
         where: { id: resolvedTeacherId },
-        relations: ["user"],
       });
       if (tm) {
-        teacherInfo = { id: tm.id, name: tm.user.name, email: tm.user.email };
-        teacherUserId = tm.user.id;
+        teacherInfo = { id: tm.id, name: tm.name, email: tm.email };
+        teacherUserId = tm.userId;
       }
     }
 
@@ -256,8 +251,6 @@ export class ClassesService {
     const qb = this.classRepo
       .createQueryBuilder("cls")
       .leftJoinAndSelect("cls.teacher", "teacher")
-      .leftJoin("teacher.user", "teacherUser")
-      .addSelect(["teacherUser.name", "teacherUser.email"])
       .where("cls.academyId = :academyId", { academyId: academy.id })
       .orderBy("cls.scheduledAt", "DESC")
       .take(limit)
@@ -299,8 +292,8 @@ export class ClassesService {
         teacher: c.teacher
           ? {
               id: c.teacher.id,
-              name: (c.teacher as AcademyMember & { user: User }).user?.name,
-              email: (c.teacher as AcademyMember & { user: User }).user?.email,
+              name: c.teacher.name,
+              email: c.teacher.email,
             }
           : null,
         teacherUrl: `${this.appUrl}/class/${c.id}?token=${c.teacherToken}`,
@@ -318,7 +311,7 @@ export class ClassesService {
   async findOne(academy: Academy, id: string) {
     const cls = await this.classRepo.findOne({
       where: { id, academyId: academy.id },
-      relations: ["teacher", "teacher.user", "lesson", "room"],
+      relations: ["teacher", "lesson", "room"],
     });
 
     if (!cls) {
@@ -346,8 +339,8 @@ export class ClassesService {
       teacher: cls.teacher
         ? {
             id: cls.teacher.id,
-            name: (cls.teacher as AcademyMember & { user: User }).user?.name,
-            email: (cls.teacher as AcademyMember & { user: User }).user?.email,
+            name: cls.teacher.name,
+            email: cls.teacher.email,
           }
         : null,
       students: classStudents.map((cs) => ({
@@ -410,15 +403,10 @@ export class ClassesService {
 
     if (dto.teacherId !== undefined) {
       if (dto.teacherId) {
-        const teacherMember = await this.memberRepo
-          .createQueryBuilder("m")
-          .where("m.id = :id", { id: dto.teacherId })
-          .andWhere("m.academyId = :academyId", { academyId: academy.id })
-          .andWhere("m.roles @> :roles", {
-            roles: JSON.stringify(["teacher"]),
-          })
-          .getOne();
-        if (!teacherMember) {
+        const teacher = await this.teacherRepo.findOne({
+          where: { id: dto.teacherId, academyId: academy.id, isActive: true },
+        });
+        if (!teacher) {
           throw new BadRequestException("Teacher not found");
         }
       }
@@ -509,13 +497,12 @@ export class ClassesService {
     // Get teacher info
     let teacherUserId: string | null = null;
     if (cls.teacherId) {
-      const teacherMember = await this.memberRepo.findOne({
+      const teacher = await this.teacherRepo.findOne({
         where: { id: cls.teacherId },
-        relations: ["user"],
       });
-      if (teacherMember?.user?.email) {
-        emailRecipients.push(teacherMember.user.email);
-        teacherUserId = teacherMember.user.id;
+      if (teacher?.email) {
+        emailRecipients.push(teacher.email);
+        teacherUserId = teacher.userId;
       }
     }
 

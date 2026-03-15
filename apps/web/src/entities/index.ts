@@ -27,6 +27,11 @@ import {
   LessonStatus,
   MediaStatus,
   UsageMetric,
+  UserType,
+  StudentProgressSource,
+  LessonProgressStatus,
+  ReviewItemType,
+  ReviewSourceType,
 } from "@langopia/shared/types";
 
 // ─── User ─────────────────────────────────────────────────
@@ -56,6 +61,9 @@ export class User {
 
   @Column({ type: "varchar", length: 255, nullable: true })
   stripeSubscriptionId!: string | null;
+
+  @Column({ type: "varchar", length: 20, default: "staff" })
+  userType!: string;
 
   @Column({ type: "boolean", default: true })
   isActive!: boolean;
@@ -115,6 +123,9 @@ export class Academy {
 
   @OneToMany(() => Student, (s) => s.academy)
   students!: Student[];
+
+  @OneToMany(() => Teacher, (t) => t.academy)
+  teachers!: Teacher[];
 
   @OneToMany(() => Room, (r) => r.academy)
   rooms!: Room[];
@@ -217,6 +228,36 @@ export class Student {
   @Column({ type: "uuid", nullable: true })
   userId!: string | null;
 
+  @Column({ type: "varchar", length: 10, nullable: true })
+  nativeLanguage!: string | null;
+
+  @Column({ type: "varchar", length: 10, nullable: true })
+  learningLanguage!: string | null;
+
+  @Column({ type: "varchar", length: 5, nullable: true })
+  selfAssessedLevel!: string | null;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  learningGoal!: string | null;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  occupation!: string | null;
+
+  @Column({ type: "jsonb", default: [] })
+  interests!: string[];
+
+  @Column({ type: "int", default: 15 })
+  dailyGoalMinutes!: number;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  timezone!: string | null;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  profileImageUrl!: string | null;
+
+  @Column({ type: "boolean", default: false })
+  onboardingCompleted!: boolean;
+
   @ManyToOne(() => Academy, (a) => a.students)
   @JoinColumn({ name: "academyId" })
   academy!: Academy;
@@ -232,6 +273,53 @@ export class Student {
 
   @UpdateDateColumn({ type: "timestamptz" })
   lastSeenAt!: Date;
+}
+
+// ─── Teacher ─────────────────────────────────────────
+
+@Entity("teachers")
+@Unique(["academyId", "email"])
+export class Teacher {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  academyId!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  email!: string;
+
+  @Column({ type: "varchar", length: 255 })
+  name!: string;
+
+  @Column({ type: "jsonb", default: [] })
+  languages!: string[];
+
+  @Column({ type: "int", default: 0 })
+  totalClasses!: number;
+
+  @Column({ type: "int", default: 0 })
+  totalMinutes!: number;
+
+  @Column({ type: "boolean", default: true })
+  isActive!: boolean;
+
+  @Column({ type: "uuid", nullable: true })
+  userId!: string | null;
+
+  @ManyToOne(() => Academy, (a) => a.teachers)
+  @JoinColumn({ name: "academyId" })
+  academy!: Academy;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: "userId" })
+  user!: User | null;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: "timestamptz" })
+  updatedAt!: Date;
 }
 
 // ─── Lesson ─────────────────────────────────────────
@@ -277,6 +365,47 @@ export class Lesson {
 
   @UpdateDateColumn({ type: "timestamptz" })
   updatedAt!: Date;
+}
+
+// ─── LessonVersion ───────────────────────────────────────
+
+@Entity("lesson_versions")
+@Unique(["lessonId", "version"])
+@Index(["lessonId"])
+export class LessonVersion {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  lessonId!: string;
+
+  @Column({ type: "int" })
+  version!: number;
+
+  @Column({ type: "varchar", length: 255 })
+  title!: string;
+
+  @Column({ type: "text", nullable: true })
+  description!: string | null;
+
+  @Column({ type: "varchar", length: 10 })
+  language!: string;
+
+  @Column({ type: "varchar", length: 10 })
+  cefrLevel!: string;
+
+  @Column({ type: "varchar", length: 20 })
+  status!: string;
+
+  @Column({ type: "jsonb", default: [] })
+  exerciseSnapshot!: Record<string, unknown>[];
+
+  @ManyToOne(() => Lesson, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "lessonId" })
+  lesson!: Lesson;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
 }
 
 // ─── LearningPath ─────────────────────────────────────────
@@ -437,9 +566,9 @@ export class Class {
   @JoinColumn({ name: "courseId" })
   course!: Course | null;
 
-  @ManyToOne(() => AcademyMember, { nullable: true })
+  @ManyToOne(() => Teacher, { nullable: true })
   @JoinColumn({ name: "teacherId" })
-  teacher!: AcademyMember | null;
+  teacher!: Teacher | null;
 
   @ManyToOne(() => Room, { nullable: true })
   @JoinColumn({ name: "roomId" })
@@ -547,6 +676,9 @@ export class Room {
 
   @Column({ type: "jsonb", nullable: true })
   whiteboardData!: Record<string, unknown> | null;
+
+  @Column({ type: "jsonb", nullable: true })
+  suggestions!: Record<string, unknown>[] | null;
 
   @ManyToOne(() => Academy, (a) => a.rooms)
   @JoinColumn({ name: "academyId" })
@@ -713,6 +845,9 @@ export class Transcription {
 
   @Column({ type: "varchar", length: 10, nullable: true })
   languageDetected!: string | null;
+
+  @Column({ type: "boolean", default: false })
+  isLive!: boolean;
 
   @ManyToOne(() => Room, (r) => r.transcriptions)
   @JoinColumn({ name: "roomId" })
@@ -1036,11 +1171,57 @@ export class MediaItem {
   @OneToMany(() => MediaPage, (p) => p.mediaItem)
   pages!: MediaPage[];
 
+  @OneToMany(() => MediaChunk, (c) => c.mediaItem)
+  chunks!: MediaChunk[];
+
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;
 
   @UpdateDateColumn({ type: "timestamptz" })
   updatedAt!: Date;
+}
+
+// ─── MediaChunk ──────────────────────────────────────
+
+@Entity("media_chunks")
+@Unique(["mediaItemId", "orderIndex"])
+export class MediaChunk {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  mediaItemId!: string;
+
+  @Column({ type: "varchar", length: 50 })
+  chunkType!: string;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  title!: string | null;
+
+  @Column({ type: "text" })
+  content!: string;
+
+  @Column({ type: "jsonb", default: {} })
+  metadata!: Record<string, unknown>;
+
+  @Column({ type: "int" })
+  startPage!: number;
+
+  @Column({ type: "int" })
+  endPage!: number;
+
+  @Column({ type: "int" })
+  orderIndex!: number;
+
+  @Column({ type: "vector", length: 1536, nullable: true })
+  embedding!: string | null;
+
+  @ManyToOne(() => MediaItem, (m) => m.chunks, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "mediaItemId" })
+  mediaItem!: MediaItem;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
 }
 
 // ─── MediaPage ──────────────────────────────────────
@@ -1229,6 +1410,12 @@ export class CourseLesson {
 
   @Column({ type: "int", default: 0 })
   sortOrder!: number;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  moduleTitle!: string | null;
+
+  @Column({ type: "int", default: 0 })
+  moduleOrder!: number;
 
   @ManyToOne(() => Course, (c) => c.courseLessons, { onDelete: "CASCADE" })
   @JoinColumn({ name: "courseId" })
@@ -1605,6 +1792,199 @@ export class InviteLink {
   @ManyToOne(() => Academy, (a) => a.inviteLinks)
   @JoinColumn({ name: "academyId" })
   academy!: Academy;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+}
+
+// ─── Student Progress ──────────────────────────────────
+
+@Entity("student_progress")
+export class StudentProgress {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  studentId!: string;
+
+  @Column({ type: "uuid" })
+  exerciseId!: string;
+
+  @Column({ type: "uuid", nullable: true })
+  lessonId!: string | null;
+
+  @Column({ type: "boolean", default: false })
+  isCompleted!: boolean;
+
+  @Column({ type: "boolean", nullable: true })
+  isCorrect!: boolean | null;
+
+  @Column({ type: "text", nullable: true })
+  studentAnswer!: string | null;
+
+  @Column({ type: "int", default: 0 })
+  timeSpentSeconds!: number;
+
+  @Column({ type: "int", default: 1 })
+  attemptNumber!: number;
+
+  @Column({ type: "varchar", length: 20, default: "lesson" })
+  source!: string;
+
+  @CreateDateColumn({ type: "timestamptz" })
+  createdAt!: Date;
+}
+
+// ─── Lesson Progress ───────────────────────────────────
+
+@Entity("lesson_progress")
+@Unique(["studentId", "lessonId"])
+export class LessonProgress {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  studentId!: string;
+
+  @Column({ type: "uuid" })
+  lessonId!: string;
+
+  @Column({ type: "int", default: 0 })
+  completedExercises!: number;
+
+  @Column({ type: "int", default: 0 })
+  totalExercises!: number;
+
+  @Column({ type: "int", default: 0 })
+  lastExerciseIndex!: number;
+
+  @Column({ type: "varchar", length: 20, default: "not_started" })
+  status!: string;
+
+  @Column({ type: "timestamptz", nullable: true })
+  completedAt!: Date | null;
+}
+
+// ─── Course Progress ───────────────────────────────────
+
+@Entity("course_progress")
+@Unique(["studentId", "courseId"])
+export class CourseProgress {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  studentId!: string;
+
+  @Column({ type: "uuid" })
+  courseId!: string;
+
+  @Column({ type: "int", default: 0 })
+  completedLessons!: number;
+
+  @Column({ type: "int", default: 0 })
+  totalLessons!: number;
+
+  @Column({ type: "varchar", length: 20, default: "not_started" })
+  status!: string;
+
+  @Column({ type: "timestamptz", nullable: true })
+  completedAt!: Date | null;
+}
+
+// ─── Study Streak ──────────────────────────────────────
+
+@Entity("study_streaks")
+@Unique(["studentId"])
+export class StudyStreak {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  studentId!: string;
+
+  @Column({ type: "int", default: 0 })
+  currentStreak!: number;
+
+  @Column({ type: "int", default: 0 })
+  longestStreak!: number;
+
+  @Column({ type: "date", nullable: true })
+  lastActivityDate!: string | null;
+
+  @Column({ type: "int", default: 1 })
+  freezesAvailable!: number;
+
+  @Column({ type: "int", default: 0 })
+  totalActivityDays!: number;
+}
+
+// ─── Daily Activity ────────────────────────────────────
+
+@Entity("daily_activities")
+@Unique(["studentId", "activityDate"])
+export class DailyActivity {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  studentId!: string;
+
+  @Column({ type: "date" })
+  activityDate!: string;
+
+  @Column({ type: "int", default: 0 })
+  exercisesCompleted!: number;
+
+  @Column({ type: "int", default: 0 })
+  reviewItemsCompleted!: number;
+
+  @Column({ type: "int", default: 0 })
+  minutesPracticed!: number;
+
+  @Column({ type: "int", default: 0 })
+  classesAttended!: number;
+
+  @Column({ type: "int", default: 0 })
+  xpEarned!: number;
+}
+
+// ─── Review Item ───────────────────────────────────────
+
+@Entity("review_items")
+export class ReviewItem {
+  @PrimaryGeneratedColumn("uuid")
+  id!: string;
+
+  @Column({ type: "uuid" })
+  studentId!: string;
+
+  @Column({ type: "varchar", length: 20, default: "vocabulary" })
+  itemType!: string;
+
+  @Column({ type: "jsonb", default: {} })
+  content!: Record<string, unknown>;
+
+  @Column({ type: "varchar", length: 20, default: "class_report" })
+  sourceType!: string;
+
+  @Column({ type: "varchar", length: 255, nullable: true })
+  sourceId!: string | null;
+
+  @Column({ type: "float", default: 2.5 })
+  easeFactor!: number;
+
+  @Column({ type: "int", default: 1 })
+  interval!: number;
+
+  @Column({ type: "int", default: 0 })
+  repetitions!: number;
+
+  @Column({ type: "date" })
+  nextReviewDate!: string;
+
+  @Column({ type: "boolean", default: false })
+  isRetired!: boolean;
 
   @CreateDateColumn({ type: "timestamptz" })
   createdAt!: Date;

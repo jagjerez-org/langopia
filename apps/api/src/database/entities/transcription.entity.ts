@@ -39,6 +39,9 @@ export class Transcription {
   @Column({ type: "varchar", length: 10, nullable: true })
   languageDetected!: string | null;
 
+  @Column({ type: "boolean", default: false })
+  isLive!: boolean;
+
   @ManyToOne("Room", "transcriptions")
   @JoinColumn({ name: "roomId" })
   room!: Relation<Room>;

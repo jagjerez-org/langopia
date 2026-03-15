@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   GraduationCap,
   Plus,
@@ -10,8 +11,12 @@ import {
   Check,
   X,
   Clock,
+  Trash2,
+  UserX,
+  UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { ApiError } from "@langopia/api-client";
 import { useAcademy } from "@/components/academy-provider";
 import { useApiKeyClient, useApiClient } from "@/hooks/use-api-client";
 import { Button } from "@/components/ui/button";
@@ -23,12 +28,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PageHeader, PageSkeleton, EmptyState, ListItem, GradientAvatar } from "@/components/dashboard-list";
 
 interface Teacher {
   id: string;
   name: string;
   email: string;
-  roles: string[];
+  languages: string[];
+  isActive: boolean;
+  userId: string | null;
+  createdAt: string;
 }
 
 interface Application {
@@ -46,7 +55,7 @@ interface Application {
   createdAt: string;
 }
 
-const applicationStatusColors: Record<string, string> = {
+const STATUS_COLORS: Record<string, string> = {
   pending:
     "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   approved:
@@ -56,6 +65,7 @@ const applicationStatusColors: Record<string, string> = {
 };
 
 export default function TeachersPage() {
+  const router = useRouter();
   const { selectedAcademy, selectedAcademyData, loading: academyLoading } =
     useAcademy();
   const apiKey = useApiKeyClient();
@@ -122,8 +132,12 @@ export default function TeachersPage() {
       toast.success("Teacher invited!");
       setInviteEmail("");
       fetchTeachers();
-    } catch {
-      toast.error("Failed to invite teacher");
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "Failed to invite teacher";
+      toast.error(message);
     } finally {
       setInviting(false);
     }
@@ -145,39 +159,58 @@ export default function TeachersPage() {
     }
   }
 
+  async function handleDeactivate(teacher: Teacher) {
+    try {
+      await apiKey.teachers.deactivate(teacher.id);
+      toast.success(`${teacher.name} deactivated`);
+      fetchTeachers();
+    } catch {
+      toast.error("Failed to deactivate teacher");
+    }
+  }
+
+  async function handleReactivate(teacher: Teacher) {
+    try {
+      await apiKey.teachers.reactivate(teacher.id);
+      toast.success(`${teacher.name} reactivated`);
+      fetchTeachers();
+    } catch {
+      toast.error("Failed to reactivate teacher");
+    }
+  }
+
+  async function handleRemove(teacher: Teacher) {
+    try {
+      await apiKey.teachers.remove(teacher.id);
+      toast.success(`${teacher.name} removed`);
+      fetchTeachers();
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.message
+          : "Failed to remove teacher. They may have classes assigned — try deactivating instead.";
+      toast.error(message);
+    }
+  }
+
   if (academyLoading) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="h-8 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-        <div className="glass h-64 animate-pulse rounded-xl" />
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!selectedAcademy) {
     return (
-      <div className="mx-auto max-w-5xl">
-        <div className="glass flex flex-col items-center justify-center rounded-xl py-16 text-center">
-          <GraduationCap className="mb-3 h-10 w-10 text-zinc-400" />
-          <p className="font-medium text-zinc-500">No academy selected</p>
-          <p className="mt-1 text-sm text-zinc-400">
-            Select an academy from the sidebar to manage teachers
-          </p>
-        </div>
+      <div className="mx-auto max-w-6xl">
+        <EmptyState icon={GraduationCap} title="No academy selected" description="Select an academy from the sidebar to manage teachers" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Teachers</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Manage teachers and review applications
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <PageHeader
+        title="Teachers"
+        subtitle="Manage teachers and review applications"
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg border border-zinc-200/40 p-1 dark:border-zinc-700/40">
@@ -237,40 +270,53 @@ export default function TeachersPage() {
           )}
 
           {loadingTeachers ? (
-            <div className="glass h-40 animate-pulse rounded-xl" />
-          ) : teachers.length === 0 ? (
-            <div className="glass-subtle flex flex-col items-center justify-center rounded-xl border border-zinc-200/40 py-12 text-center dark:border-zinc-700/40">
-              <GraduationCap className="mb-3 h-8 w-8 text-zinc-400" />
-              <p className="text-sm text-zinc-500">No teachers yet</p>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="glass h-20 animate-pulse rounded-xl" />
+              ))}
             </div>
+          ) : teachers.length === 0 ? (
+            <EmptyState icon={GraduationCap} title="No teachers yet" description="Invite a teacher to get started" />
           ) : (
             <div className="space-y-3">
               {teachers.map((teacher) => (
-                <div
+                <ListItem
                   key={teacher.id}
-                  className="glass-subtle flex items-center gap-4 rounded-xl border border-zinc-200/40 p-4 dark:border-zinc-700/40"
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-sm font-bold text-white">
-                    {teacher.name.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{teacher.name}</p>
-                    <p className="flex items-center gap-1 truncate text-sm text-zinc-500">
-                      <Mail className="h-3 w-3" /> {teacher.email}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    {teacher.roles.map((role) => (
+                  onClick={() => router.push(`/dashboard/teachers/${teacher.id}`)}
+                  avatar={<GradientAvatar>{teacher.name.charAt(0).toUpperCase()}</GradientAvatar>}
+                  title={teacher.name}
+                  badges={
+                    <div className="flex gap-1">
                       <Badge
-                        key={role}
                         variant="secondary"
-                        className="capitalize"
+                        className={teacher.isActive ? "" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}
                       >
-                        {role}
+                        {teacher.isActive ? "Active" : "Inactive"}
                       </Badge>
-                    ))}
-                  </div>
-                </div>
+                    </div>
+                  }
+                  subtitle={
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3 w-3" /> {teacher.email}
+                    </span>
+                  }
+                  actions={
+                    <>
+                      {teacher.isActive ? (
+                        <Button variant="ghost" size="sm" onClick={() => handleDeactivate(teacher)} title="Deactivate teacher">
+                          <UserX className="h-4 w-4 text-zinc-400 hover:text-amber-500" />
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => handleReactivate(teacher)} title="Reactivate teacher">
+                          <UserCheck className="h-4 w-4 text-zinc-400 hover:text-emerald-500" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="sm" onClick={() => handleRemove(teacher)} title="Remove teacher (only if no classes)">
+                        <Trash2 className="h-4 w-4 text-zinc-400 hover:text-red-500" />
+                      </Button>
+                    </>
+                  }
+                />
               ))}
             </div>
           )}
@@ -304,61 +350,46 @@ export default function TeachersPage() {
           </div>
 
           {loadingApplications ? (
-            <div className="glass h-40 animate-pulse rounded-xl" />
-          ) : applications.length === 0 ? (
-            <div className="glass-subtle flex flex-col items-center justify-center rounded-xl border border-zinc-200/40 py-12 text-center dark:border-zinc-700/40">
-              <FileText className="mb-3 h-8 w-8 text-zinc-400" />
-              <p className="text-sm text-zinc-500">No applications</p>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="glass h-20 animate-pulse rounded-xl" />
+              ))}
             </div>
+          ) : applications.length === 0 ? (
+            <EmptyState icon={FileText} title="No applications" description="Applications will appear here when teachers apply" />
           ) : (
             <div className="space-y-3">
               {applications.map((app) => (
-                <div
+                <ListItem
                   key={app.id}
-                  onClick={() => {
-                    setReviewingApp(app);
-                    setReviewNotes("");
-                  }}
-                  className="glass-subtle cursor-pointer rounded-xl border border-zinc-200/40 p-4 transition-all hover:shadow-md dark:border-zinc-700/40"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{app.fullName}</p>
-                      <p className="text-sm text-zinc-500">{app.email}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
+                  onClick={() => { setReviewingApp(app); setReviewNotes(""); }}
+                  chevron={false}
+                  avatar={<GradientAvatar>{app.fullName.charAt(0).toUpperCase()}</GradientAvatar>}
+                  title={app.fullName}
+                  badges={
+                    <>
                       {app.languages.length > 0 && (
                         <div className="flex gap-1">
                           {app.languages.map((lang) => (
-                            <Badge
-                              key={lang}
-                              variant="outline"
-                              className="text-xs"
-                            >
-                              {lang}
-                            </Badge>
+                            <Badge key={lang} variant="outline" className="text-xs">{lang}</Badge>
                           ))}
                         </div>
                       )}
-                      <Badge
-                        className={
-                          applicationStatusColors[app.status] ??
-                          applicationStatusColors.pending
-                        }
-                      >
+                      <Badge className={STATUS_COLORS[app.status] ?? STATUS_COLORS.pending}>
                         {app.status}
                       </Badge>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center gap-4 text-xs text-zinc-400">
-                    <span>
-                      Applied{" "}
-                      {new Date(app.createdAt).toLocaleDateString()}
-                    </span>
-                    {app.phone && <span>Phone: {app.phone}</span>}
-                    {app.cvUrl && <span>CV attached</span>}
-                  </div>
-                </div>
+                    </>
+                  }
+                  subtitle={
+                    <>
+                      <span>{app.email}</span>
+                      <span>&middot;</span>
+                      <span>Applied {new Date(app.createdAt).toLocaleDateString()}</span>
+                      {app.phone && <><span>&middot;</span><span>Phone: {app.phone}</span></>}
+                      {app.cvUrl && <><span>&middot;</span><span>CV attached</span></>}
+                    </>
+                  }
+                />
               ))}
             </div>
           )}

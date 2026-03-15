@@ -46,7 +46,19 @@
       "Bash(adb devices:*)",
       "Bash(npx shadcn@latest:*)",
       "Bash(docker compose:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ls -la /c/Users/jagod/repositories/langopia/apps/web/src/app/\\\\\\(dashboard\\\\\\)/dashboard/exercises/ 2>/dev/null)",
+      "Bash(ls -la /c/Users/jagod/repositories/langopia/apps/web/src/app/\\\\\\(dashboard\\\\\\)/dashboard/lessons/ 2>/dev/null)",
+      "Bash(cat \"/c/Users/jagod/repositories/langopia/apps/web/src/app/\\(dashboard\\)/dashboard/exercises/page.tsx\" | head -100)",
+      "Bash(wc -l \"/c/Users/jagod/repositories/langopia/apps/web/src/app/\\(dashboard\\)/dashboard/exercises/page.tsx\")",
+      "Bash(cat \"/c/Users/jagod/repositories/langopia/apps/web/src/app/\\(dashboard\\)/dashboard/lessons/page.tsx\" | head -100)",
+      "Bash(cat \"/c/Users/jagod/repositories/langopia/apps/web/src/app/\\(dashboard\\)/dashboard/lessons/[id]/page.tsx\" | head -150)",
+      "Bash(git diff:*)",
+      "Bash(ls -la /c/Users/jagod/repositories/langopia/apps/web/src/app/\\\\\\(auth\\\\\\)/)",
+      "Bash(cd C:/Users/jagod/repositories/langopia && rm -rf apps/web/.next 2>/dev/null; echo \"Cache cleared\")",
+      "Bash(ls C:/Users/jagod/repositories/langopia/apps/web/src/app/\\\\\\(app\\\\\\)/)",
+      "Bash(find /c/Users/jagod/repositories/langopia -path \"*/node_modules\" -prune -o -type f -name \"*.ts\" -exec grep -l \"class.*teacher\\\\|teacher.*class\" {} \\\\; 2>/dev/null | head -20)",
+      "WebFetch(domain:help.preply.com)"
     ]
   }
 }

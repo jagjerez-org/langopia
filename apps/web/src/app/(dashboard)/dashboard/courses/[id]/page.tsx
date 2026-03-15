@@ -6,11 +6,13 @@ import {
   BookOpen,
   Check,
   ChevronDown,
+  ChevronRight,
   ChevronUp,
   GripVertical,
   Pencil,
   Plus,
   Save,
+  Settings2,
   Trash2,
   X,
 } from "lucide-react";
@@ -40,10 +42,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CourseWizard } from "@/components/course-wizard";
 
 interface CourseLesson {
   id: string;
   sortOrder: number;
+  moduleTitle?: string | null;
+  moduleOrder?: number;
   lesson: { id: string; title: string; status: string };
 }
 
@@ -91,6 +96,9 @@ export default function CourseDetailPage() {
 
   // Delete confirmation
   const [deleteCourseOpen, setDeleteCourseOpen] = useState(false);
+
+  // Wizard for reorganization
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const loadCourse = useCallback(async () => {
     if (!selectedAcademy || !id) return;
@@ -144,8 +152,9 @@ export default function CourseDetailPage() {
       await api.courses.delete(selectedAcademy, id);
       toast.success("Course deleted");
       router.push("/dashboard/courses");
-    } catch {
-      toast.error("Failed to delete course");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete course";
+      toast.error(message);
     }
   }
 
@@ -383,13 +392,21 @@ export default function CourseDetailPage() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-lg font-semibold">Lessons ({courseLessons.length})</h3>
-          <button
-            onClick={handleOpenAddLesson}
-            disabled={savingLessons}
-            className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" /> Add Lesson
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWizardOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            >
+              <Settings2 className="h-4 w-4" /> Reorganize
+            </button>
+            <button
+              onClick={handleOpenAddLesson}
+              disabled={savingLessons}
+              className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-500 disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" /> Add Lesson
+            </button>
+          </div>
         </div>
 
         {courseLessons.length === 0 ? (
@@ -401,55 +418,115 @@ export default function CourseDetailPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
-            {courseLessons.map((cl, index) => (
-              <div
-                key={cl.id}
-                className="flex items-center gap-3 rounded-xl border border-zinc-200/60 bg-white p-4 shadow-sm dark:border-zinc-700/60 dark:bg-zinc-900"
-              >
-                <GripVertical className="h-4 w-4 shrink-0 text-zinc-300 dark:text-zinc-600" />
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
-                  {index + 1}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className="truncate font-medium">{cl.lesson.title}</p>
+          (() => {
+            // Group lessons by module
+            const moduleGroups = new Map<string, CourseLesson[]>();
+            const sortedLessons = [...courseLessons].sort(
+              (a, b) => (a.moduleOrder ?? 0) - (b.moduleOrder ?? 0) || a.sortOrder - b.sortOrder,
+            );
+            for (const cl of sortedLessons) {
+              const key = cl.moduleTitle ?? "";
+              if (!moduleGroups.has(key)) moduleGroups.set(key, []);
+              moduleGroups.get(key)!.push(cl);
+            }
+            const hasModules = moduleGroups.size > 1 || (moduleGroups.size === 1 && !moduleGroups.has(""));
+
+            if (!hasModules) {
+              // Flat list (legacy/no modules)
+              return (
+                <div className="space-y-2">
+                  {sortedLessons.map((cl, index) => (
+                    <div
+                      key={cl.id}
+                      className="flex items-center gap-3 rounded-xl border border-zinc-200/60 bg-white p-4 shadow-sm dark:border-zinc-700/60 dark:bg-zinc-900"
+                    >
+                      <GripVertical className="h-4 w-4 shrink-0 text-zinc-300 dark:text-zinc-600" />
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                        {index + 1}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate font-medium">{cl.lesson.title}</p>
+                      </div>
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-medium capitalize ${
+                          lessonStatusColors[cl.lesson.status] ?? "bg-zinc-100 text-zinc-600"
+                        }`}
+                      >
+                        {cl.lesson.status}
+                      </span>
+                      <div className="flex shrink-0 items-center gap-0.5">
+                        <button
+                          onClick={() => handleMoveLesson(index, "up")}
+                          disabled={index === 0 || savingLessons}
+                          className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-30 dark:hover:bg-zinc-800"
+                          title="Move up"
+                        >
+                          <ChevronUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleMoveLesson(index, "down")}
+                          disabled={index === sortedLessons.length - 1 || savingLessons}
+                          className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-30 dark:hover:bg-zinc-800"
+                          title="Move down"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRemoveLesson(index)}
+                          disabled={savingLessons}
+                          className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 dark:hover:bg-red-900/20"
+                          title="Remove from course"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <span
-                  className={`rounded-md px-2 py-0.5 text-xs font-medium capitalize ${
-                    lessonStatusColors[cl.lesson.status] ?? "bg-zinc-100 text-zinc-600"
-                  }`}
-                >
-                  {cl.lesson.status}
-                </span>
-                <div className="flex shrink-0 items-center gap-0.5">
-                  <button
-                    onClick={() => handleMoveLesson(index, "up")}
-                    disabled={index === 0 || savingLessons}
-                    className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-30 dark:hover:bg-zinc-800"
-                    title="Move up"
+              );
+            }
+
+            // Grouped by module
+            return (
+              <div className="space-y-4">
+                {Array.from(moduleGroups.entries()).map(([moduleTitle, lessons]) => (
+                  <div
+                    key={moduleTitle}
+                    className="rounded-xl border border-zinc-200/80 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-800/50"
                   >
-                    <ChevronUp className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleMoveLesson(index, "down")}
-                    disabled={index === courseLessons.length - 1 || savingLessons}
-                    className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 disabled:opacity-30 dark:hover:bg-zinc-800"
-                    title="Move down"
-                  >
-                    <ChevronDown className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleRemoveLesson(index)}
-                    disabled={savingLessons}
-                    className="rounded-md p-1.5 text-zinc-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-30 dark:hover:bg-red-900/20"
-                    title="Remove from course"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                    <div className="flex items-center gap-2 px-4 py-2.5">
+                      <ChevronRight className="h-4 w-4 text-zinc-400" />
+                      <span className="text-sm font-semibold">{moduleTitle}</span>
+                      <span className="text-xs text-zinc-400">
+                        {lessons.length} lesson{lessons.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="space-y-1.5 px-3 pb-3">
+                      {lessons.map((cl, index) => (
+                        <div
+                          key={cl.id}
+                          className="flex items-center gap-3 rounded-lg border border-zinc-200/60 bg-white px-3 py-2.5 dark:border-zinc-700/60 dark:bg-zinc-900"
+                        >
+                          <GripVertical className="h-3.5 w-3.5 shrink-0 text-zinc-300 dark:text-zinc-600" />
+                          <BookOpen className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                          <div className="flex-1 min-w-0">
+                            <p className="truncate text-sm font-medium">{cl.lesson.title}</p>
+                          </div>
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-xs font-medium capitalize ${
+                              lessonStatusColors[cl.lesson.status] ?? "bg-zinc-100 text-zinc-600"
+                            }`}
+                          >
+                            {cl.lesson.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()
         )}
       </div>
 
@@ -499,6 +576,14 @@ export default function CourseDetailPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* ─── Course Wizard (reorganize) ─── */}
+      <CourseWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        editingCourse={course}
+        onComplete={loadCourse}
+      />
 
       {/* ─── Delete course confirmation ─── */}
       <AlertDialog open={deleteCourseOpen} onOpenChange={setDeleteCourseOpen}>

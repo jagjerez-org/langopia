@@ -26,6 +26,7 @@ import {
   FinancingsResource,
   OnboardingResource,
   AcademyLandingResource,
+  StudentAppResource,
 } from "./resources";
 
 export type AuthMode = "jwt" | "apikey" | "none";
@@ -45,6 +46,12 @@ export interface RequestOptions {
   body?: unknown;
   query?: Record<string, unknown>;
   formData?: FormData;
+  signal?: AbortSignal;
+}
+
+export interface UploadWithProgressOptions extends RequestOptions {
+  onProgress?: (loaded: number, total: number) => void;
+  signal?: AbortSignal;
 }
 
 export class LangopiaClient {
@@ -78,6 +85,7 @@ export class LangopiaClient {
   readonly financings: FinancingsResource;
   readonly onboarding: OnboardingResource;
   readonly academyLanding: AcademyLandingResource;
+  readonly studentApp: StudentAppResource;
 
   constructor(config: LangopiaClientConfig) {
     this.config = config;
@@ -108,6 +116,7 @@ export class LangopiaClient {
     this.financings = new FinancingsResource(this);
     this.onboarding = new OnboardingResource(this);
     this.academyLanding = new AcademyLandingResource(this);
+    this.studentApp = new StudentAppResource(this);
   }
 
   /** Update tokens after login/refresh */
@@ -121,17 +130,20 @@ export class LangopiaClient {
     this.config.apiKey = apiKey;
   }
 
+  private getAuthHeader(auth: AuthMode): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (auth === "jwt" && this.config.accessToken) {
+      headers["Authorization"] = `Bearer ${this.config.accessToken}`;
+    } else if (auth === "apikey" && this.config.apiKey) {
+      headers["Authorization"] = `Bearer ${this.config.apiKey}`;
+    }
+    return headers;
+  }
+
   /** Core request method used by all resources */
   async request<T>(options: RequestOptions): Promise<T> {
     const url = this.buildUrl(options.path, options.query);
-    const headers: Record<string, string> = {};
-
-    // Auth header
-    if (options.auth === "jwt" && this.config.accessToken) {
-      headers["Authorization"] = `Bearer ${this.config.accessToken}`;
-    } else if (options.auth === "apikey" && this.config.apiKey) {
-      headers["Authorization"] = `Bearer ${this.config.apiKey}`;
-    }
+    const headers: Record<string, string> = this.getAuthHeader(options.auth);
 
     // Body
     let bodyInit: BodyInit | undefined;
@@ -147,6 +159,7 @@ export class LangopiaClient {
       method: options.method,
       headers,
       body: bodyInit,
+      signal: options.signal,
     });
 
     // Auto-refresh on 401 for JWT requests
@@ -163,6 +176,58 @@ export class LangopiaClient {
     }
 
     return this.handleResponse<T>(res);
+  }
+
+  /** Upload with XHR progress tracking. Falls back to request() if XMLHttpRequest unavailable (SSR). */
+  async uploadWithProgress<T>(options: UploadWithProgressOptions): Promise<T> {
+    if (typeof XMLHttpRequest === "undefined") {
+      return this.request<T>(options);
+    }
+
+    const url = this.buildUrl(options.path, options.query);
+    const headers = this.getAuthHeader(options.auth);
+
+    return new Promise<T>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(options.method, url);
+
+      for (const [key, value] of Object.entries(headers)) {
+        xhr.setRequestHeader(key, value);
+      }
+
+      if (options.signal) {
+        options.signal.addEventListener("abort", () => xhr.abort());
+      }
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && options.onProgress) {
+          options.onProgress(e.loaded, e.total);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 204) {
+          resolve(undefined as T);
+          return;
+        }
+        let body: unknown;
+        try {
+          body = JSON.parse(xhr.responseText);
+        } catch {
+          body = xhr.responseText;
+        }
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(body as T);
+        } else {
+          reject(new ApiError(xhr.status, body));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
+
+      xhr.send(options.formData);
+    });
   }
 
   private async handleResponse<T>(res: Response): Promise<T> {

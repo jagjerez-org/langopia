@@ -207,19 +207,6 @@ export class LearningPathsService {
     };
   }
 
-  async deleteLearningPath(academyId: string, id: string) {
-    const lp = await this.lpRepo.findOne({
-      where: { id, academyId },
-    });
-
-    if (!lp) {
-      throw new NotFoundException("Learning path not found");
-    }
-
-    // LearningPathLesson records cascade-delete; lessons themselves are preserved
-    await this.lpRepo.remove(lp);
-  }
-
   async listLessons(academyId: string, lpId: string) {
     const lp = await this.lpRepo.findOne({
       where: { id: lpId, academyId },

@@ -164,6 +164,9 @@ export enum ExerciseType {
   COMPLETE_CHAT = "complete_chat",
   WRITE_COMPLETE = "write_complete",
   LISTEN_COMPLETE = "listen_complete",
+  PODCAST = "podcast",
+  GUIDED_STORY = "guided_story",
+  GUIDED_CONVERSATION = "guided_conversation",
 }
 
 export enum ExerciseSource {
@@ -254,6 +257,18 @@ export enum MediaStatus {
   FAILED = "failed",
 }
 
+export enum ChunkType {
+  VOCABULARY_LIST = "vocabulary_list",
+  DIALOGUE = "dialogue",
+  GRAMMAR_EXPLANATION = "grammar_explanation",
+  READING_PASSAGE = "reading_passage",
+  EXERCISE = "exercise",
+  INSTRUCTIONS = "instructions",
+  CULTURAL_NOTE = "cultural_note",
+  IMAGE_DESCRIPTION = "image_description",
+  OTHER = "other",
+}
+
 // ─── CEFR & Languages ───────────────────────────────
 
 export const CEFR_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
@@ -280,6 +295,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
   needsAudio: boolean;
   needsVideo: boolean;
   isInteractive: boolean;
+  studentPreview: string;
 }> = {
   [ExerciseType.WARM_UP]: {
     label: "Warm Up",
@@ -288,6 +304,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: false,
     needsVideo: false,
     isInteractive: true,
+    studentPreview: "Students read a text passage and write a free-text response (opinion, reflection, or short answer). Includes a model answer for comparison.",
   },
   [ExerciseType.INTRO]: {
     label: "Introduction",
@@ -296,6 +313,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: false,
     needsVideo: false,
     isInteractive: false,
+    studentPreview: "Read-only presentation card with topic overview and key concepts. No student interaction.",
   },
   [ExerciseType.CARD]: {
     label: "Concept Card",
@@ -304,6 +322,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: false,
     needsVideo: false,
     isInteractive: false,
+    studentPreview: "Read-only reference card with grammar rules, vocabulary, or concept explanations with examples.",
   },
   [ExerciseType.TAP_TO_COMPLETE]: {
     label: "Tap to Complete",
@@ -312,6 +331,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: false,
     needsVideo: false,
     isInteractive: true,
+    studentPreview: "Sentence with blanks (___) and tappable word options. Student taps the correct word to fill each blank.",
   },
   [ExerciseType.TAP_TO_ORDER]: {
     label: "Tap to Order",
@@ -320,6 +340,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: false,
     needsVideo: false,
     isInteractive: true,
+    studentPreview: "Shuffled words that students reorder by tapping to form a correct sentence.",
   },
   [ExerciseType.LISTEN_MATCH]: {
     label: "Listen & Match",
@@ -328,6 +349,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: true,
     needsVideo: false,
     isInteractive: true,
+    studentPreview: "Audio clip + matching pairs (e.g., word-definition). Student listens then connects matching items.",
   },
   [ExerciseType.LISTEN_REPEAT]: {
     label: "Listen & Repeat",
@@ -336,6 +358,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: true,
     needsVideo: false,
     isInteractive: true,
+    studentPreview: "Audio clip of a phrase. Student listens and records themselves repeating it.",
   },
   [ExerciseType.WATCH_REFLECT]: {
     label: "Watch & Reflect",
@@ -344,6 +367,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: false,
     needsVideo: true,
     isInteractive: true,
+    studentPreview: "Video clip + reflection prompt. Student watches then writes a free-text response.",
   },
   [ExerciseType.COMPLETE_CHAT]: {
     label: "Complete Chat",
@@ -352,6 +376,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: false,
     needsVideo: false,
     isInteractive: true,
+    studentPreview: "Chat conversation (A/B dialogue) with blanks in some lines. Student taps correct responses from options.",
   },
   [ExerciseType.WRITE_COMPLETE]: {
     label: "Write to Complete",
@@ -360,6 +385,7 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: false,
     needsVideo: false,
     isInteractive: true,
+    studentPreview: "Text with blanks (___) where students type the missing words/phrases (no options provided).",
   },
   [ExerciseType.LISTEN_COMPLETE]: {
     label: "Listen & Complete",
@@ -368,8 +394,68 @@ export const EXERCISE_TYPE_CONFIG: Record<ExerciseType, {
     needsAudio: true,
     needsVideo: false,
     isInteractive: true,
+    studentPreview: "Audio clip + dialogue with blanks. Student listens then fills blanks by tapping from word options.",
+  },
+  [ExerciseType.PODCAST]: {
+    label: "Podcast",
+    description: "Listen to a podcast episode and answer comprehension questions",
+    icon: "Podcast",
+    needsAudio: true,
+    needsVideo: false,
+    isInteractive: true,
+    studentPreview: "Podcast-style audio (HOST/GUEST dialogue) with transcript. Student answers multiple-choice comprehension questions.",
+  },
+  [ExerciseType.GUIDED_STORY]: {
+    label: "Guided Story",
+    description: "Participate in building a story by choosing directions and filling in words",
+    icon: "BookHeart",
+    needsAudio: false,
+    needsVideo: false,
+    isInteractive: true,
+    studentPreview: "Interactive story with fill-in blanks and branching choice points (a/b/c). Student shapes the narrative.",
+  },
+  [ExerciseType.GUIDED_CONVERSATION]: {
+    label: "Guided Conversation",
+    description: "Practice a real conversation by filling in your part of the dialogue",
+    icon: "MessagesSquare",
+    needsAudio: false,
+    needsVideo: false,
+    isInteractive: true,
+    studentPreview: "Realistic dialogue where student fills in their part (YOU: lines) by typing responses. Includes contextual hints.",
   },
 };
+
+// ─── Student App ─────────────────────────────────────────
+
+export enum StudentProgressSource {
+  LESSON = "lesson",
+  REVIEW = "review",
+  HOMEWORK = "homework",
+  PRACTICE = "practice",
+}
+
+export enum LessonProgressStatus {
+  NOT_STARTED = "not_started",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+}
+
+export enum ReviewItemType {
+  VOCABULARY = "vocabulary",
+  GRAMMAR = "grammar",
+  EXERCISE = "exercise",
+}
+
+export enum ReviewSourceType {
+  CLASS_REPORT = "class_report",
+  LESSON = "lesson",
+  MANUAL = "manual",
+}
+
+export enum UserType {
+  STAFF = "staff",
+  STUDENT = "student",
+}
 
 // ─── Usage ───────────────────────────────────────────────
 

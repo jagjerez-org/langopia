@@ -4,9 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import {
   Calendar as CalendarIcon,
   Plus,
-  X,
   ExternalLink,
-  Pencil,
   Ban,
   Loader2,
 } from "lucide-react";
@@ -28,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { TutorialOverlay } from "@/components/tutorial-overlay";
+import { PageHeader, PageSkeleton, EmptyState, PrimaryAction } from "@/components/dashboard-list";
 
 interface ClassEvent {
   id: string;
@@ -57,9 +56,11 @@ interface Teacher {
 interface Lesson {
   id: string;
   title: string;
+  language: string;
+  cefrLevel: string;
 }
 
-const STATUS_COLORS: Record<string, string> = {
+const CALENDAR_COLORS: Record<string, string> = {
   scheduled: "#3b82f6",
   confirmed: "#22c55e",
   in_progress: "#8b5cf6",
@@ -67,7 +68,7 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: "#ef4444",
 };
 
-const STATUS_BADGE: Record<string, string> = {
+const STATUS_COLORS: Record<string, string> = {
   scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   confirmed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   in_progress: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
@@ -89,17 +90,13 @@ export default function ClassesPage() {
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
   const [newScheduledAt, setNewScheduledAt] = useState("");
   const [newDuration, setNewDuration] = useState(60);
   const [newClassType, setNewClassType] = useState("individual");
-  const [newLanguage, setNewLanguage] = useState("en");
   const [newMaxStudents, setNewMaxStudents] = useState(1);
   const [newTeacherId, setNewTeacherId] = useState("");
   const [newLessonId, setNewLessonId] = useState("");
-  const [newStudentEmails, setNewStudentEmails] = useState("");
   const [newCancellationMinutes, setNewCancellationMinutes] = useState(60);
-  const [newCourseId, setNewCourseId] = useState("");
   const [newZoomLink, setNewZoomLink] = useState("");
 
   // Detail dialog
@@ -175,23 +172,21 @@ export default function ClassesPage() {
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!apiKey || !newTitle || !newScheduledAt) return;
+    const selectedLesson = lessons.find((l) => l.id === newLessonId);
+    if (!apiKey || !newScheduledAt || !selectedLesson) return;
 
     setSaving(true);
     try {
-      const studentEmails = newStudentEmails ? newStudentEmails.split(",").map((e) => e.trim()).filter(Boolean) : undefined;
       await api.classes.create({
-        title: newTitle,
+        title: selectedLesson.title,
         scheduledAt: new Date(newScheduledAt).toISOString(),
         durationMinutes: newDuration,
         classType: newClassType,
-        language: newLanguage,
-        maxStudents: newMaxStudents,
+        language: selectedLesson.language,
+        maxStudents: newClassType === "individual" ? 1 : newMaxStudents,
         teacherId: newTeacherId || undefined,
-        lessonId: newLessonId || undefined,
-        courseId: newCourseId || undefined,
+        lessonId: newLessonId,
         zoomLink: newZoomLink || undefined,
-        studentEmails: studentEmails && studentEmails.length > 0 ? studentEmails : undefined,
         cancellationMinutes: newCancellationMinutes,
       });
 
@@ -224,17 +219,13 @@ export default function ClassesPage() {
   }
 
   function resetCreateForm() {
-    setNewTitle("");
     setNewScheduledAt("");
     setNewDuration(60);
     setNewClassType("individual");
-    setNewLanguage("en");
     setNewMaxStudents(1);
     setNewTeacherId("");
     setNewLessonId("");
-    setNewStudentEmails("");
     setNewCancellationMinutes(60);
-    setNewCourseId("");
     setNewZoomLink("");
   }
 
@@ -246,28 +237,19 @@ export default function ClassesPage() {
       title: c.title,
       start: start.toISOString(),
       end: end.toISOString(),
-      backgroundColor: STATUS_COLORS[c.status] ?? "#6b7280",
-      borderColor: STATUS_COLORS[c.status] ?? "#6b7280",
+      backgroundColor: CALENDAR_COLORS[c.status] ?? "#6b7280",
+      borderColor: CALENDAR_COLORS[c.status] ?? "#6b7280",
     };
   });
 
   if (academyLoading) {
-    return (
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="h-8 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-        <div className="glass h-[600px] animate-pulse rounded-xl" />
-      </div>
-    );
+    return <PageSkeleton maxWidth="max-w-7xl" contentHeight="h-[600px]" />;
   }
 
   if (!selectedAcademy) {
     return (
       <div className="mx-auto max-w-7xl">
-        <div className="glass flex flex-col items-center justify-center rounded-xl py-16 text-center">
-          <CalendarIcon className="mb-3 h-10 w-10 text-zinc-400" />
-          <p className="font-medium text-zinc-500">No academy selected</p>
-          <p className="mt-1 text-sm text-zinc-400">Select an academy from the sidebar to manage classes</p>
-        </div>
+        <EmptyState icon={CalendarIcon} title="No academy selected" description="Select an academy from the sidebar to manage classes" />
       </div>
     );
   }
@@ -282,17 +264,17 @@ export default function ClassesPage() {
         ]}
       />
       <div className="mx-auto max-w-7xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Classes</h1>
-          <p className="text-sm text-zinc-500">Schedule and manage your classes</p>
-        </div>
-        <Button onClick={() => { resetCreateForm(); setCreateOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" /> New Class
-        </Button>
-      </div>
+      <PageHeader
+        title="Classes"
+        subtitle="Schedule and manage your classes"
+        action={
+          <PrimaryAction onClick={() => { resetCreateForm(); setCreateOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" /> New Class
+          </PrimaryAction>
+        }
+      />
 
-      <div className="glass rounded-xl p-4">
+      <div className="glass rounded-xl p-5">
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -318,6 +300,14 @@ export default function ClassesPage() {
             hour12: false,
           }}
         />
+        <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-border pt-4">
+          {Object.entries(CALENDAR_COLORS).map(([status, color]) => (
+            <div key={status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+              <span className="capitalize">{status.replace("_", " ")}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Create Class Dialog */}
@@ -328,9 +318,21 @@ export default function ClassesPage() {
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium">Title *</label>
-              <Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="English Class" required />
+              <label className="mb-1 block text-sm font-medium">Lesson *</label>
+              <select value={newLessonId} onChange={(e) => setNewLessonId(e.target.value)} required className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                <option value="">Select a lesson...</option>
+                {lessons.map((l) => (
+                  <option key={l.id} value={l.id}>{l.title}</option>
+                ))}
+              </select>
             </div>
+            {(() => { const sl = lessons.find((l) => l.id === newLessonId); return sl ? (
+              <div className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm">
+                <span className="font-medium">{sl.title}</span>
+                <Badge variant="outline">{sl.cefrLevel}</Badge>
+                <Badge variant="outline" className="uppercase">{sl.language}</Badge>
+              </div>
+            ) : null; })()}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-sm font-medium">Date & Time *</label>
@@ -344,30 +346,26 @@ export default function ClassesPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="mb-1 block text-sm font-medium">Class Type</label>
-                <select value={newClassType} onChange={(e) => setNewClassType(e.target.value)} className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <select value={newClassType} onChange={(e) => { setNewClassType(e.target.value); if (e.target.value === "individual") setNewMaxStudents(1); else setNewMaxStudents(5); }} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                   <option value="individual">Individual</option>
                   <option value="group">Group</option>
                 </select>
               </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Language</label>
-                <Input value={newLanguage} onChange={(e) => setNewLanguage(e.target.value)} placeholder="en" />
-              </div>
+              {newClassType === "group" && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium">Max Students</label>
+                  <Input type="number" value={newMaxStudents} onChange={(e) => setNewMaxStudents(Number(e.target.value))} min={2} max={50} />
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1 block text-sm font-medium">Max Students</label>
-                <Input type="number" value={newMaxStudents} onChange={(e) => setNewMaxStudents(Number(e.target.value))} min={1} max={50} />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">Cancel Policy (min)</label>
-                <Input type="number" value={newCancellationMinutes} onChange={(e) => setNewCancellationMinutes(Number(e.target.value))} min={0} />
-              </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Cancellation Policy (min)</label>
+              <Input type="number" value={newCancellationMinutes} onChange={(e) => setNewCancellationMinutes(Number(e.target.value))} min={0} />
             </div>
             {teachers.length > 0 && (
               <div>
                 <label className="mb-1 block text-sm font-medium">Teacher</label>
-                <select value={newTeacherId} onChange={(e) => setNewTeacherId(e.target.value)} className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <select value={newTeacherId} onChange={(e) => setNewTeacherId(e.target.value)} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                   <option value="">Auto-assign</option>
                   {teachers.map((t) => (
                     <option key={t.id} value={t.id}>{t.name} ({t.email})</option>
@@ -375,30 +373,14 @@ export default function ClassesPage() {
                 </select>
               </div>
             )}
-            {lessons.length > 0 && (
-              <div>
-                <label className="mb-1 block text-sm font-medium">Lesson Plan</label>
-                <select value={newLessonId} onChange={(e) => setNewLessonId(e.target.value)} className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900">
-                  <option value="">None</option>
-                  {lessons.map((l) => (
-                    <option key={l.id} value={l.id}>{l.title}</option>
-                  ))}
-                </select>
-              </div>
-            )}
             <div>
-              <label className="mb-1 block text-sm font-medium">Zoom Link</label>
-              <Input value={newZoomLink} onChange={(e) => setNewZoomLink(e.target.value)} placeholder="https://zoom.us/j/..." />
-              <p className="mt-1 text-xs text-zinc-400">Optional — use Zoom instead of LiveKit</p>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium">Student Emails</label>
-              <Input value={newStudentEmails} onChange={(e) => setNewStudentEmails(e.target.value)} placeholder="student1@email.com, student2@email.com" />
-              <p className="mt-1 text-xs text-zinc-400">Comma-separated emails</p>
+              <label className="mb-1 block text-sm font-medium">External Room Link</label>
+              <Input value={newZoomLink} onChange={(e) => setNewZoomLink(e.target.value)} placeholder="https://zoom.us/... or https://meet.google.com/..." />
+              <p className="mt-1 text-xs text-zinc-400">Optional — use Zoom or Google Meet instead of LiveKit</p>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)} disabled={saving}>Cancel</Button>
-              <Button type="submit" disabled={saving || !newTitle || !newScheduledAt}>
+              <Button type="submit" disabled={saving || !newScheduledAt || !newLessonId}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Class
               </Button>
@@ -416,7 +398,7 @@ export default function ClassesPage() {
           {selectedClass && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Badge className={STATUS_BADGE[selectedClass.status] ?? ""}>
+                <Badge className={STATUS_COLORS[selectedClass.status] ?? ""}>
                   {selectedClass.status.replace("_", " ")}
                 </Badge>
                 <Badge variant="outline" className="capitalize">

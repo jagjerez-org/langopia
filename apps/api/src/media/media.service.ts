@@ -45,7 +45,7 @@ export class MediaService {
     academyId: string,
     ownerId: string,
     file: Express.Multer.File,
-    cefrLevel: string,
+    cefrLevel?: string,
     tagsRaw?: string,
   ) {
     // Check storage limit
@@ -69,13 +69,8 @@ export class MediaService {
       throw new BadRequestException("File exceeds 50 MB limit");
     }
 
-    // Validate CEFR level
     const normalizedCefr = cefrLevel?.trim().toUpperCase() ?? "";
-    if (!normalizedCefr || !VALID_CEFR_LEVELS.includes(normalizedCefr)) {
-      throw new BadRequestException(
-        `cefrLevel is required. Valid values: ${VALID_CEFR_LEVELS.join(", ")}`,
-      );
-    }
+    const validCefr = normalizedCefr && VALID_CEFR_LEVELS.includes(normalizedCefr) ? normalizedCefr : null;
 
     const tags: string[] = tagsRaw ? JSON.parse(tagsRaw) : [];
 
@@ -115,7 +110,7 @@ export class MediaService {
     item.storageKey = storageKey;
     item.storageUrl = storageUrl;
     item.status = "pending";
-    item.detectedCefrLevel = normalizedCefr;
+    item.detectedCefrLevel = validCefr;
     item.tags = tags;
 
     const saved = await this.mediaRepo.save(item);
@@ -130,7 +125,7 @@ export class MediaService {
 
     // Fire-and-forget analysis
     this.mediaProcessing
-      .analyzeMediaItem(saved.id)
+      .analyzeMediaItem(saved.id, ownerId, academyId)
       .catch((err) =>
         this.logger.error("Background media analysis failed:", err),
       );
@@ -188,8 +183,8 @@ export class MediaService {
   async getMediaItem(id: string, academyId: string) {
     const item = await this.mediaRepo.findOne({
       where: { id, academyId },
-      relations: ["pages"],
-      order: { pages: { pageNumber: "ASC" } },
+      relations: ["pages", "chunks"],
+      order: { pages: { pageNumber: "ASC" }, chunks: { orderIndex: "ASC" } },
     });
 
     if (!item) {
@@ -297,7 +292,7 @@ export class MediaService {
     academyId: string,
     ownerId: string,
     files: Express.Multer.File[],
-    cefrLevel: string,
+    cefrLevel?: string,
   ) {
     // Check storage limit
     const user = await this.userRepo.findOne({ where: { id: ownerId } });
@@ -313,13 +308,8 @@ export class MediaService {
       );
     }
 
-    // Validate CEFR level
     const normalizedCefr = cefrLevel?.trim().toUpperCase() ?? "";
-    if (!normalizedCefr || !VALID_CEFR_LEVELS.includes(normalizedCefr)) {
-      throw new BadRequestException(
-        `cefrLevel is required. Valid values: ${VALID_CEFR_LEVELS.join(", ")}`,
-      );
-    }
+    const validCefr = normalizedCefr && VALID_CEFR_LEVELS.includes(normalizedCefr) ? normalizedCefr : null;
 
     if (!files || files.length === 0) {
       throw new BadRequestException("No files provided");
@@ -380,7 +370,7 @@ export class MediaService {
       item.storageKey = storageKey;
       item.storageUrl = storageUrl;
       item.status = "pending";
-      item.detectedCefrLevel = normalizedCefr;
+      item.detectedCefrLevel = validCefr;
 
       const saved = await this.mediaRepo.save(item);
 
@@ -393,7 +383,7 @@ export class MediaService {
 
       // Fire-and-forget
       this.mediaProcessing
-        .analyzeMediaItem(saved.id)
+        .analyzeMediaItem(saved.id, ownerId, academyId)
         .catch((err) =>
           this.logger.error(
             "Background media analysis failed:",
@@ -475,7 +465,7 @@ export class MediaService {
 
     // Fire-and-forget re-analysis
     this.mediaProcessing
-      .analyzeMediaItem(item.id)
+      .analyzeMediaItem(item.id, item.uploadedByUserId, item.academyId)
       .catch((err) =>
         this.logger.error("Retry media analysis failed:", err),
       );

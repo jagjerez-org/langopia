@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Sparkles,
   X,
@@ -10,10 +10,11 @@ import {
   ChevronRight,
   Loader2,
   Lightbulb,
-  FolderOpen,
-  AlertCircle,
   RefreshCw,
   Library,
+  Upload,
+  Minimize2,
+  FileText,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import { EXERCISE_LANGUAGES, ExerciseType, EXERCISE_TYPE_CONFIG } from "@langopia/shared/types";
@@ -27,23 +28,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { MediaLibrarySidebar, type MediaSelection } from "@/components/media-library-sidebar";
 import { RegenerateDialog } from "@/components/regenerate-dialog";
 import { ExerciseRenderer, type ExerciseData } from "@/components/exercises/exercise-renderer";
+import { useWizard } from "./exercise-wizard-context";
 
 // ─── Types ──────────────────────────────────────────────
-
-interface ExerciseWizardProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  apiKey: string;
-  lessonId?: string;
-  lessonTitle?: string;
-  lessonLanguage?: string;
-  lessonCefrLevel?: string;
-  levelCodes?: string[];
-  onComplete?: () => void;
-}
 
 interface ExistingExercise {
   id: string;
@@ -62,17 +51,6 @@ interface ExistingExercise {
   distance: number;
   matchType: "topic" | "content";
   similarity: "very_high" | "high" | "medium";
-}
-
-interface AnalysisResult {
-  detectedTopic: string;
-  materialSummary: string;
-  suggestions: {
-    type: string;
-    count: number;
-    reason: string;
-  }[];
-  existingExercises?: ExistingExercise[];
 }
 
 interface GeneratedExercise {
@@ -102,6 +80,12 @@ function getTypeIcon(type: string) {
   if (!config) return <Sparkles className="h-4 w-4" />;
   const IconComp = (LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>)[config.icon];
   return IconComp ? <IconComp className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // ─── Step Indicator ──────────────────────────────────────
@@ -141,35 +125,39 @@ function StepIndicator({ current }: { current: number }) {
 
 // ─── Main Wizard ─────────────────────────────────────────
 
-export function ExerciseWizard({
-  open,
-  onOpenChange,
-  apiKey,
-  lessonId,
-  lessonTitle,
-  lessonLanguage,
-  lessonCefrLevel,
-  levelCodes = [],
-  onComplete,
-}: ExerciseWizardProps) {
+export function ExerciseWizard() {
   const api = useApiKeyClient();
-  const [step, setStep] = useState(0);
+  const {
+    isOpen,
+    wizardState,
+    analyzing,
+    generating,
+    onCompleteRef,
+    minimizeWizard,
+    closeWizard,
+    updateState,
+    setAnalyzing,
+    setGenerating,
+  } = useWizard();
 
-  // Step 1: Material
-  const [topic, setTopic] = useState(lessonTitle ?? "");
-  const [language, setLanguage] = useState(lessonLanguage ?? "en");
-  const [cefrLevel, setCefrLevel] = useState(lessonCefrLevel ?? "B1");
-  const [analyzing, setAnalyzing] = useState(false);
+  const {
+    step,
+    topic,
+    language,
+    cefrLevel,
+    uploadedFile,
+    analysis,
+    planCounts,
+    lessonId,
+    lessonTitle,
+    levelCodes,
+  } = wizardState;
 
-  // Media Library
-  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState<MediaSelection[]>([]);
-  const [materialContext, setMaterialContext] = useState<string>("");
+  // Local UI state
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Step 2: Plan
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
-  const [planCounts, setPlanCounts] = useState<Record<string, number>>({});
-  const [generating, setGenerating] = useState(false);
+  // Step 2: Existing exercises
   const [existingExercises, setExistingExercises] = useState<ExistingExercise[]>([]);
   const [selectedExisting, setSelectedExisting] = useState<Set<string>>(new Set());
   const [addingExisting, setAddingExisting] = useState(false);
@@ -180,64 +168,65 @@ export function ExerciseWizard({
   const [regenerateExercise, setRegenerateExercise] = useState<GeneratedExercise | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Reset when dialog closes
+  // ─── Dialog open/close ─────────────────
   function handleOpenChange(open: boolean) {
     if (!open) {
-      setStep(0);
-      setTopic(lessonTitle ?? "");
-      setLanguage(lessonLanguage ?? "en");
-      setCefrLevel(lessonCefrLevel ?? "B1");
-      setAnalyzing(false);
-      setMediaLibraryOpen(false);
-      setSelectedMedia([]);
-      setMaterialContext("");
-      setAnalysis(null);
-      setPlanCounts({});
-      setGenerating(false);
+      closeWizard();
       setExistingExercises([]);
       setSelectedExisting(new Set());
-      setAddingExisting(false);
       setGeneratedExercises([]);
       setSelectedGenerated(new Set());
       setRegenerateExercise(null);
-      setSaving(false);
     }
-    onOpenChange(open);
+  }
+
+  // ─── File handling ─────────────────────
+  function handleFileSelect(file: File) {
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File too large. Maximum size is 10 MB.");
+      return;
+    }
+    updateState({ uploadedFile: file });
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFileSelect(file);
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
+    e.target.value = "";
   }
 
   // ─── Step 1: Analyze ─────────────────────
 
-  function handleMediaSelect(mediaList: MediaSelection[]) {
-    setSelectedMedia(mediaList);
-    const combinedText = mediaList.map((m) => m.extractedText).join("\n\n---\n\n");
-    setMaterialContext(combinedText);
-    const first = mediaList[0];
-    if (first) {
-      if (first.detectedTopic && !lessonTitle) setTopic(first.detectedTopic);
-      if (first.detectedLanguage && !lessonLanguage) setLanguage(first.detectedLanguage);
-      if (first.detectedCefrLevel && !lessonCefrLevel) setCefrLevel(first.detectedCefrLevel);
-    }
-  }
-
   async function handleAnalyze() {
-    if (!topic.trim() && !materialContext) {
-      toast.error("Provide a topic or select material from the media library");
+    if (!topic.trim() && !uploadedFile) {
+      toast.error("Provide a topic or upload a file");
       return;
     }
 
     setAnalyzing(true);
     try {
-      const data = await api.exercises.analyze(null, {
+      const data = await api.exercises.analyze(uploadedFile, {
         topic: topic.trim() || undefined,
         language,
-        cefrLevel,
-        materialContext: materialContext || undefined,
+        cefrLevel: cefrLevel || undefined,
       });
-      setAnalysis(data as unknown as AnalysisResult);
+
+      // Auto-fill detected fields from AI analysis
+      const autoFill: Record<string, unknown> = { analysis: data };
+      if (data.detectedTopic && !topic.trim()) autoFill.topic = data.detectedTopic;
+      if (data.detectedLanguage) autoFill.language = data.detectedLanguage;
+      if (data.detectedCefrLevel) autoFill.cefrLevel = data.detectedCefrLevel;
+      updateState(autoFill as Partial<typeof wizardState>);
 
       if (data.existingExercises && data.existingExercises.length > 0) {
-        setExistingExercises(data.existingExercises);
-        // Pre-select very_high and high similarity exercises
+        setExistingExercises(data.existingExercises as unknown as ExistingExercise[]);
         setSelectedExisting(
           new Set(
             data.existingExercises
@@ -250,18 +239,11 @@ export function ExerciseWizard({
         setSelectedExisting(new Set());
       }
 
-      if (!topic.trim() && data.detectedTopic) {
-        setTopic(data.detectedTopic);
-      }
-
-      // Initialize plan counts from suggestions (keyed by type slug)
       const counts: Record<string, number> = {};
       for (const s of data.suggestions) {
         counts[s.type] = s.count;
       }
-      setPlanCounts(counts);
-
-      setStep(1);
+      updateState({ planCounts: counts, step: 1 });
     } catch (err) {
       if (err instanceof ApiError && err.isForbidden) {
         toast.error(err.message || "AI token limit exceeded.");
@@ -312,15 +294,15 @@ export function ExerciseWizard({
         exercises: exercisePlan,
         topic: topic.trim() || analysis?.detectedTopic || "General",
         language,
-        cefrLevel,
-        materialContext: materialContext || undefined,
+        cefrLevel: cefrLevel || "B1",
+        materialContext: analysis?.materialSummary || undefined,
         lessonId: lessonId || undefined,
       });
 
       const generated: GeneratedExercise[] = (result.data ?? []) as unknown as GeneratedExercise[];
       setGeneratedExercises(generated);
       setSelectedGenerated(new Set(generated.map((e) => e.id)));
-      setStep(2);
+      updateState({ step: 2 });
     } catch (err) {
       if (err instanceof ApiError && err.isForbidden) {
         toast.error(err.message || "AI token limit exceeded.");
@@ -357,26 +339,34 @@ export function ExerciseWizard({
 
     const kept = generatedExercises.filter((e) => selectedGenerated.has(e.id));
     toast.success(`Saved ${kept.length} exercise${kept.length !== 1 ? "s" : ""}`);
-    onComplete?.();
+    onCompleteRef.current?.();
     handleOpenChange(false);
   }
 
   // ─── Computed ─────────────────────────────
 
   const totalPlanCount = Object.values(planCounts).reduce((s, c) => s + c, 0);
-
   const allTypes = Object.values(ExerciseType) as string[];
 
   // ─── Render ────────────────────────────────
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-violet-500" />
-            Exercise Wizard
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-violet-500" />
+              Exercise Wizard
+            </DialogTitle>
+            <button
+              onClick={minimizeWizard}
+              className="rounded-md p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+              title="Minimize"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </button>
+          </div>
         </DialogHeader>
 
         <StepIndicator current={step} />
@@ -384,11 +374,42 @@ export function ExerciseWizard({
         {/* ═══ STEP 1: Material & Topic ═══ */}
         {step === 0 && (
           <div className="space-y-4 pt-2">
+            {/* AI Analysis Banner (after analysis) */}
+            {analysis && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3 dark:border-emerald-800 dark:bg-emerald-900/10">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                  <Lightbulb className="h-3.5 w-3.5" /> AI Detection
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {analysis.detectedTopic && (
+                    <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                      {analysis.detectedTopic}
+                    </span>
+                  )}
+                  {analysis.detectedLanguage && (
+                    <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                      {EXERCISE_LANGUAGES.find((l) => l.code === analysis.detectedLanguage)?.name ?? analysis.detectedLanguage.toUpperCase()}
+                    </span>
+                  )}
+                  {analysis.detectedCefrLevel && (
+                    <span className="rounded-md bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                      {analysis.detectedCefrLevel}
+                    </span>
+                  )}
+                </div>
+                {analysis.materialSummary && (
+                  <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
+                    {analysis.materialSummary}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-500">Topic</label>
               <input
                 value={topic}
-                onChange={(e) => setTopic(e.target.value)}
+                onChange={(e) => updateState({ topic: e.target.value })}
                 placeholder={lessonTitle || "e.g. Business English - Negotiations"}
                 className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-violet-500"
               />
@@ -399,9 +420,8 @@ export function ExerciseWizard({
                 <label className="text-xs font-medium text-zinc-500">Language</label>
                 <select
                   value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  disabled={!!lessonLanguage}
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 disabled:opacity-60"
+                  onChange={(e) => updateState({ language: e.target.value })}
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
                 >
                   {EXERCISE_LANGUAGES.map((l) => (
                     <option key={l.code} value={l.code}>{l.name}</option>
@@ -412,68 +432,82 @@ export function ExerciseWizard({
                 <label className="text-xs font-medium text-zinc-500">CEFR Level</label>
                 <select
                   value={cefrLevel}
-                  onChange={(e) => setCefrLevel(e.target.value)}
-                  disabled={!!lessonCefrLevel}
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 disabled:opacity-60"
+                  onChange={(e) => updateState({ cefrLevel: e.target.value })}
+                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-800"
                 >
-                  {levelCodes.map((l) => (
+                  <option value="">Auto-detect</option>
+                  {(levelCodes.length > 0 ? levelCodes : ["A1", "A2", "B1", "B2", "C1", "C2"]).map((l) => (
                     <option key={l} value={l}>{l}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* Material source */}
+            {/* File Upload Drop Zone */}
             <div className="space-y-2">
               <label className="text-xs font-medium text-zinc-500">Source material (optional)</label>
 
-              {selectedMedia.length > 0 && (
+              {uploadedFile ? (
                 <div className="rounded-lg border border-violet-200 bg-violet-50/50 p-3 dark:border-violet-800 dark:bg-violet-900/10">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FolderOpen className="h-4 w-4 text-violet-500" />
-                      <span className="text-sm font-medium text-violet-700 dark:text-violet-400">
-                        {selectedMedia.length} file{selectedMedia.length !== 1 ? "s" : ""} selected
-                      </span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 shrink-0 text-violet-500" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-violet-700 dark:text-violet-400">
+                          {uploadedFile.name}
+                        </p>
+                        <p className="text-xs text-violet-500/70">
+                          {formatFileSize(uploadedFile.size)}
+                        </p>
+                      </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => { setSelectedMedia([]); setMaterialContext(""); }}
-                      className="text-zinc-400 hover:text-red-500"
+                      onClick={() => updateState({ uploadedFile: null })}
+                      className="shrink-0 text-zinc-400 hover:text-red-500"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <div className="mt-2 space-y-1">
-                    {selectedMedia.map((m) => (
-                      <div key={m.mediaItemId} className="flex items-center justify-between text-xs">
-                        <span className="truncate text-zinc-600 dark:text-zinc-400">{m.filename}</span>
-                        {m.similarExerciseCount > 0 && (
-                          <span className="ml-2 flex shrink-0 items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400">
-                            <AlertCircle className="h-2.5 w-2.5" />
-                            {m.similarExerciseCount}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                </div>
+              ) : (
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragEnter={(e) => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 border-dashed px-4 py-6 transition ${
+                    isDragging
+                      ? "border-violet-400 bg-violet-50/50 dark:border-violet-500 dark:bg-violet-900/10"
+                      : "border-zinc-200 hover:border-violet-300 hover:bg-violet-50/30 dark:border-zinc-700 dark:hover:border-violet-600 dark:hover:bg-violet-900/5"
+                  }`}
+                >
+                  <Upload className={`h-6 w-6 ${isDragging ? "text-violet-500" : "text-zinc-400"}`} />
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-xs text-zinc-400">
+                      PDF, PPTX, images, text files (max 10 MB)
+                    </p>
                   </div>
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={() => setMediaLibraryOpen(true)}
-                className="flex items-center gap-1.5 rounded-lg border border-dashed border-violet-300 px-4 py-3 text-sm font-medium text-violet-600 transition hover:border-violet-400 hover:bg-violet-50/50 dark:border-violet-700 dark:text-violet-400 dark:hover:border-violet-500 dark:hover:bg-violet-900/10"
-              >
-                <FolderOpen className="h-4 w-4" />
-                {selectedMedia.length > 0 ? "Change Selection" : "Open Media Library"}
-              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.pptx,.ppt,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.webp"
+                onChange={handleFileInputChange}
+                className="hidden"
+              />
             </div>
 
             <div className="flex justify-end">
               <button
                 onClick={handleAnalyze}
-                disabled={analyzing || (!topic.trim() && !materialContext)}
+                disabled={analyzing || (!topic.trim() && !uploadedFile)}
                 className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition hover:shadow-lg disabled:opacity-50"
               >
                 {analyzing ? (
@@ -505,7 +539,7 @@ export function ExerciseWizard({
                 <span className="text-zinc-500">AI detected topic:</span>
                 <span className="font-medium">{analysis.detectedTopic}</span>
                 <button
-                  onClick={() => setTopic(analysis.detectedTopic)}
+                  onClick={() => updateState({ topic: analysis.detectedTopic })}
                   className="text-xs text-violet-600 hover:text-violet-500"
                 >
                   Use this
@@ -602,7 +636,7 @@ export function ExerciseWizard({
               </div>
             )}
 
-            {/* All 11 exercise types */}
+            {/* All exercise types */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
                 Exercise Types
@@ -644,7 +678,7 @@ export function ExerciseWizard({
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             type="button"
-                            onClick={() => setPlanCounts((p) => ({ ...p, [type]: Math.max(0, (p[type] ?? 0) - 1) }))}
+                            onClick={() => updateState({ planCounts: { ...planCounts, [type]: Math.max(0, (planCounts[type] ?? 0) - 1) } })}
                             disabled={count <= 0}
                             className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 text-zinc-500 hover:bg-zinc-50 disabled:opacity-30 dark:border-zinc-700 dark:hover:bg-zinc-700"
                           >
@@ -653,7 +687,7 @@ export function ExerciseWizard({
                           <span className="w-6 text-center text-sm font-semibold">{count}</span>
                           <button
                             type="button"
-                            onClick={() => setPlanCounts((p) => ({ ...p, [type]: Math.min(10, (p[type] ?? 0) + 1) }))}
+                            onClick={() => updateState({ planCounts: { ...planCounts, [type]: Math.min(10, (planCounts[type] ?? 0) + 1) } })}
                             disabled={count >= 10}
                             className="flex h-7 w-7 items-center justify-center rounded-md border border-zinc-200 text-zinc-500 hover:bg-zinc-50 disabled:opacity-30 dark:border-zinc-700 dark:hover:bg-zinc-700"
                           >
@@ -670,7 +704,7 @@ export function ExerciseWizard({
             {/* Navigation */}
             <div className="flex items-center justify-between border-t pt-3 dark:border-zinc-800">
               <button
-                onClick={() => setStep(0)}
+                onClick={() => updateState({ step: 0 })}
                 className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               >
                 &larr; Back
@@ -790,7 +824,7 @@ export function ExerciseWizard({
             {/* Navigation */}
             <div className="flex items-center justify-between border-t pt-3 dark:border-zinc-800">
               <button
-                onClick={() => setStep(1)}
+                onClick={() => updateState({ step: 1 })}
                 className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
               >
                 &larr; Back
@@ -810,13 +844,6 @@ export function ExerciseWizard({
           </div>
         )}
       </DialogContent>
-
-      {/* Media Library Sidebar */}
-      <MediaLibrarySidebar
-        open={mediaLibraryOpen}
-        onOpenChange={setMediaLibraryOpen}
-        onSelect={handleMediaSelect}
-      />
 
       {/* Regenerate Dialog */}
       {regenerateExercise && (

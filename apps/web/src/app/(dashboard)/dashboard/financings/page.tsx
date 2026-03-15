@@ -1,17 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   Wallet,
   TrendingUp,
   TrendingDown,
   Users,
   AlertCircle,
+  Plus,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useApiClient } from "@/hooks/use-api-client";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -33,6 +46,8 @@ import {
   Legend,
   ComposedChart,
 } from "recharts";
+import type { AcademyPlanResponse, AcademyPlanLimits } from "@langopia/api-client";
+import { AcademyPlanPeriodicity } from "@langopia/shared/types";
 
 type Period = "daily" | "monthly" | "quarterly" | "annual";
 
@@ -108,6 +123,36 @@ export default function FinancingsPage() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
+  // Plans management state
+  const [plans, setPlans] = useState<AcademyPlanResponse[]>([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<AcademyPlanResponse | null>(null);
+  const [planName, setPlanName] = useState("");
+  const [planPrice, setPlanPrice] = useState("");
+  const [planCurrency, setPlanCurrency] = useState("EUR");
+  const [planPeriodicity, setPlanPeriodicity] = useState<AcademyPlanPeriodicity>(AcademyPlanPeriodicity.MONTHLY);
+  const [planLimits, setPlanLimits] = useState<AcademyPlanLimits>({});
+  const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const fetchPlans = useCallback(async () => {
+    if (!selectedAcademy) return;
+    setLoadingPlans(true);
+    try {
+      const data = await api.academyPlans.list(selectedAcademy);
+      setPlans(data);
+    } catch {
+      toast.error("Failed to load plans");
+    } finally {
+      setLoadingPlans(false);
+    }
+  }, [selectedAcademy, api]);
+
+  useEffect(() => {
+    fetchPlans();
+  }, [fetchPlans]);
+
   useEffect(() => {
     if (!selectedAcademy) return;
 
@@ -128,6 +173,74 @@ export default function FinancingsPage() {
         setLoadingData(false);
       });
   }, [selectedAcademy, period, api]);
+
+  function openCreatePlan() {
+    setEditingPlan(null);
+    setPlanName("");
+    setPlanPrice("");
+    setPlanCurrency("EUR");
+    setPlanPeriodicity(AcademyPlanPeriodicity.MONTHLY);
+    setPlanLimits({});
+    setDialogOpen(true);
+  }
+
+  function openEditPlan(plan: AcademyPlanResponse) {
+    setEditingPlan(plan);
+    setPlanName(plan.name);
+    setPlanPrice(String(plan.price));
+    setPlanCurrency(plan.currency);
+    setPlanPeriodicity(plan.periodicity);
+    setPlanLimits(plan.limits ?? {});
+    setDialogOpen(true);
+  }
+
+  async function handleSavePlan() {
+    if (!selectedAcademy || !planName.trim() || !planPrice) return;
+    setSaving(true);
+    try {
+      const body = {
+        name: planName.trim(),
+        price: Number(planPrice),
+        currency: planCurrency,
+        periodicity: planPeriodicity,
+        limits: planLimits,
+      };
+      if (editingPlan) {
+        await api.academyPlans.update(selectedAcademy, editingPlan.id, body);
+        toast.success("Plan updated");
+      } else {
+        await api.academyPlans.create(selectedAcademy, body);
+        toast.success("Plan created");
+      }
+      setDialogOpen(false);
+      fetchPlans();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save plan";
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleToggleActive(plan: AcademyPlanResponse) {
+    if (!selectedAcademy) return;
+    setTogglingId(plan.id);
+    try {
+      if (plan.isActive) {
+        await api.academyPlans.deactivate(selectedAcademy, plan.id);
+        toast.success(`"${plan.name}" deactivated`);
+      } else {
+        await api.academyPlans.activate(selectedAcademy, plan.id);
+        toast.success(`"${plan.name}" activated`);
+      }
+      fetchPlans();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to toggle plan";
+      toast.error(message);
+    } finally {
+      setTogglingId(null);
+    }
+  }
 
   const kpis = overview?.kpis;
 
@@ -218,6 +331,81 @@ export default function FinancingsPage() {
             <SelectItem value="annual">Annual</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Subscription Plans */}
+      <div className="glass-subtle rounded-xl border border-zinc-200/40 p-6 dark:border-zinc-700/40">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Subscription Plans</h2>
+          <Button size="sm" onClick={openCreatePlan}>
+            <Plus className="mr-2 h-4 w-4" /> Add Plan
+          </Button>
+        </div>
+        {loadingPlans ? (
+          <div className="space-y-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
+            ))}
+          </div>
+        ) : plans.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Wallet className="mb-3 h-8 w-8 text-zinc-400" />
+            <p className="text-sm font-medium text-zinc-500">No plans defined</p>
+            <p className="text-xs text-zinc-400">Create subscription plans for your students</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {plans.map((plan) => (
+              <div
+                key={plan.id}
+                className="flex items-center justify-between rounded-lg border border-zinc-200/40 px-4 py-3 dark:border-zinc-700/40"
+              >
+                <div className="flex items-center gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{plan.name}</span>
+                      <Badge
+                        variant="secondary"
+                        className={
+                          plan.isActive
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
+                        }
+                      >
+                        {plan.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </div>
+                    <div className="mt-0.5 flex items-center gap-2 text-sm text-zinc-500">
+                      <span className="font-semibold text-zinc-700 dark:text-zinc-300">
+                        {plan.currency === "EUR" ? "€" : plan.currency}{plan.price}
+                      </span>
+                      <span>/ {plan.periodicity}</span>
+                      {plan.subscriptionCount != null && (
+                        <span className="text-xs text-zinc-400">
+                          · {plan.subscriptionCount} subscription{plan.subscriptionCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => openEditPlan(plan)}
+                    className="rounded-md p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+                    title="Edit plan"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <Switch
+                    checked={plan.isActive}
+                    onCheckedChange={() => handleToggleActive(plan)}
+                    disabled={togglingId === plan.id}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* KPI Cards */}
@@ -437,6 +625,158 @@ export default function FinancingsPage() {
         )}
       </div>
     </div>
+
+      {/* Create / Edit Plan Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingPlan ? "Edit Plan" : "Add Plan"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="plan-name">Name</Label>
+              <Input
+                id="plan-name"
+                value={planName}
+                onChange={(e) => setPlanName(e.target.value)}
+                placeholder="e.g. Basic Monthly"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="plan-price">Price</Label>
+                <Input
+                  id="plan-price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={planPrice}
+                  onChange={(e) => setPlanPrice(e.target.value)}
+                  placeholder="29.99"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="plan-currency">Currency</Label>
+                <Input
+                  id="plan-currency"
+                  value={planCurrency}
+                  onChange={(e) => setPlanCurrency(e.target.value.toUpperCase())}
+                  placeholder="EUR"
+                  maxLength={3}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plan-periodicity">Periodicity</Label>
+              <Select
+                value={planPeriodicity}
+                onValueChange={(v) => setPlanPeriodicity(v as AcademyPlanPeriodicity)}
+              >
+                <SelectTrigger id="plan-periodicity">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={AcademyPlanPeriodicity.DAILY}>Daily</SelectItem>
+                  <SelectItem value={AcademyPlanPeriodicity.WEEKLY}>Weekly</SelectItem>
+                  <SelectItem value={AcademyPlanPeriodicity.MONTHLY}>Monthly</SelectItem>
+                  <SelectItem value={AcademyPlanPeriodicity.ANNUAL}>Annual</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Limits */}
+            <div className="space-y-3 rounded-lg border border-zinc-200/40 p-4 dark:border-zinc-700/40">
+              <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Limits</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="limit-individual" className="text-xs">Max Individual Classes</Label>
+                  <Input
+                    id="limit-individual"
+                    type="number"
+                    min="0"
+                    value={planLimits.maxIndividualClasses ?? ""}
+                    onChange={(e) => setPlanLimits({ ...planLimits, maxIndividualClasses: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="Unlimited"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="limit-group" className="text-xs">Max Group Classes</Label>
+                  <Input
+                    id="limit-group"
+                    type="number"
+                    min="0"
+                    value={planLimits.maxGroupClasses ?? ""}
+                    onChange={(e) => setPlanLimits({ ...planLimits, maxGroupClasses: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="Unlimited"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="limit-cancellations" className="text-xs">Max Cancellations</Label>
+                  <Input
+                    id="limit-cancellations"
+                    type="number"
+                    min="0"
+                    value={planLimits.maxCancellations ?? ""}
+                    onChange={(e) => setPlanLimits({ ...planLimits, maxCancellations: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="Unlimited"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="limit-bookings" className="text-xs">Max Bookings</Label>
+                  <Input
+                    id="limit-bookings"
+                    type="number"
+                    min="0"
+                    value={planLimits.maxBookings ?? ""}
+                    onChange={(e) => setPlanLimits({ ...planLimits, maxBookings: e.target.value ? Number(e.target.value) : undefined })}
+                    placeholder="Unlimited"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="limit-period" className="text-xs">Limit Period</Label>
+                <Input
+                  id="limit-period"
+                  value={planLimits.limitPeriod ?? ""}
+                  onChange={(e) => setPlanLimits({ ...planLimits, limitPeriod: e.target.value || undefined })}
+                  placeholder="e.g. monthly, weekly"
+                />
+              </div>
+              <div className="space-y-3 pt-2">
+                <h4 className="text-xs font-medium text-zinc-500">Feature Access</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  {([
+                    ["accessIndividualClasses", "Individual Classes"],
+                    ["accessGroupClasses", "Group Classes"],
+                    ["accessLearningPath", "Learning Paths"],
+                    ["accessAiChat", "AI Chat"],
+                  ] as const).map(([key, label]) => (
+                    <div key={key} className="flex items-center justify-between gap-2">
+                      <Label htmlFor={`limit-${key}`} className="text-xs">{label}</Label>
+                      <Switch
+                        id={`limit-${key}`}
+                        checked={planLimits[key] ?? false}
+                        onCheckedChange={(checked) => setPlanLimits({ ...planLimits, [key]: checked })}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSavePlan}
+              disabled={saving || !planName.trim() || !planPrice}
+            >
+              {saving ? "Saving..." : editingPlan ? "Update" : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

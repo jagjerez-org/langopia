@@ -6,6 +6,7 @@ import { Student } from "../database/entities/student.entity.js";
 import { RoomParticipant } from "../database/entities/room-participant.entity.js";
 import { RoomNotes } from "../database/entities/room-notes.entity.js";
 import { ChatMessage } from "../database/entities/chat-message.entity.js";
+import { Transcription } from "../database/entities/transcription.entity.js";
 import { LiveKitModule } from "../livekit/livekit.module.js";
 import { RecordingModule } from "../recording/recording.module.js";
 import { PostClassPipelineModule } from "../post-class-pipeline/post-class-pipeline.module.js";
@@ -21,6 +22,7 @@ import { RoomInternalService } from "./room-internal.service.js";
       RoomParticipant,
       RoomNotes,
       ChatMessage,
+      Transcription,
     ]),
     LiveKitModule,
     RecordingModule,

@@ -26,6 +26,12 @@ export class CourseLesson {
   @Column({ type: "int", default: 0 })
   sortOrder!: number;
 
+  @Column({ type: "varchar", length: 255, nullable: true })
+  moduleTitle!: string | null;
+
+  @Column({ type: "int", default: 0 })
+  moduleOrder!: number;
+
   @ManyToOne("Course", "courseLessons", { onDelete: "CASCADE" })
   @JoinColumn({ name: "courseId" })
   course!: Relation<Course>;

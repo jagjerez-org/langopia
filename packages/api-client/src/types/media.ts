@@ -1,15 +1,15 @@
-import type { MediaStatus } from "@langopia/shared/types";
+import type { MediaStatus, ChunkType } from "@langopia/shared/types";
 import type { PaginationParams } from "./common";
 
 // ─── Requests ───────────────────────────────────────
 
 export interface UploadMediaRequest {
-  cefrLevel: string;
+  cefrLevel?: string;
   tags?: string;
 }
 
 export interface BulkUploadMediaRequest {
-  cefrLevel: string;
+  cefrLevel?: string;
 }
 
 export interface QueryMediaParams extends PaginationParams {
@@ -42,6 +42,18 @@ export interface MediaPageResponse {
   extractedText: string | null;
 }
 
+export interface MediaChunkResponse {
+  id: string;
+  chunkType: ChunkType;
+  title: string | null;
+  content: string;
+  metadata: Record<string, unknown>;
+  startPage: number;
+  endPage: number;
+  orderIndex: number;
+  createdAt: string;
+}
+
 export interface MediaResponse {
   id: string;
   filename: string;
@@ -56,6 +68,7 @@ export interface MediaResponse {
   detectedLanguage: string | null;
   academyId: string;
   pages?: MediaPageResponse[];
+  chunks?: MediaChunkResponse[];
   createdAt: string;
   updatedAt: string;
 }

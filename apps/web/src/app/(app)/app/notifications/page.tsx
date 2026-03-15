@@ -82,7 +82,7 @@ export default function AppNotificationsPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto max-w-6xl space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
         {data && data.unreadCount > 0 && (

@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
   InternalServerErrorException,
@@ -19,6 +20,7 @@ import { Exercise } from "../database/entities/exercise.entity.js";
 import { Lesson } from "../database/entities/lesson.entity.js";
 import { LessonExercise } from "../database/entities/lesson-exercise.entity.js";
 import { User } from "../database/entities/user.entity.js";
+import { MediaItem } from "../database/entities/media-item.entity.js";
 import { UsageService } from "../usage/usage.service.js";
 import {
   EmbeddingService,
@@ -27,6 +29,7 @@ import {
 } from "../embedding/embedding.service.js";
 import { TTSService } from "../tts/tts.service.js";
 import { FileExtractService } from "../file-extract/file-extract.service.js";
+import { MediaProcessingService } from "../media-processing/media-processing.service.js";
 
 export interface SerializedExercise {
   id: string;
@@ -45,6 +48,7 @@ export interface SerializedExercise {
   audioUrl: string | null;
   videoUrl: string | null;
   imageUrl: string | null;
+  lesson?: { id: string; title: string } | null;
   createdAt: Date;
 }
 
@@ -64,13 +68,19 @@ export class ExercisesService {
     private readonly lessonExerciseRepo: Repository<LessonExercise>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(MediaItem)
+    private readonly mediaItemRepo: Repository<MediaItem>,
     private readonly usage: UsageService,
     private readonly embedding: EmbeddingService,
     private readonly tts: TTSService,
     private readonly fileExtract: FileExtractService,
+    private readonly mediaProcessing: MediaProcessingService,
   ) {}
 
-  serializeExercise(e: Exercise): SerializedExercise {
+  serializeExercise(
+    e: Exercise,
+    lesson?: { id: string; title: string } | null,
+  ): SerializedExercise {
     return {
       id: e.id,
       type: e.type,
@@ -88,6 +98,7 @@ export class ExercisesService {
       audioUrl: e.audioUrl,
       videoUrl: e.videoUrl,
       imageUrl: e.imageUrl,
+      lesson: lesson !== undefined ? lesson : undefined,
       createdAt: e.createdAt,
     };
   }
@@ -108,6 +119,11 @@ export class ExercisesService {
 
     const qb = this.exerciseRepo
       .createQueryBuilder("exercise")
+      .leftJoinAndSelect(
+        "exercise.lessonExercises",
+        "le",
+      )
+      .leftJoinAndSelect("le.lesson", "lesson")
       .where("exercise.academyId = :academyId", { academyId })
       .orderBy("exercise.createdAt", "DESC")
       .take(limit)
@@ -127,7 +143,14 @@ export class ExercisesService {
     const [exercises, total] = await qb.getManyAndCount();
 
     return {
-      data: exercises.map((e) => this.serializeExercise(e)),
+      data: exercises.map((e) => {
+        const links = (e.lessonExercises as unknown as { lesson?: { id: string; title: string } }[]) ?? [];
+        const firstLesson = links[0]?.lesson;
+        const lesson = firstLesson
+          ? { id: firstLesson.id, title: firstLesson.title }
+          : null;
+        return this.serializeExercise(e, lesson);
+      }),
       total,
       limit,
       offset,
@@ -143,6 +166,7 @@ export class ExercisesService {
       language?: string;
       cefrLevel?: string;
       materialContext?: string;
+      mediaItemIds?: string[];
       lessonId?: string;
       exercises: { type: string; count: number }[];
     },
@@ -152,6 +176,7 @@ export class ExercisesService {
       language = "en",
       cefrLevel = "B1",
       materialContext,
+      mediaItemIds,
       lessonId,
       exercises: exercisePlan,
     } = body;
@@ -187,6 +212,37 @@ export class ExercisesService {
       throw new ForbiddenException(
         "AI token limit exceeded for your plan. Please upgrade to continue generating exercises.",
       );
+    }
+
+    // RAG: resolve mediaItemIds to structured chunk context (overrides raw materialContext)
+    let sourceContent = materialContext;
+    if (mediaItemIds && mediaItemIds.length > 0) {
+      try {
+        const ragQuery = `${topic} ${language} ${cefrLevel}`;
+        const { chunks, tokensUsed: ragTokens } =
+          await this.mediaProcessing.findRelevantChunks({
+            mediaItemIds,
+            query: ragQuery,
+            topK: 10,
+          });
+        if (ragTokens > 0) {
+          await this.usage.incrementUsage(
+            ownerId,
+            academyId,
+            UsageMetric.AI_TOKENS,
+            ragTokens,
+          );
+        }
+        if (chunks.length > 0) {
+          sourceContent =
+            this.mediaProcessing.formatChunksAsContext(chunks);
+        }
+      } catch (ragErr) {
+        this.logger.warn(
+          "RAG chunk retrieval failed (falling back to materialContext):",
+          ragErr,
+        );
+      }
     }
 
     try {
@@ -255,7 +311,7 @@ export class ExercisesService {
         language: language || "en",
         cefrLevel: cefrLevel || "B1",
         topic,
-        sourceContent: materialContext,
+        sourceContent,
         existingSummaries,
         searchCallback,
       });
@@ -328,6 +384,136 @@ export class ExercisesService {
     }
   }
 
+  // POST /v1/exercises/single — create one exercise (prompt or manual)
+  async createSingleExercise(
+    academyId: string,
+    ownerId: string,
+    body: {
+      mode: "prompt" | "manual";
+      language: string;
+      cefrLevel: string;
+      prompt?: string;
+      topic?: string;
+      type?: string;
+      targetSkill?: string;
+      title?: string;
+      instruction?: string;
+      content?: string;
+      options?: string[];
+      correctAnswer?: string;
+      explanation?: string;
+      videoUrl?: string;
+      imageUrl?: string;
+    },
+  ) {
+    if (body.mode === "manual") {
+      if (!body.type) throw new BadRequestException("type is required for manual mode");
+      if (!body.instruction) throw new BadRequestException("instruction is required for manual mode");
+      if (!body.content) throw new BadRequestException("content is required for manual mode");
+
+      const exercise = new Exercise();
+      exercise.academyId = academyId;
+      exercise.type = body.type;
+      exercise.title = body.title ?? null;
+      exercise.targetSkill = body.targetSkill || "vocabulary";
+      exercise.topic = body.topic ?? null;
+      exercise.language = body.language;
+      exercise.instruction = body.instruction;
+      exercise.content = body.content;
+      exercise.options = body.options ?? null;
+      exercise.correctAnswer = body.correctAnswer ?? "";
+      exercise.explanation = body.explanation ?? "";
+      exercise.cefrLevel = body.cefrLevel;
+      exercise.source = ExerciseSource.MANUAL;
+      exercise.videoUrl = body.videoUrl ?? null;
+      exercise.imageUrl = body.imageUrl ?? null;
+      const saved = await this.exerciseRepo.save(exercise);
+
+      // Fire-and-forget: generate embedding
+      this.embedding
+        .embedExercise(saved.id)
+        .then((tokens) => {
+          if (tokens > 0)
+            this.usage.incrementUsage(ownerId, academyId, UsageMetric.AI_TOKENS, tokens);
+        })
+        .catch((err) => this.logger.error("Embedding generation failed:", err));
+
+      return { data: this.serializeExercise(saved) };
+    }
+
+    // Prompt mode: generate a single exercise via AI
+    if (!body.prompt) throw new BadRequestException("prompt is required for prompt mode");
+
+    const user = await this.userRepo.findOne({ where: { id: ownerId } });
+    const plan = (user?.plan as UserPlan) ?? UserPlan.FREE;
+    const limitCheck = await this.usage.checkPlanLimit(ownerId, plan, UsageMetric.AI_TOKENS);
+    if (!limitCheck.allowed) {
+      throw new ForbiddenException("AI token limit exceeded for your plan.");
+    }
+
+    const validTypes = new Set(Object.values(ExerciseType) as string[]);
+    const exerciseType = body.type && validTypes.has(body.type) ? body.type : ExerciseType.TAP_TO_COMPLETE;
+
+    try {
+      const { generateExercisesByType } = await import("@langopia/ai-pipeline");
+
+      const result = await generateExercisesByType({
+        requests: [{ type: exerciseType, count: 1 }],
+        language: body.language,
+        cefrLevel: body.cefrLevel,
+        topic: body.topic || "general",
+        customPrompt: body.prompt,
+      });
+
+      if (result.exercises.length === 0) {
+        throw new InternalServerErrorException("AI failed to generate exercise");
+      }
+
+      const ex = result.exercises[0];
+      const exercise = new Exercise();
+      exercise.academyId = academyId;
+      exercise.type = ex.type;
+      exercise.title = ex.title ?? null;
+      exercise.targetSkill = ex.targetSkill || "vocabulary";
+      exercise.topic = body.topic ?? null;
+      exercise.language = body.language;
+      exercise.instruction = ex.instruction;
+      exercise.content = ex.content;
+      exercise.options = ex.options ?? null;
+      exercise.correctAnswer = ex.correctAnswer;
+      exercise.explanation = ex.explanation;
+      exercise.cefrLevel = body.cefrLevel;
+      exercise.source = ExerciseSource.AI_LIVE;
+      exercise.videoUrl = null;
+      exercise.imageUrl = null;
+      const saved = await this.exerciseRepo.save(exercise);
+
+      if (result.tokensUsed > 0) {
+        await this.usage.incrementUsage(ownerId, academyId, UsageMetric.AI_TOKENS, result.tokensUsed);
+      }
+
+      // TTS if needed
+      const needsAudioMap = new Map<string, boolean>();
+      if (ex.needsAudio) needsAudioMap.set(saved.id, true);
+      await this.generateTTS([saved], ownerId, academyId, plan, needsAudioMap);
+
+      // Fire-and-forget: generate embedding
+      this.embedding
+        .embedExercise(saved.id)
+        .then((tokens) => {
+          if (tokens > 0)
+            this.usage.incrementUsage(ownerId, academyId, UsageMetric.AI_TOKENS, tokens);
+        })
+        .catch((err) => this.logger.error("Embedding generation failed:", err));
+
+      return { data: this.serializeExercise(saved) };
+    } catch (err) {
+      if (err instanceof BadRequestException || err instanceof ForbiddenException) throw err;
+      this.logger.error("Failed to create single exercise:", err);
+      throw new InternalServerErrorException("Failed to create exercise");
+    }
+  }
+
   // GET /v1/exercises/:id
   async getExercise(id: string, academyId: string) {
     const exercise = await this.exerciseRepo.findOne({
@@ -349,6 +535,15 @@ export class ExercisesService {
 
     if (!exercise) {
       throw new NotFoundException("Exercise not found");
+    }
+
+    const lessonLinkCount = await this.lessonExerciseRepo.count({
+      where: { exerciseId: id },
+    });
+    if (lessonLinkCount > 0) {
+      throw new ConflictException(
+        "Cannot delete exercise: it is linked to one or more lessons. Remove it from all lessons first.",
+      );
     }
 
     await this.exerciseRepo.remove(exercise);
@@ -661,6 +856,7 @@ export class ExercisesService {
       language?: string;
       cefrLevel?: string;
       materialContext?: string;
+      mediaItemIds?: string[];
     },
     file?: Express.Multer.File,
   ) {
@@ -682,9 +878,37 @@ export class ExercisesService {
     }
 
     let topic = opts.topic;
-    const language = opts.language || "en";
-    const cefrLevel = opts.cefrLevel || "B1";
+    let language = opts.language || "en";
+    let cefrLevel = opts.cefrLevel || "B1";
     let sourceContent = opts.materialContext;
+
+    // Extract CEFR level & language from selected media items as defaults
+    if (opts.mediaItemIds && opts.mediaItemIds.length > 0) {
+      try {
+        const mediaItems = await this.mediaItemRepo
+          .createQueryBuilder("mi")
+          .select(["mi.detectedCefrLevel", "mi.detectedLanguage"])
+          .where("mi.id IN (:...ids)", { ids: opts.mediaItemIds })
+          .andWhere("mi.academyId = :academyId", { academyId })
+          .getMany();
+
+        // Use first media item's detected values as defaults when user didn't provide explicit values
+        for (const mi of mediaItems) {
+          if (!opts.cefrLevel && mi.detectedCefrLevel) {
+            cefrLevel = mi.detectedCefrLevel;
+            break;
+          }
+        }
+        for (const mi of mediaItems) {
+          if (!opts.language && mi.detectedLanguage) {
+            language = mi.detectedLanguage;
+            break;
+          }
+        }
+      } catch (err) {
+        this.logger.warn("Failed to query media item metadata:", err);
+      }
+    }
 
     // Handle file upload
     if (file) {
@@ -710,9 +934,39 @@ export class ExercisesService {
       }
     }
 
+    // RAG: resolve mediaItemIds to structured chunk context (overrides raw materialContext)
+    if (opts.mediaItemIds && opts.mediaItemIds.length > 0) {
+      try {
+        const ragQuery = `${topic || ""} ${language} ${cefrLevel}`;
+        const { chunks, tokensUsed: ragTokens } =
+          await this.mediaProcessing.findRelevantChunks({
+            mediaItemIds: opts.mediaItemIds,
+            query: ragQuery,
+            topK: 10,
+          });
+        if (ragTokens > 0) {
+          await this.usage.incrementUsage(
+            ownerId,
+            academyId,
+            UsageMetric.AI_TOKENS,
+            ragTokens,
+          );
+        }
+        if (chunks.length > 0) {
+          sourceContent =
+            this.mediaProcessing.formatChunksAsContext(chunks);
+        }
+      } catch (ragErr) {
+        this.logger.warn(
+          "RAG chunk retrieval failed (falling back to materialContext):",
+          ragErr,
+        );
+      }
+    }
+
     if (!topic && !sourceContent) {
       throw new BadRequestException(
-        "Either topic or file upload is required",
+        "Either topic, file upload, or media selection is required",
       );
     }
 
@@ -792,6 +1046,10 @@ export class ExercisesService {
 
       return {
         detectedTopic: result.detectedTopic,
+        detectedLanguage: result.detectedLanguage,
+        detectedCefrLevel: result.detectedCefrLevel,
+        suggestedTitle: result.suggestedTitle,
+        suggestedDescription: result.suggestedDescription,
         materialSummary: result.materialSummary,
         suggestions: result.suggestions,
         existingExercises,
@@ -808,6 +1066,565 @@ export class ExercisesService {
         "Failed to analyze material",
       );
     }
+  }
+
+  // POST /v1/exercises/analyze/refine — refine exercise plan via chat
+  async refinePlan(
+    academyId: string,
+    ownerId: string,
+    opts: {
+      currentPlan: {
+        detectedTopic: string;
+        materialSummary: string;
+        suggestions: { type: string; count: number; reason: string }[];
+      };
+      userMessage: string;
+      language?: string;
+      cefrLevel?: string;
+      materialContext?: string;
+      mediaItemIds?: string[];
+    },
+  ) {
+    const language = opts.language || "en";
+    const cefrLevel = opts.cefrLevel || "B1";
+
+    // Check AI token plan limit
+    const user = await this.userRepo.findOne({ where: { id: ownerId } });
+    const plan = (user?.plan as UserPlan) ?? UserPlan.FREE;
+    const limitCheck = await this.usage.checkPlanLimit(
+      ownerId,
+      plan,
+      UsageMetric.AI_TOKENS,
+    );
+    if (!limitCheck.allowed) {
+      throw new ForbiddenException(
+        "AI token limit exceeded. Please upgrade your plan.",
+      );
+    }
+
+    // RAG: resolve mediaItemIds to context
+    let materialText = opts.materialContext;
+    if (opts.mediaItemIds && opts.mediaItemIds.length > 0) {
+      try {
+        const ragQuery = `${opts.currentPlan.detectedTopic} ${language} ${cefrLevel}`;
+        const { chunks, tokensUsed: ragTokens } =
+          await this.mediaProcessing.findRelevantChunks({
+            mediaItemIds: opts.mediaItemIds,
+            query: ragQuery,
+            topK: 10,
+          });
+        if (ragTokens > 0) {
+          await this.usage.incrementUsage(
+            ownerId,
+            academyId,
+            UsageMetric.AI_TOKENS,
+            ragTokens,
+          );
+        }
+        if (chunks.length > 0) {
+          materialText =
+            this.mediaProcessing.formatChunksAsContext(chunks);
+        }
+      } catch (ragErr) {
+        this.logger.warn(
+          "RAG chunk retrieval failed (falling back to materialContext):",
+          ragErr,
+        );
+      }
+    }
+
+    try {
+      const { refineExercisePlan } = await import("@langopia/ai-pipeline");
+
+      const result = await refineExercisePlan({
+        currentPlan: opts.currentPlan,
+        userMessage: opts.userMessage,
+        language,
+        cefrLevel,
+        materialText,
+      });
+
+      // Track AI token usage
+      if (result.tokensUsed > 0) {
+        await this.usage.incrementUsage(
+          ownerId,
+          academyId,
+          UsageMetric.AI_TOKENS,
+          result.tokensUsed,
+        );
+      }
+
+      return {
+        detectedTopic: result.detectedTopic,
+        materialSummary: result.materialSummary,
+        suggestions: result.suggestions,
+        aiResponse: result.aiResponse,
+      };
+    } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ForbiddenException
+      ) {
+        throw err;
+      }
+      this.logger.error("Failed to refine plan:", err);
+      throw new InternalServerErrorException("Failed to refine plan");
+    }
+  }
+
+  // POST /v1/exercises/preview — generate exercises without saving
+  async previewExercises(
+    academyId: string,
+    ownerId: string,
+    opts: {
+      topic?: string;
+      language?: string;
+      cefrLevel?: string;
+      materialContext?: string;
+      mediaItemIds?: string[];
+      exercises?: { type: string; count: number }[];
+    },
+    file?: Express.Multer.File,
+  ) {
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    const MAX_TOTAL_SIZE = 30 * 1024 * 1024;
+
+    // Check AI token plan limit
+    const user = await this.userRepo.findOne({ where: { id: ownerId } });
+    const plan = (user?.plan as UserPlan) ?? UserPlan.FREE;
+    const limitCheck = await this.usage.checkPlanLimit(
+      ownerId,
+      plan,
+      UsageMetric.AI_TOKENS,
+    );
+    if (!limitCheck.allowed) {
+      throw new ForbiddenException(
+        "AI token limit exceeded. Please upgrade your plan.",
+      );
+    }
+
+    let topic = opts.topic;
+    let language = opts.language || "en";
+    let cefrLevel = opts.cefrLevel || "B1";
+    let sourceContent = opts.materialContext;
+
+    // Extract CEFR level & language from selected media items as defaults
+    if (opts.mediaItemIds && opts.mediaItemIds.length > 0) {
+      try {
+        const mediaItems = await this.mediaItemRepo
+          .createQueryBuilder("mi")
+          .select(["mi.detectedCefrLevel", "mi.detectedLanguage"])
+          .where("mi.id IN (:...ids)", { ids: opts.mediaItemIds })
+          .andWhere("mi.academyId = :academyId", { academyId })
+          .getMany();
+
+        for (const mi of mediaItems) {
+          if (!opts.cefrLevel && mi.detectedCefrLevel) {
+            cefrLevel = mi.detectedCefrLevel;
+            break;
+          }
+        }
+        for (const mi of mediaItems) {
+          if (!opts.language && mi.detectedLanguage) {
+            language = mi.detectedLanguage;
+            break;
+          }
+        }
+      } catch (err) {
+        this.logger.warn("Failed to query media item metadata:", err);
+      }
+    }
+
+    // Handle file upload
+    if (file) {
+      if (file.size === 0) {
+        // Skip empty file
+      } else if (file.size > MAX_FILE_SIZE) {
+        throw new BadRequestException(
+          `File "${file.originalname}" exceeds 10 MB limit.`,
+        );
+      } else if (file.size > MAX_TOTAL_SIZE) {
+        throw new BadRequestException(
+          "Total file size exceeds 30 MB limit.",
+        );
+      } else {
+        const text = await this.fileExtract.extractTextFromBuffer(
+          file.buffer,
+          file.originalname,
+          file.mimetype,
+        );
+        if (text.trim()) {
+          sourceContent = `--- ${file.originalname} ---\n${text}`;
+        }
+      }
+    }
+
+    // RAG: resolve mediaItemIds to structured chunk context
+    if (opts.mediaItemIds && opts.mediaItemIds.length > 0) {
+      try {
+        const ragQuery = `${topic || ""} ${language} ${cefrLevel}`;
+        const { chunks, tokensUsed: ragTokens } =
+          await this.mediaProcessing.findRelevantChunks({
+            mediaItemIds: opts.mediaItemIds,
+            query: ragQuery,
+            topK: 10,
+          });
+        if (ragTokens > 0) {
+          await this.usage.incrementUsage(
+            ownerId,
+            academyId,
+            UsageMetric.AI_TOKENS,
+            ragTokens,
+          );
+        }
+        if (chunks.length > 0) {
+          sourceContent =
+            this.mediaProcessing.formatChunksAsContext(chunks);
+        }
+      } catch (ragErr) {
+        this.logger.warn(
+          "RAG chunk retrieval failed (falling back to materialContext):",
+          ragErr,
+        );
+      }
+    }
+
+    if (!topic && !sourceContent) {
+      throw new BadRequestException(
+        "Either topic, file upload, or media selection is required",
+      );
+    }
+
+    try {
+      // Step 1: Analyze material
+      const { analyzeExerciseMaterial } = await import(
+        "@langopia/ai-pipeline"
+      );
+
+      const analysisResult = await analyzeExerciseMaterial({
+        materialText: sourceContent,
+        topic,
+        language,
+        cefrLevel,
+      });
+
+      if (analysisResult.tokensUsed > 0) {
+        await this.usage.incrementUsage(
+          ownerId,
+          academyId,
+          UsageMetric.AI_TOKENS,
+          analysisResult.tokensUsed,
+        );
+      }
+
+      // Find existing similar exercises
+      let existingExercises: unknown[] = [];
+      let existingSummaries: string[] | undefined;
+      let searchCallback:
+        | ((query: string) => Promise<{ results: string; tokensUsed: number }>)
+        | undefined;
+      try {
+        const effectiveTopic = analysisResult.detectedTopic || topic || "";
+        if (effectiveTopic) {
+          const { candidates, tokensUsed: dedupTokens } =
+            await this.embedding.findDedupCandidates({
+              topic: effectiveTopic,
+              materialContext: sourceContent,
+              academyId,
+              language,
+              cefrLevel,
+            });
+          if (dedupTokens > 0) {
+            await this.usage.incrementUsage(
+              ownerId,
+              academyId,
+              UsageMetric.AI_TOKENS,
+              dedupTokens,
+            );
+          }
+          if (candidates.length > 0) {
+            existingExercises = candidates.map((e) => ({
+              id: e.id,
+              type: e.type,
+              title: e.title,
+              targetSkill: e.targetSkill,
+              topic: e.topic,
+              language: e.language,
+              instruction: e.instruction,
+              content: e.content,
+              options: e.options,
+              correctAnswer: e.correctAnswer,
+              explanation: e.explanation,
+              cefrLevel: e.cefrLevel,
+              audioUrl: e.audioUrl,
+              distance: e.distance,
+              matchType: e.matchType,
+              similarity:
+                e.distance < DISTANCE_THRESHOLD_DEDUP
+                  ? "very_high"
+                  : e.distance < DISTANCE_THRESHOLD_TOPIC
+                    ? "high"
+                    : "medium",
+            }));
+
+            existingSummaries = candidates.map((e) => {
+              const similarity =
+                e.distance < DISTANCE_THRESHOLD_DEDUP
+                  ? "VERY_HIGH"
+                  : e.distance < DISTANCE_THRESHOLD_TOPIC
+                    ? "HIGH"
+                    : "MEDIUM";
+              return `- [${similarity}] [${e.type}] "${e.title || "Untitled"}" | Skill: ${e.targetSkill} | Instruction: ${e.instruction} | Content: ${e.content.slice(0, 300)}${e.options ? ` | Options: ${e.options.join(", ")}` : ""}${e.correctAnswer ? ` | Answer: ${e.correctAnswer}` : ""}`;
+            });
+          }
+
+          searchCallback = async (query: string) => {
+            return this.embedding.searchExercisesForRAG({
+              query,
+              academyId,
+              language: language || undefined,
+              cefrLevel: cefrLevel || undefined,
+              limit: 5,
+            });
+          };
+        }
+      } catch (embedErr) {
+        this.logger.warn(
+          "Embedding search failed (continuing without existing exercises):",
+          embedErr,
+        );
+      }
+
+      // Step 2: Generate exercises (use provided plan or AI suggestions)
+      const exercisePlan = opts.exercises && opts.exercises.length > 0
+        ? opts.exercises
+        : analysisResult.suggestions;
+
+      const requests = exercisePlan
+        .filter((e) => e.count > 0)
+        .map((e) => ({ type: e.type, count: e.count }));
+
+      const { generateExercisesByType } = await import(
+        "@langopia/ai-pipeline"
+      );
+
+      const genResult = await generateExercisesByType({
+        requests,
+        language: language || "en",
+        cefrLevel: cefrLevel || "B1",
+        topic: analysisResult.detectedTopic || topic || "",
+        sourceContent,
+        existingSummaries,
+        searchCallback,
+      });
+
+      if (genResult.tokensUsed > 0) {
+        await this.usage.incrementUsage(
+          ownerId,
+          academyId,
+          UsageMetric.AI_TOKENS,
+          genResult.tokensUsed,
+        );
+      }
+
+      // Assign tempIds — no DB writes
+      const exercises = genResult.exercises.map((ex) => ({
+        tempId: crypto.randomUUID(),
+        type: ex.type,
+        title: ex.title,
+        instruction: ex.instruction,
+        content: ex.content,
+        options: ex.options,
+        correctAnswer: ex.correctAnswer,
+        explanation: ex.explanation,
+        cefrLevel: ex.cefrLevel || cefrLevel,
+        targetSkill: ex.targetSkill || "vocabulary",
+        needsAudio: ex.needsAudio,
+      }));
+
+      return {
+        detectedTopic: analysisResult.detectedTopic,
+        detectedLanguage: analysisResult.detectedLanguage,
+        detectedCefrLevel: analysisResult.detectedCefrLevel,
+        suggestedTitle: analysisResult.suggestedTitle,
+        suggestedDescription: analysisResult.suggestedDescription,
+        materialSummary: analysisResult.materialSummary,
+        existingExercises,
+        exercises,
+      };
+    } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ForbiddenException
+      ) {
+        throw err;
+      }
+      this.logger.error("Failed to preview exercises:", err);
+      throw new InternalServerErrorException(
+        "Failed to preview exercises",
+      );
+    }
+  }
+
+  // POST /v1/exercises/preview/refine — refine previewed exercises via chat
+  async refinePreview(
+    academyId: string,
+    ownerId: string,
+    opts: {
+      currentExercises: {
+        tempId: string;
+        type: string;
+        title?: string;
+        instruction: string;
+        content: string;
+        options?: string[];
+        correctAnswer: string;
+        explanation: string;
+        cefrLevel: string;
+        targetSkill: string;
+      }[];
+      userMessage: string;
+      language?: string;
+      cefrLevel?: string;
+      materialContext?: string;
+      topic?: string;
+    },
+  ) {
+    const language = opts.language || "en";
+    const cefrLevel = opts.cefrLevel || "B1";
+
+    // Check AI token plan limit
+    const user = await this.userRepo.findOne({ where: { id: ownerId } });
+    const plan = (user?.plan as UserPlan) ?? UserPlan.FREE;
+    const limitCheck = await this.usage.checkPlanLimit(
+      ownerId,
+      plan,
+      UsageMetric.AI_TOKENS,
+    );
+    if (!limitCheck.allowed) {
+      throw new ForbiddenException(
+        "AI token limit exceeded. Please upgrade your plan.",
+      );
+    }
+
+    try {
+      const { refineExercises } = await import("@langopia/ai-pipeline");
+
+      const result = await refineExercises({
+        currentExercises: opts.currentExercises,
+        userMessage: opts.userMessage,
+        language,
+        cefrLevel,
+        materialText: opts.materialContext,
+        topic: opts.topic,
+      });
+
+      if (result.tokensUsed > 0) {
+        await this.usage.incrementUsage(
+          ownerId,
+          academyId,
+          UsageMetric.AI_TOKENS,
+          result.tokensUsed,
+        );
+      }
+
+      return {
+        exercises: result.exercises,
+        aiResponse: result.aiResponse,
+      };
+    } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof ForbiddenException
+      ) {
+        throw err;
+      }
+      this.logger.error("Failed to refine preview:", err);
+      throw new InternalServerErrorException("Failed to refine exercises");
+    }
+  }
+
+  // POST /v1/exercises/bulk — bulk save previewed exercises
+  async bulkSaveExercises(
+    academyId: string,
+    ownerId: string,
+    body: {
+      lessonId?: string;
+      topic?: string;
+      exercises: {
+        type: string;
+        title?: string;
+        targetSkill: string;
+        instruction: string;
+        content: string;
+        options?: string[];
+        correctAnswer: string;
+        explanation: string;
+        cefrLevel: string;
+        language: string;
+        needsAudio?: boolean;
+      }[];
+    },
+  ) {
+    if (!body.exercises || body.exercises.length === 0) {
+      throw new BadRequestException("exercises array is required");
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: ownerId } });
+    const plan = (user?.plan as UserPlan) ?? UserPlan.FREE;
+
+    const saved: Exercise[] = [];
+    const needsAudioMap = new Map<string, boolean>();
+
+    for (const ex of body.exercises) {
+      const exercise = new Exercise();
+      exercise.academyId = academyId;
+      exercise.type = ex.type;
+      exercise.title = ex.title ?? null;
+      exercise.targetSkill = ex.targetSkill || "vocabulary";
+      exercise.topic = body.topic ?? null;
+      exercise.language = ex.language || "en";
+      exercise.instruction = ex.instruction;
+      exercise.content = ex.content;
+      exercise.options = ex.options ?? null;
+      exercise.correctAnswer = ex.correctAnswer;
+      exercise.explanation = ex.explanation;
+      exercise.cefrLevel = ex.cefrLevel || "B1";
+      exercise.source = ExerciseSource.AI_LIVE;
+      exercise.videoUrl = null;
+      exercise.imageUrl = null;
+      const savedEx = await this.exerciseRepo.save(exercise);
+      if (ex.needsAudio) needsAudioMap.set(savedEx.id, true);
+      saved.push(savedEx);
+    }
+
+    // Link to lesson
+    for (const ex of saved) {
+      await this.linkToLesson(ex.id, body.lessonId, academyId);
+    }
+
+    // Fire-and-forget: TTS
+    this.generateTTS(saved, ownerId, academyId, plan, needsAudioMap).catch(
+      (err) => this.logger.error("TTS generation failed:", err),
+    );
+
+    // Fire-and-forget: embeddings
+    this.embedding
+      .embedExercises(saved.map((e) => e.id))
+      .then((tokens) => {
+        if (tokens > 0)
+          this.usage.incrementUsage(
+            ownerId,
+            academyId,
+            UsageMetric.AI_TOKENS,
+            tokens,
+          );
+      })
+      .catch((err) =>
+        this.logger.error("Embedding generation failed:", err),
+      );
+
+    return { data: saved.map((e) => this.serializeExercise(e)) };
   }
 
   // Helper: link exercise to lesson
@@ -861,17 +1678,28 @@ export class ExercisesService {
         AUDIO_KEYWORDS.test(e.instruction)
       );
     });
-    if (audioExercises.length === 0) return;
-    if (!this.tts.isTTSAvailable()) return;
+    if (audioExercises.length === 0) {
+      this.logger.warn("TTS skipped: no exercises matched audio filter");
+      return;
+    }
+    if (!this.tts.isTTSAvailable()) {
+      this.logger.warn("TTS skipped: no TTS provider configured");
+      return;
+    }
     const ttsLimit = await this.usage.checkPlanLimit(
       ownerId,
       plan,
       UsageMetric.TTS_CHARACTERS,
     );
-    if (!ttsLimit.allowed) return;
+    if (!ttsLimit.allowed) {
+      this.logger.warn("TTS skipped: plan limit reached");
+      return;
+    }
     for (const exercise of audioExercises) {
       try {
-        const audioText = exercise.content;
+        const audioText = exercise.type === "podcast"
+          ? exercise.content.split("---QUESTIONS---")[0].trim()
+          : exercise.content;
         exercise.audioUrl = await this.tts.generateExerciseAudio(
           audioText,
           exercise.id,

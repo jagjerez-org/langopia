@@ -3,10 +3,10 @@ export class ApiError extends Error {
   readonly body: unknown;
 
   constructor(status: number, body: unknown) {
-    const message =
-      typeof body === "object" && body !== null && "error" in body
-        ? String((body as { error: string }).error)
-        : `Request failed with status ${status}`;
+    const obj = typeof body === "object" && body !== null ? body as Record<string, unknown> : null;
+    const message = obj
+      ? String(obj.message ?? obj.error ?? `Request failed with status ${status}`)
+      : `Request failed with status ${status}`;
     super(message);
     this.name = "ApiError";
     this.status = status;

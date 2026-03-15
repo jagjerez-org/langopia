@@ -10,6 +10,8 @@ import {
   Lesson,
   LessonExercise,
   Notification,
+  Student,
+  Teacher,
 } from "../database/entities/index.js";
 import { MeController } from "./me.controller.js";
 import { MeService } from "./me.service.js";
@@ -25,6 +27,8 @@ import { MeService } from "./me.service.js";
       Lesson,
       LessonExercise,
       Notification,
+      Student,
+      Teacher,
     ]),
     AuthModule,
   ],

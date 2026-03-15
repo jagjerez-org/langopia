@@ -12,6 +12,9 @@ import { WatchReflect } from "./watch-reflect";
 import { CompleteChat } from "./complete-chat";
 import { WriteComplete } from "./write-complete";
 import { ListenComplete } from "./listen-complete";
+import { Podcast } from "./podcast";
+import { GuidedStory } from "./guided-story";
+import { GuidedConversation } from "./guided-conversation";
 
 export interface ExerciseData {
   id: string;
@@ -59,6 +62,12 @@ export function ExerciseRenderer({ exercise, mode }: ExerciseRendererProps) {
       return <WriteComplete {...props} />;
     case ExerciseType.LISTEN_COMPLETE:
       return <ListenComplete {...props} />;
+    case ExerciseType.PODCAST:
+      return <Podcast {...props} />;
+    case ExerciseType.GUIDED_STORY:
+      return <GuidedStory {...props} />;
+    case ExerciseType.GUIDED_CONVERSATION:
+      return <GuidedConversation {...props} />;
     default:
       return (
         <div className="rounded-lg border p-4">

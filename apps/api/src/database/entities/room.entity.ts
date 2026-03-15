@@ -79,6 +79,9 @@ export class Room {
   @Column({ type: "jsonb", nullable: true })
   whiteboardData!: Record<string, unknown> | null;
 
+  @Column({ type: "jsonb", nullable: true })
+  suggestions!: Record<string, unknown>[] | null;
+
   @ManyToOne("Academy", "rooms")
   @JoinColumn({ name: "academyId" })
   academy!: Relation<Academy>;

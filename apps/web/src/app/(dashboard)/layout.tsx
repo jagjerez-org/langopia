@@ -6,6 +6,12 @@ import { Header } from "@/components/header";
 import { AuthProvider, useAuth } from "@/components/auth-provider";
 import { AcademyProvider } from "@/components/academy-provider";
 import { TutorialProvider } from "@/components/tutorial-provider";
+import { WizardProvider } from "@/components/exercise-wizard-context";
+import { ExerciseWizard } from "@/components/exercise-wizard";
+import { FloatingWizardBar } from "@/components/floating-wizard-bar";
+import { UploadProvider } from "@/components/upload-progress-context";
+import { UploadProgressWidget } from "@/components/upload-progress-widget";
+import { SidebarProvider } from "@/components/sidebar-context";
 
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -26,17 +32,26 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AcademyProvider>
-      <TutorialProvider>
-        <div className="flex h-screen bg-zinc-50/50 dark:bg-zinc-950">
-          <Sidebar />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <Header />
-            <main className="bg-mesh-subtle flex-1 overflow-y-auto p-6">
-              {children}
-            </main>
-          </div>
-        </div>
-      </TutorialProvider>
+      <SidebarProvider>
+        <TutorialProvider>
+          <WizardProvider>
+            <UploadProvider>
+              <div className="flex h-screen bg-zinc-50/50 dark:bg-zinc-950">
+                <Sidebar />
+                <div className="flex flex-1 flex-col overflow-hidden">
+                  <Header />
+                  <main className="bg-mesh-subtle flex-1 overflow-y-auto p-6">
+                    {children}
+                  </main>
+                </div>
+              </div>
+              <ExerciseWizard />
+              <FloatingWizardBar />
+              <UploadProgressWidget />
+            </UploadProvider>
+          </WizardProvider>
+        </TutorialProvider>
+      </SidebarProvider>
     </AcademyProvider>
   );
 }

@@ -10,6 +10,7 @@ import {
 } from "typeorm";
 import type { AcademyMember } from "./academy-member.entity.js";
 import type { Student } from "./student.entity.js";
+import type { Teacher } from "./teacher.entity.js";
 import type { Room } from "./room.entity.js";
 import type { Class } from "./class.entity.js";
 import type { AcademyLevel } from "./academy-level.entity.js";
@@ -56,6 +57,9 @@ export class Academy {
 
   @OneToMany("Student", "academy")
   students!: Relation<Student[]>;
+
+  @OneToMany("Teacher", "academy")
+  teachers!: Relation<Teacher[]>;
 
   @OneToMany("Room", "academy")
   rooms!: Relation<Room[]>;

@@ -40,15 +40,41 @@ export class FileExtractService {
     }
 
     if (name.endsWith(".pdf")) {
-      const pdfParse = (await import("pdf-parse")).default;
-      const result = await pdfParse(buffer);
-      const pages = result.text.split("\f").filter((p: string) => p.trim());
-      if (pages.length === 0)
-        return [{ pageNumber: 1, text: result.text }];
-      return pages.map((text: string, i: number) => ({
-        pageNumber: i + 1,
-        text: text.trim(),
-      }));
+      const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) })
+        .promise;
+      const pages: PageExtraction[] = [];
+      for (let i = 1; i <= doc.numPages; i++) {
+        const page = await doc.getPage(i);
+        const content = await page.getTextContent();
+        let text = "";
+        let lastY: number | null = null;
+        let lastEndX: number | null = null;
+        for (const item of content.items) {
+          if (!("str" in item)) continue;
+          const ti = item as {
+            str: string;
+            transform: number[];
+            width: number;
+            height: number;
+          };
+          const x = ti.transform[4];
+          const y = ti.transform[5];
+          const fontSize = Math.abs(ti.transform[0]) || 12;
+          if (lastY !== null && Math.abs(y - lastY) > fontSize * 0.5) {
+            text += "\n";
+          } else if (lastEndX !== null && x > lastEndX + fontSize * 0.15) {
+            text += " ";
+          }
+          text += ti.str;
+          lastEndX = x + ti.width;
+          lastY = y;
+        }
+        const trimmed = text.trim();
+        if (trimmed) pages.push({ pageNumber: i, text: trimmed });
+      }
+      if (pages.length === 0) return [{ pageNumber: 1, text: "" }];
+      return pages;
     }
 
     if (name.endsWith(".pptx")) {

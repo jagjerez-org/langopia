@@ -16,25 +16,36 @@ interface ChatMessage {
 interface RoomChatProps {
   roomId: string;
   role: "teacher" | "student";
+  senderName: string;
 }
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-export function RoomChat({ roomId, role }: RoomChatProps) {
+export function RoomChat({ roomId, role, senderName }: RoomChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const seenIds = useRef(new Set<string>());
   const api = useMemo(() => createPublicClient(), []);
 
-  const onMessage = useCallback((msg: { payload: Uint8Array }) => {
-    try {
-      const data = JSON.parse(decoder.decode(msg.payload));
-      if (data.type === "chat") {
-        setMessages((prev) => [...prev, data.message]);
-      }
-    } catch {}
+  const addMessage = useCallback((msg: ChatMessage) => {
+    if (seenIds.current.has(msg.id)) return;
+    seenIds.current.add(msg.id);
+    setMessages((prev) => [...prev, msg]);
   }, []);
+
+  const onMessage = useCallback(
+    (msg: { payload: Uint8Array }) => {
+      try {
+        const data = JSON.parse(decoder.decode(msg.payload));
+        if (data.type === "chat") {
+          addMessage(data.message);
+        }
+      } catch {}
+    },
+    [addMessage],
+  );
 
   const { send } = useDataChannel("chat", onMessage);
 
@@ -43,7 +54,27 @@ export function RoomChat({ roomId, role }: RoomChatProps) {
     api.rooms
       .getChat(roomId)
       .then((data) => {
-        if (Array.isArray(data)) setMessages(data as unknown as ChatMessage[]);
+        if (Array.isArray(data)) {
+          for (const msg of data as unknown as ChatMessage[]) {
+            if (!seenIds.current.has(msg.id)) {
+              seenIds.current.add(msg.id);
+            }
+          }
+          setMessages((prev) => {
+            const merged = [...(data as unknown as ChatMessage[])];
+            for (const existing of prev) {
+              if (!seenIds.current.has(existing.id)) {
+                seenIds.current.add(existing.id);
+                merged.push(existing);
+              }
+            }
+            return merged.sort(
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime(),
+            );
+          });
+        }
       })
       .catch(() => {});
   }, [roomId, api]);
@@ -59,17 +90,17 @@ export function RoomChat({ roomId, role }: RoomChatProps) {
 
     const msg: ChatMessage = {
       id: crypto.randomUUID(),
-      senderName: "You",
+      senderName,
       senderRole: role,
       message: input.trim(),
       createdAt: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, msg]);
+    addMessage(msg);
 
     // Broadcast via data channel
     const payload = encoder.encode(
-      JSON.stringify({ type: "chat", message: msg })
+      JSON.stringify({ type: "chat", message: msg }),
     );
     send(payload, { reliable: true });
 

@@ -37,6 +37,10 @@ export interface QueryLessonExercisesParams {
   offset?: string;
 }
 
+export interface CreateLessonVersionRequest {
+  note?: string;
+}
+
 // ─── Responses ──────────────────────────────────────
 
 export interface LessonResponse {
@@ -51,4 +55,33 @@ export interface LessonResponse {
   exercises?: ExerciseResponse[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LessonVersionSummary {
+  id: string;
+  lessonId: string;
+  version: number;
+  title: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface LessonVersionResponse {
+  id: string;
+  lessonId: string;
+  version: number;
+  title: string;
+  description: string | null;
+  language: string;
+  cefrLevel: string;
+  status: string;
+  exerciseSnapshot: Record<string, unknown>[];
+  createdAt: string;
+}
+
+export interface LessonKpisResponse {
+  classCount: number;
+  studentCount: number;
+  completionRate: number;
+  averageScore: number;
 }

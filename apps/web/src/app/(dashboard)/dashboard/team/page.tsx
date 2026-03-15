@@ -44,14 +44,13 @@ interface InviteLink {
   createdAt: string;
 }
 
-const ROLES = ["admin", "content_manager", "financing", "coordinator", "teacher"] as const;
+const ROLES = ["admin", "content_manager", "financing", "coordinator"] as const;
 
 const ROLE_COLORS: Record<string, string> = {
   admin: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
   content_manager: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
   financing: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
   coordinator: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  teacher: "bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300",
 };
 
 function roleBadgeClass(role: string) {
@@ -73,7 +72,7 @@ export default function TeamPage() {
   // Invite member dialog
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<string>("teacher");
+  const [inviteRole, setInviteRole] = useState<string>("coordinator");
   const [inviting, setInviting] = useState(false);
 
   // Edit member dialog
@@ -88,7 +87,7 @@ export default function TeamPage() {
 
   // Create invite link dialog
   const [linkOpen, setLinkOpen] = useState(false);
-  const [linkRole, setLinkRole] = useState<string>("teacher");
+  const [linkRole, setLinkRole] = useState<string>("coordinator");
   const [linkMaxUses, setLinkMaxUses] = useState("");
   const [linkExpiryDays, setLinkExpiryDays] = useState("");
   const [creatingLink, setCreatingLink] = useState(false);

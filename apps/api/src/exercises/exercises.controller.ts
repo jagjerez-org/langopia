@@ -23,10 +23,15 @@ import type { Academy } from "../database/entities/academy.entity.js";
 import { ExercisesService } from "./exercises.service.js";
 import { QueryExercisesDto } from "./dto/query-exercises.dto.js";
 import { CreateExerciseDto } from "./dto/create-exercise.dto.js";
+import { CreateSingleExerciseDto } from "./dto/create-single-exercise.dto.js";
 import { UpdateExerciseDto } from "./dto/update-exercise.dto.js";
 import { SearchExercisesDto } from "./dto/search-exercises.dto.js";
 import { RegenerateExerciseDto } from "./dto/regenerate-exercise.dto.js";
 import { AnalyzeExerciseDto } from "./dto/analyze-exercise.dto.js";
+import { RefinePlanDto } from "./dto/refine-plan.dto.js";
+import { PreviewExercisesDto } from "./dto/preview-exercises.dto.js";
+import { RefinePreviewDto } from "./dto/refine-preview.dto.js";
+import { BulkSaveExercisesDto } from "./dto/bulk-save-exercises.dto.js";
 
 @ApiTags("exercises")
 @ApiBearerAuth()
@@ -66,9 +71,25 @@ export class ExercisesController {
         language: body.language,
         cefrLevel: body.cefrLevel,
         materialContext: body.materialContext,
+        mediaItemIds: body.mediaItemIds,
         lessonId: body.lessonId,
         exercises: body.exercises,
       },
+    );
+  }
+
+  @Post("single")
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Create a single exercise (prompt or manual)" })
+  async createSingle(
+    @CurrentAcademy() academy: Academy,
+    @Req() req: { ownerId: string },
+    @Body() body: CreateSingleExerciseDto,
+  ) {
+    return this.exercisesService.createSingleExercise(
+      academy.id,
+      req.ownerId,
+      body,
     );
   }
 
@@ -96,6 +117,72 @@ export class ExercisesController {
     );
   }
 
+  @Post("preview")
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor("file"))
+  @ApiOperation({ summary: "Preview exercises (analyze + generate, no DB save)" })
+  async preview(
+    @CurrentAcademy() academy: Academy,
+    @Req() req: { ownerId: string },
+    @Body() body: PreviewExercisesDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.exercisesService.previewExercises(
+      academy.id,
+      req.ownerId,
+      {
+        topic: body.topic,
+        language: body.language,
+        cefrLevel: body.cefrLevel,
+        materialContext: body.materialContext,
+        mediaItemIds: body.mediaItemIds,
+        exercises: body.exercises,
+      },
+      file,
+    );
+  }
+
+  @Post("preview/refine")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Refine previewed exercises via chat" })
+  async refinePreview(
+    @CurrentAcademy() academy: Academy,
+    @Req() req: { ownerId: string },
+    @Body() body: RefinePreviewDto,
+  ) {
+    return this.exercisesService.refinePreview(
+      academy.id,
+      req.ownerId,
+      {
+        currentExercises: body.currentExercises,
+        userMessage: body.userMessage,
+        language: body.language,
+        cefrLevel: body.cefrLevel,
+        materialContext: body.materialContext,
+        topic: body.topic,
+      },
+    );
+  }
+
+  @Post("bulk")
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Bulk save previewed exercises to DB" })
+  async bulkSave(
+    @CurrentAcademy() academy: Academy,
+    @Req() req: { ownerId: string },
+    @Body() body: BulkSaveExercisesDto,
+  ) {
+    return this.exercisesService.bulkSaveExercises(
+      academy.id,
+      req.ownerId,
+      {
+        lessonId: body.lessonId,
+        topic: body.topic,
+        exercises: body.exercises,
+      },
+    );
+  }
+
   @Post("analyze")
   @HttpCode(HttpStatus.OK)
   @UseInterceptors(FileInterceptor("file"))
@@ -114,8 +201,31 @@ export class ExercisesController {
         language: body.language,
         cefrLevel: body.cefrLevel,
         materialContext: body.materialContext,
+        mediaItemIds: body.mediaItemIds,
       },
       file,
+    );
+  }
+
+  @Post("analyze/refine")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Refine exercise plan via chat" })
+  async refinePlan(
+    @CurrentAcademy() academy: Academy,
+    @Req() req: { ownerId: string },
+    @Body() body: RefinePlanDto,
+  ) {
+    return this.exercisesService.refinePlan(
+      academy.id,
+      req.ownerId,
+      {
+        currentPlan: body.currentPlan,
+        userMessage: body.userMessage,
+        language: body.language,
+        cefrLevel: body.cefrLevel,
+        materialContext: body.materialContext,
+        mediaItemIds: body.mediaItemIds,
+      },
     );
   }
 

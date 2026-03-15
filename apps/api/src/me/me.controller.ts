@@ -8,6 +8,7 @@ import { QueryMyClassesDto } from "./dto/query-my-classes.dto.js";
 import { QueryMyReportsDto } from "./dto/query-my-reports.dto.js";
 import { QueryMyExercisesDto } from "./dto/query-my-exercises.dto.js";
 import { QueryMyLessonsDto } from "./dto/query-my-lessons.dto.js";
+import { QueryMyStudentsDto } from "./dto/query-my-students.dto.js";
 import { QueryMyNotificationsDto } from "./dto/query-my-notifications.dto.js";
 
 @ApiTags("Me")
@@ -78,6 +79,18 @@ export class MeController {
   @ApiOperation({ summary: "Get lesson detail with exercises" })
   getLessonDetail(@CurrentUser() user: User, @Param("id") id: string) {
     return this.meService.getLessonDetail(user, id);
+  }
+
+  @Get("students")
+  @ApiOperation({ summary: "Get students I have taught" })
+  getStudents(@CurrentUser() user: User, @Query() query: QueryMyStudentsDto) {
+    return this.meService.getStudents(user, query);
+  }
+
+  @Get("students/:id")
+  @ApiOperation({ summary: "Get student detail with class history" })
+  getStudentDetail(@CurrentUser() user: User, @Param("id") id: string) {
+    return this.meService.getStudentDetail(user, id);
   }
 
   @Get("notifications")

@@ -10,11 +10,14 @@ import { Exercise } from "../database/entities/exercise.entity.js";
 import { Lesson } from "../database/entities/lesson.entity.js";
 import { LessonExercise } from "../database/entities/lesson-exercise.entity.js";
 import { Notification } from "../database/entities/notification.entity.js";
+import { Student } from "../database/entities/student.entity.js";
+import { Teacher } from "../database/entities/teacher.entity.js";
 import type { User } from "../database/entities/user.entity.js";
 import { QueryMyClassesDto } from "./dto/query-my-classes.dto.js";
 import { QueryMyReportsDto } from "./dto/query-my-reports.dto.js";
 import { QueryMyExercisesDto } from "./dto/query-my-exercises.dto.js";
 import { QueryMyLessonsDto } from "./dto/query-my-lessons.dto.js";
+import { QueryMyStudentsDto } from "./dto/query-my-students.dto.js";
 
 @Injectable()
 export class MeService {
@@ -37,6 +40,10 @@ export class MeService {
     private readonly lessonExerciseRepo: Repository<LessonExercise>,
     @InjectRepository(Notification)
     private readonly notificationRepo: Repository<Notification>,
+    @InjectRepository(Student)
+    private readonly studentRepo: Repository<Student>,
+    @InjectRepository(Teacher)
+    private readonly teacherRepo: Repository<Teacher>,
     private readonly config: ConfigService,
   ) {
     this.appUrl =
@@ -54,6 +61,15 @@ export class MeService {
     return members.map((m) => m.id);
   }
 
+  /** Get all Teacher IDs for a user */
+  private async getTeacherIds(userId: string): Promise<string[]> {
+    const teachers = await this.teacherRepo.find({
+      where: { userId },
+      select: ["id"],
+    });
+    return teachers.map((t) => t.id);
+  }
+
   /** Get all academy IDs for a user */
   private async getAcademyIds(userId: string): Promise<string[]> {
     const members = await this.memberRepo.find({
@@ -64,9 +80,9 @@ export class MeService {
   }
 
   async getStats(user: User) {
-    const memberIds = await this.getMemberIds(user.id);
+    const teacherIds = await this.getTeacherIds(user.id);
 
-    if (memberIds.length === 0) {
+    if (teacherIds.length === 0) {
       return {
         upcomingClasses: 0,
         completedClasses: 0,
@@ -79,7 +95,7 @@ export class MeService {
 
     const upcomingClasses = await this.classRepo
       .createQueryBuilder("cls")
-      .where("cls.teacherId IN (:...memberIds)", { memberIds })
+      .where("cls.teacherId IN (:...teacherIds)", { teacherIds })
       .andWhere("cls.status IN (:...statuses)", {
         statuses: ["scheduled", "confirmed"],
       })
@@ -88,7 +104,7 @@ export class MeService {
 
     const completedClasses = await this.classRepo
       .createQueryBuilder("cls")
-      .where("cls.teacherId IN (:...memberIds)", { memberIds })
+      .where("cls.teacherId IN (:...teacherIds)", { teacherIds })
       .andWhere("cls.status = :status", { status: "completed" })
       .getCount();
 
@@ -96,12 +112,12 @@ export class MeService {
       .createQueryBuilder("report")
       .innerJoin("report.room", "room")
       .innerJoin(Class, "cls", "cls.roomId = room.id")
-      .where("cls.teacherId IN (:...memberIds)", { memberIds })
+      .where("cls.teacherId IN (:...teacherIds)", { teacherIds })
       .getCount();
 
     const nextClassEntity = await this.classRepo
       .createQueryBuilder("cls")
-      .where("cls.teacherId IN (:...memberIds)", { memberIds })
+      .where("cls.teacherId IN (:...teacherIds)", { teacherIds })
       .andWhere("cls.status IN (:...statuses)", {
         statuses: ["scheduled", "confirmed"],
       })
@@ -125,21 +141,19 @@ export class MeService {
   }
 
   async getClasses(user: User, query: QueryMyClassesDto) {
-    const memberIds = await this.getMemberIds(user.id);
+    const teacherIds = await this.getTeacherIds(user.id);
     const limit = Math.min(query.limit ?? 50, 100);
     const offset = query.offset ?? 0;
 
-    if (memberIds.length === 0) {
+    if (teacherIds.length === 0) {
       return { data: [], total: 0, limit, offset };
     }
 
     const qb = this.classRepo
       .createQueryBuilder("cls")
       .leftJoinAndSelect("cls.teacher", "teacher")
-      .leftJoin("teacher.user", "teacherUser")
-      .addSelect(["teacherUser.name", "teacherUser.email"])
       .leftJoinAndSelect("cls.academy", "academy")
-      .where("cls.teacherId IN (:...memberIds)", { memberIds })
+      .where("cls.teacherId IN (:...teacherIds)", { teacherIds })
       .orderBy("cls.scheduledAt", "DESC")
       .take(limit)
       .skip(offset);
@@ -177,8 +191,7 @@ export class MeService {
         teacher: c.teacher
           ? {
               id: c.teacher.id,
-              name: (c.teacher as AcademyMember & { user: { name: string } })
-                .user?.name,
+              name: c.teacher.name,
             }
           : null,
         roomId: c.roomId,
@@ -190,22 +203,20 @@ export class MeService {
   }
 
   async getClassDetail(user: User, classId: string) {
-    const memberIds = await this.getMemberIds(user.id);
+    const teacherIds = await this.getTeacherIds(user.id);
 
-    if (memberIds.length === 0) {
+    if (teacherIds.length === 0) {
       throw new NotFoundException("Class not found");
     }
 
     const cls = await this.classRepo
       .createQueryBuilder("cls")
       .leftJoinAndSelect("cls.teacher", "teacher")
-      .leftJoin("teacher.user", "teacherUser")
-      .addSelect(["teacherUser.name", "teacherUser.email"])
       .leftJoinAndSelect("cls.lesson", "lesson")
       .leftJoinAndSelect("cls.room", "room")
       .leftJoinAndSelect("cls.academy", "academy")
       .where("cls.id = :classId", { classId })
-      .andWhere("cls.teacherId IN (:...memberIds)", { memberIds })
+      .andWhere("cls.teacherId IN (:...teacherIds)", { teacherIds })
       .getOne();
 
     if (!cls) {
@@ -216,6 +227,16 @@ export class MeService {
       where: { classId: cls.id },
       relations: ["student"],
     });
+
+    // Get report if class has a room
+    let reportId: string | null = null;
+    if (cls.roomId) {
+      const report = await this.reportRepo.findOne({
+        where: { roomId: cls.roomId },
+        select: ["id"],
+      });
+      reportId = report?.id ?? null;
+    }
 
     return {
       id: cls.id,
@@ -235,16 +256,8 @@ export class MeService {
       teacher: cls.teacher
         ? {
             id: cls.teacher.id,
-            name: (
-              cls.teacher as AcademyMember & {
-                user: { name: string; email: string };
-              }
-            ).user?.name,
-            email: (
-              cls.teacher as AcademyMember & {
-                user: { name: string; email: string };
-              }
-            ).user?.email,
+            name: cls.teacher.name,
+            email: cls.teacher.email,
           }
         : null,
       students: classStudents.map((cs) => ({
@@ -261,15 +274,16 @@ export class MeService {
       studentUrl: `${this.appUrl}/class/${cls.id}?token=${cls.studentToken}`,
       createdAt: cls.createdAt,
       updatedAt: cls.updatedAt,
+      reportId,
     };
   }
 
   async getReports(user: User, query: QueryMyReportsDto) {
-    const memberIds = await this.getMemberIds(user.id);
+    const teacherIds = await this.getTeacherIds(user.id);
     const limit = Math.min(query.limit ?? 50, 100);
     const offset = query.offset ?? 0;
 
-    if (memberIds.length === 0) {
+    if (teacherIds.length === 0) {
       return { data: [], total: 0, limit, offset };
     }
 
@@ -278,7 +292,7 @@ export class MeService {
       .innerJoinAndSelect("report.room", "room")
       .innerJoin(Class, "cls", "cls.roomId = room.id")
       .addSelect(["cls.id", "cls.title", "cls.scheduledAt"])
-      .where("cls.teacherId IN (:...memberIds)", { memberIds })
+      .where("cls.teacherId IN (:...teacherIds)", { teacherIds })
       .orderBy("report.createdAt", "DESC")
       .take(limit)
       .skip(offset);
@@ -324,9 +338,9 @@ export class MeService {
   }
 
   async getReportDetail(user: User, reportId: string) {
-    const memberIds = await this.getMemberIds(user.id);
+    const teacherIds = await this.getTeacherIds(user.id);
 
-    if (memberIds.length === 0) {
+    if (teacherIds.length === 0) {
       throw new NotFoundException("Report not found");
     }
 
@@ -345,7 +359,7 @@ export class MeService {
       .createQueryBuilder("cls")
       .leftJoinAndSelect("cls.academy", "academy")
       .where("cls.roomId = :roomId", { roomId: report.roomId })
-      .andWhere("cls.teacherId IN (:...memberIds)", { memberIds })
+      .andWhere("cls.teacherId IN (:...teacherIds)", { teacherIds })
       .getOne();
 
     if (!cls) {
@@ -662,5 +676,180 @@ export class MeService {
     );
 
     return { success: true };
+  }
+
+  async getStudents(user: User, query: QueryMyStudentsDto) {
+    const teacherIds = await this.getTeacherIds(user.id);
+    const limit = Math.min(query.limit ?? 50, 100);
+    const offset = query.offset ?? 0;
+
+    if (teacherIds.length === 0) {
+      return { data: [], total: 0, limit, offset };
+    }
+
+    const qb = this.studentRepo
+      .createQueryBuilder("student")
+      .innerJoin(
+        "class_students",
+        "cs",
+        "cs.studentId = student.id",
+      )
+      .innerJoin(
+        Class,
+        "cls",
+        "cls.id = cs.classId AND cls.teacherId IN (:...teacherIds)",
+        { teacherIds },
+      )
+      .leftJoin("student.academy", "academy")
+      .addSelect(["academy.name"])
+      .addSelect("COUNT(DISTINCT cls.id)", "totalClasses")
+      .addSelect("MAX(cls.scheduledAt)", "lastClassAt")
+      .groupBy("student.id")
+      .addGroupBy("academy.id")
+      .orderBy("lastClassAt", "DESC", "NULLS LAST")
+      .limit(limit)
+      .offset(offset);
+
+    if (query.academyId) {
+      qb.andWhere("student.academyId = :academyId", {
+        academyId: query.academyId,
+      });
+    }
+    if (query.search) {
+      qb.andWhere(
+        "(student.name ILIKE :search OR student.email ILIKE :search)",
+        { search: `%${query.search}%` },
+      );
+    }
+
+    const { raw, entities } = await qb.getRawAndEntities();
+
+    // Get total count separately
+    const countQb = this.studentRepo
+      .createQueryBuilder("student")
+      .innerJoin(
+        "class_students",
+        "cs",
+        "cs.studentId = student.id",
+      )
+      .innerJoin(
+        Class,
+        "cls",
+        "cls.id = cs.classId AND cls.teacherId IN (:...teacherIds)",
+        { teacherIds },
+      );
+
+    if (query.academyId) {
+      countQb.andWhere("student.academyId = :academyId", {
+        academyId: query.academyId,
+      });
+    }
+    if (query.search) {
+      countQb.andWhere(
+        "(student.name ILIKE :search OR student.email ILIKE :search)",
+        { search: `%${query.search}%` },
+      );
+    }
+
+    const total = await countQb.getCount();
+
+    return {
+      data: entities.map((s, i) => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        academyId: s.academyId,
+        academyName: (s as Student & { academy: { name: string } }).academy?.name ?? "",
+        cefrEstimate: s.cefrEstimate,
+        isActive: s.isActive,
+        totalClasses: parseInt(raw[i]?.totalClasses ?? "0", 10),
+        lastClassAt: raw[i]?.lastClassAt ?? null,
+      })),
+      total,
+      limit,
+      offset,
+    };
+  }
+
+  async getStudentDetail(user: User, studentId: string) {
+    const teacherIds = await this.getTeacherIds(user.id);
+
+    if (teacherIds.length === 0) {
+      throw new NotFoundException("Student not found");
+    }
+
+    // Verify this teacher has taught this student
+    const student = await this.studentRepo
+      .createQueryBuilder("student")
+      .leftJoinAndSelect("student.academy", "academy")
+      .where("student.id = :studentId", { studentId })
+      .getOne();
+
+    if (!student) {
+      throw new NotFoundException("Student not found");
+    }
+
+    // Get classes where this teacher taught this student
+    const classes = await this.classRepo
+      .createQueryBuilder("cls")
+      .innerJoin("cls.classStudents", "cs", "cs.studentId = :studentId", {
+        studentId,
+      })
+      .leftJoin("cls.room", "room")
+      .leftJoin(
+        "class_reports",
+        "report",
+        "report.roomId = room.id",
+      )
+      .addSelect(["report.id"])
+      .where("cls.teacherId IN (:...teacherIds)", { teacherIds })
+      .orderBy("cls.scheduledAt", "DESC")
+      .getMany();
+
+    if (classes.length === 0) {
+      throw new NotFoundException("Student not found");
+    }
+
+    // Get report IDs for completed classes with rooms
+    const roomIds = classes
+      .filter((c) => c.roomId)
+      .map((c) => c.roomId!);
+
+    const reportMap = new Map<string, string>();
+    if (roomIds.length > 0) {
+      const reports = await this.reportRepo
+        .createQueryBuilder("report")
+        .select(["report.id", "report.roomId"])
+        .where("report.roomId IN (:...roomIds)", { roomIds })
+        .getMany();
+      for (const r of reports) {
+        reportMap.set(r.roomId, r.id);
+      }
+    }
+
+    const totalMinutes = classes.reduce(
+      (sum, c) => sum + (c.durationMinutes ?? 0),
+      0,
+    );
+
+    return {
+      id: student.id,
+      name: student.name,
+      email: student.email,
+      academyName: student.academy?.name ?? "",
+      cefrEstimate: student.cefrEstimate,
+      isActive: student.isActive,
+      totalClasses: classes.length,
+      totalMinutes,
+      classes: classes.map((c) => ({
+        id: c.id,
+        title: c.title,
+        scheduledAt: c.scheduledAt,
+        durationMinutes: c.durationMinutes,
+        status: c.status,
+        classType: c.classType,
+        reportId: c.roomId ? (reportMap.get(c.roomId) ?? null) : null,
+      })),
+    };
   }
 }

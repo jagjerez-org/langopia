@@ -63,4 +63,29 @@ export class RoomInternalResource {
       auth: "none",
     });
   }
+
+  transcribeChunk(roomId: string, formData: FormData): Promise<{ text: string }> {
+    return this.client.request({
+      method: "POST",
+      path: `/room/${roomId}/transcribe`,
+      auth: "none",
+      formData,
+    });
+  }
+
+  triggerSuggestions(roomId: string): Promise<{ status: string; suggestions?: Record<string, unknown>[] }> {
+    return this.client.request({
+      method: "POST",
+      path: `/room/${roomId}/suggestions`,
+      auth: "none",
+    });
+  }
+
+  getSuggestions(roomId: string): Promise<{ status: string; suggestions: Record<string, unknown>[] | null }> {
+    return this.client.request({
+      method: "GET",
+      path: `/room/${roomId}/suggestions`,
+      auth: "none",
+    });
+  }
 }

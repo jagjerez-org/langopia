@@ -14,9 +14,12 @@ import {
   Save,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
-import { ExerciseWizard } from "@/components/exercise-wizard";
+import { useWizard } from "@/components/exercise-wizard-context";
 import { RegenerateDialog } from "@/components/regenerate-dialog";
 import { ExerciseRenderer } from "@/components/exercises/exercise-renderer";
+import { LessonKpis } from "@/components/lesson-kpis";
+import { LessonVersionHistory } from "@/components/lesson-version-history";
+import { LessonWizard } from "@/components/lesson-wizard";
 import { EXERCISE_TYPE_CONFIG, ExerciseType } from "@langopia/shared/types";
 import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
@@ -94,6 +97,7 @@ export default function LessonDetailPage() {
   const router = useRouter();
   const api = useApiKeyClient();
   const { levelCodes } = useAcademyLevels();
+  const { openWizard } = useWizard();
 
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -102,9 +106,6 @@ export default function LessonDetailPage() {
   // Lesson editing
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
-
-  // Exercise generation wizard
-  const [wizardOpen, setWizardOpen] = useState(false);
 
   // Per-exercise state
   const [previewingIds, setPreviewingIds] = useState<Set<string>>(new Set());
@@ -116,6 +117,9 @@ export default function LessonDetailPage() {
   // Delete confirmation
   const [deleteExerciseId, setDeleteExerciseId] = useState<string | null>(null);
   const [deleteLessonOpen, setDeleteLessonOpen] = useState(false);
+
+  // Lesson wizard
+  const [lessonWizardOpen, setLessonWizardOpen] = useState(false);
 
   const apiKey = selectedAcademyData?.apiKey;
 
@@ -142,12 +146,16 @@ export default function LessonDetailPage() {
     }
   }, [api, id]);
 
+  const handleReload = useCallback(() => {
+    loadLesson();
+    loadExercises();
+  }, [loadLesson, loadExercises]);
+
   useEffect(() => {
     if (selectedAcademy) {
-      loadLesson();
-      loadExercises();
+      handleReload();
     }
-  }, [selectedAcademy, loadLesson, loadExercises]);
+  }, [selectedAcademy, handleReload]);
 
   async function handleUnlinkExercise(exerciseId: string) {
     try {
@@ -166,8 +174,9 @@ export default function LessonDetailPage() {
       await api.lessons.delete(id);
       toast.success("Lesson deleted");
       router.push("/dashboard/lessons");
-    } catch {
-      toast.error("Failed to delete lesson");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to delete lesson";
+      toast.error(message);
     }
   }
 
@@ -314,6 +323,9 @@ export default function LessonDetailPage() {
         )}
       </div>
 
+      {/* KPIs */}
+      <LessonKpis lessonId={id} />
+
       {/* Exercise Generator */}
       <div className="glass flex items-center justify-between rounded-xl p-5">
         <div className="flex items-center gap-2">
@@ -321,32 +333,30 @@ export default function LessonDetailPage() {
           <h3 className="font-semibold">Generate Exercises</h3>
           <span className="text-sm text-zinc-500">Upload material and let AI suggest exercises</span>
         </div>
-        <button
-          onClick={() => setWizardOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:shadow-lg"
-        >
-          <Sparkles className="h-4 w-4" />
-          Generate
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLessonWizardOpen(true)}
+            className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-violet-500 hover:shadow-lg"
+          >
+            <Sparkles className="h-4 w-4" />
+            Lesson Wizard
+          </button>
+          <button
+            onClick={() => openWizard({
+              lessonId: id,
+              lessonTitle: lesson.title,
+              language: lesson.language,
+              cefrLevel: lesson.cefrLevel,
+              levelCodes,
+              onComplete: () => { handleReload(); },
+            })}
+            className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+          >
+            <Sparkles className="h-4 w-4" />
+            Quick Generate
+          </button>
+        </div>
       </div>
-
-      {/* Exercise Wizard */}
-      {apiKey && lesson && (
-        <ExerciseWizard
-          open={wizardOpen}
-          onOpenChange={setWizardOpen}
-          apiKey={apiKey}
-          lessonId={id}
-          lessonTitle={lesson.title}
-          lessonLanguage={lesson.language}
-          lessonCefrLevel={lesson.cefrLevel}
-          levelCodes={levelCodes}
-          onComplete={() => {
-            loadExercises();
-            loadLesson();
-          }}
-        />
-      )}
 
       {/* Exercise List */}
       <div>
@@ -501,6 +511,9 @@ export default function LessonDetailPage() {
         )}
       </div>
 
+      {/* Version History */}
+      <LessonVersionHistory lessonId={id} onRestore={handleReload} />
+
       {/* Delete exercise confirmation */}
       <AlertDialog open={!!deleteExerciseId} onOpenChange={() => setDeleteExerciseId(null)}>
         <AlertDialogContent>
@@ -553,6 +566,22 @@ export default function LessonDetailPage() {
           }}
         />
       )}
+
+      {/* Lesson Wizard */}
+      <LessonWizard
+        open={lessonWizardOpen}
+        onOpenChange={setLessonWizardOpen}
+        editingLesson={{
+          id: lesson.id,
+          title: lesson.title,
+          description: lesson.description,
+          language: lesson.language,
+          cefrLevel: lesson.cefrLevel,
+          status: lesson.status,
+        }}
+        editingExercises={exercises}
+        onComplete={handleReload}
+      />
     </div>
   );
 }

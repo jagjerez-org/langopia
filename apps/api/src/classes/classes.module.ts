@@ -2,7 +2,7 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Class } from "../database/entities/class.entity.js";
 import { ClassStudent } from "../database/entities/class-student.entity.js";
-import { AcademyMember } from "../database/entities/academy-member.entity.js";
+import { Teacher } from "../database/entities/teacher.entity.js";
 import { Student } from "../database/entities/student.entity.js";
 import { Lesson } from "../database/entities/lesson.entity.js";
 import { User } from "../database/entities/user.entity.js";
@@ -18,7 +18,7 @@ import { ClassesService } from "./classes.service.js";
     TypeOrmModule.forFeature([
       Class,
       ClassStudent,
-      AcademyMember,
+      Teacher,
       Student,
       Lesson,
       User,

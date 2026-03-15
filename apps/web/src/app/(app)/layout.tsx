@@ -2,7 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { AuthProvider, useAuth } from "@/components/auth-provider";
-import { AppNav } from "@/components/app-nav";
+import { AppSidebar } from "@/components/app-sidebar";
+import { AppHeader } from "@/components/app-header";
+import { SidebarProvider } from "@/components/sidebar-context";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -22,10 +24,17 @@ function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-950">
-      <AppNav />
-      <main className="mx-auto max-w-2xl px-4 py-6">{children}</main>
-    </div>
+    <SidebarProvider>
+      <div className="flex h-screen bg-zinc-50/50 dark:bg-zinc-950">
+        <AppSidebar />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <AppHeader />
+          <main className="bg-mesh-subtle flex-1 overflow-y-auto p-6">
+            {children}
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 }
 

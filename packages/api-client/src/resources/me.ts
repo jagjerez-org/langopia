@@ -16,6 +16,9 @@ import type {
   MyLessonDetail,
   MyNotificationsList,
   QueryMyNotificationsParams,
+  MyStudentsList,
+  QueryMyStudentsParams,
+  MyStudentDetail,
 } from "../types";
 
 export class MeResource {
@@ -126,6 +129,23 @@ export class MeResource {
     return this.client.request({
       method: "POST",
       path: "/me/notifications/read-all",
+      auth: "jwt",
+    });
+  }
+
+  students(params?: QueryMyStudentsParams): Promise<MyStudentsList> {
+    return this.client.request({
+      method: "GET",
+      path: "/me/students",
+      auth: "jwt",
+      query: params as Record<string, unknown>,
+    });
+  }
+
+  studentDetail(id: string): Promise<MyStudentDetail> {
+    return this.client.request({
+      method: "GET",
+      path: `/me/students/${id}`,
       auth: "jwt",
     });
   }

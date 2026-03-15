@@ -41,6 +41,12 @@ export class CreateExerciseDto {
   @IsString()
   materialContext?: string;
 
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  mediaItemIds?: string[];
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()

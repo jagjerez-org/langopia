@@ -23,17 +23,17 @@ export interface SaveNotesRequest {
 
 export interface JoinRoomResponse {
   livekitToken: string;
+  livekitUrl: string;
   roomId: string;
-  roomName: string;
+  title: string;
+  language: string;
   participantId: string;
+  participantName: string;
   role: string;
   slides: string[];
-  notes: {
-    vocabulary: Array<{ word: string; definition: string; example: string }>;
-    corrections: Array<{ error: string; correction: string; context: string }>;
-    homework: string | null;
-    objectives: string | null;
-  } | null;
+  status: string;
+  scheduledAt: string | null;
+  durationMinutes: number | null;
 }
 
 export interface NotesResponse {

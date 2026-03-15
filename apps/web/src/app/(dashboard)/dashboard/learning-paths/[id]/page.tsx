@@ -130,7 +130,6 @@ export default function LearningPathDetailPage() {
 
   // Delete confirmations
   const [deleteLessonId, setDeleteLessonId] = useState<string | null>(null);
-  const [deletePathOpen, setDeletePathOpen] = useState(false);
 
   // Course management
   const [courses, setCourses] = useState<PathCourse[]>([]);
@@ -181,8 +180,8 @@ export default function LearningPathDetailPage() {
     if (!id) return;
     setLoadingCourses(true);
     try {
-      const data = await api.learningPaths.listCourses(id);
-      setCourses((data ?? []) as unknown as PathCourse[]);
+      const res = await api.learningPaths.listCourses(id) as { data?: unknown[] };
+      setCourses(((res as any)?.data ?? res ?? []) as unknown as PathCourse[]);
     } catch {
       // ignore
     } finally {
@@ -286,16 +285,6 @@ export default function LearningPathDetailPage() {
 
   async function handleUpdateStatus(status: string) {
     await handleUpdateField("status", status);
-  }
-
-  async function handleDeletePath() {
-    try {
-      await api.learningPaths.delete(id);
-      toast.success("Learning path deleted");
-      router.push("/dashboard/learning-paths");
-    } catch {
-      toast.error("Failed to delete learning path");
-    }
   }
 
   async function handleAddLesson(lessonId: string) {
@@ -437,13 +426,6 @@ export default function LearningPathDetailPage() {
               <option value="published">Published</option>
               <option value="archived">Archived</option>
             </select>
-            <button
-              onClick={() => setDeletePathOpen(true)}
-              className="rounded-lg border border-red-200 p-2 text-red-500 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-900/20"
-              title="Delete learning path"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
           </div>
         </div>
       </div>
@@ -783,24 +765,6 @@ export default function LearningPathDetailPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => deleteLessonId && handleRemoveLesson(deleteLessonId)} className="bg-red-600 text-white hover:bg-red-500">
               Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete path confirmation */}
-      <AlertDialog open={deletePathOpen} onOpenChange={setDeletePathOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Learning Path</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will delete the learning path. All lessons within will be preserved, only the path structure will be removed.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeletePath} className="bg-red-600 text-white hover:bg-red-500">
-              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

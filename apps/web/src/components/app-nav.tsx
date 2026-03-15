@@ -22,15 +22,18 @@ import {
   FileText,
   Bell,
   User,
+  Users,
   LogOut,
   Menu,
   X,
   LayoutDashboard,
 } from "lucide-react";
+import { PoweredByBadge } from "@/components/powered-by-badge";
 
 const navLinks = [
   { href: "/app", label: "Home", icon: Home },
   { href: "/app/classes", label: "Classes", icon: CalendarDays },
+  { href: "/app/students", label: "Students", icon: Users },
   { href: "/app/exercises", label: "Exercises", icon: Dumbbell },
   { href: "/app/reports", label: "Reports", icon: FileText },
   { href: "/app/notifications", label: "Notifications", icon: Bell },
@@ -65,12 +68,15 @@ export function AppNav() {
     <nav className="glass-strong sticky top-0 z-50 border-b border-zinc-200/40 dark:border-zinc-700/40">
       <div className="mx-auto flex h-14 max-w-2xl items-center justify-between px-4">
         {/* Logo */}
-        <Link
-          href="/app"
-          className="text-lg font-bold tracking-tight text-gradient"
-        >
-          Langopia
-        </Link>
+        <div className="flex flex-col">
+          <Link
+            href="/app"
+            className="text-lg font-bold leading-tight tracking-tight text-gradient"
+          >
+            Langopia
+          </Link>
+          <PoweredByBadge size="sm" />
+        </div>
 
         {/* Desktop nav */}
         <div className="hidden items-center gap-1 md:flex">

@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { BookOpen, Plus, Filter, ChevronRight, Search } from "lucide-react";
+import { BookOpen, Plus, Filter, Search } from "lucide-react";
+import { PageHeader, PageSkeleton, EmptyState, ListItem, GradientAvatar, PrimaryAction } from "@/components/dashboard-list";
 import { EXERCISE_LANGUAGES, CourseStatus } from "@langopia/shared/types";
 import { useAcademyLevels } from "@/hooks/use-academy-levels";
-import { toast } from "sonner";
 import { useAcademy } from "@/components/academy-provider";
 import { useRouter } from "next/navigation";
 import { useApiClient } from "@/hooks/use-api-client";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CourseWizard } from "@/components/course-wizard";
 
 interface Course {
   id: string;
@@ -32,7 +32,7 @@ interface Course {
   updatedAt: string;
 }
 
-const statusColors: Record<string, string> = {
+const STATUS_COLORS: Record<string, string> = {
   draft: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   published: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   archived: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400",
@@ -46,13 +46,8 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [total, setTotal] = useState(0);
 
-  // Create course form
-  const [creating, setCreating] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newLanguage, setNewLanguage] = useState("en");
-  const [newCefrLevel, setNewCefrLevel] = useState("B1");
-  const [newDescription, setNewDescription] = useState("");
-  const [saving, setSaving] = useState(false);
+  // Wizard
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   // Filters
   const [filterLanguage, setFilterLanguage] = useState<string>("all");
@@ -83,139 +78,40 @@ export default function CoursesPage() {
     if (selectedAcademy) loadCourses();
   }, [selectedAcademy, loadCourses]);
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!selectedAcademy || !newTitle.trim()) return;
-
-    setSaving(true);
-    try {
-      const course = await api.courses.create(selectedAcademy, {
-        title: newTitle,
-        language: newLanguage,
-        cefrLevel: newCefrLevel,
-        description: newDescription || undefined,
-      });
-      setCreating(false);
-      setNewTitle("");
-      setNewDescription("");
-      toast.success("Course created");
-      router.push(`/dashboard/courses/${course.id}`);
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Failed to create course";
-      toast.error(message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
   const hasActiveFilters =
     filterLanguage !== "all" || filterCefr !== "all" || filterStatus !== "all" || search.trim() !== "";
 
   if (academyLoading) {
-    return (
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="h-8 w-32 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="glass h-24 animate-pulse rounded-xl" />
-          ))}
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   if (!selectedAcademy) {
     return (
-      <div className="mx-auto max-w-5xl">
-        <div className="glass flex flex-col items-center justify-center rounded-xl py-16 text-center">
-          <BookOpen className="mb-3 h-10 w-10 text-zinc-400" />
-          <p className="font-medium text-zinc-500">No academy selected</p>
-          <p className="mt-1 text-sm text-zinc-400">Select an academy from the sidebar to view courses</p>
-        </div>
+      <div className="mx-auto max-w-6xl">
+        <EmptyState icon={BookOpen} title="No academy selected" description="Select an academy from the sidebar to view courses" />
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Courses</h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Manage your academy courses and their lesson structure
-          </p>
-        </div>
-        <Button onClick={() => setCreating(true)} className="bg-gradient-accent text-white">
-          <Plus className="mr-2 h-4 w-4" /> New Course
-        </Button>
-      </div>
+      <PageHeader
+        title="Courses"
+        subtitle="Manage your academy courses and their lesson structure"
+        action={
+          <PrimaryAction onClick={() => setWizardOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> New Course
+          </PrimaryAction>
+        }
+      />
 
-      {/* Create course form */}
-      {creating && (
-        <form onSubmit={handleCreate} className="glass-strong space-y-4 rounded-xl p-5">
-          <h3 className="font-semibold">Create New Course</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs font-medium text-zinc-500">Title *</label>
-              <Input
-                value={newTitle}
-                onChange={(e) => setNewTitle(e.target.value)}
-                placeholder="e.g. Business English Fundamentals"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-500">Language</label>
-              <Select value={newLanguage} onValueChange={setNewLanguage}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {EXERCISE_LANGUAGES.map((l) => (
-                    <SelectItem key={l.code} value={l.code}>
-                      {l.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-500">CEFR Level *</label>
-              <Select value={newCefrLevel} onValueChange={setNewCefrLevel}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {levelCodes.map((l) => (
-                    <SelectItem key={l} value={l}>
-                      {l}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
-              <label className="text-xs font-medium text-zinc-500">Description</label>
-              <textarea
-                value={newDescription}
-                onChange={(e) => setNewDescription(e.target.value)}
-                placeholder="Optional course description..."
-                rows={2}
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-violet-400 dark:border-zinc-700 dark:bg-zinc-800 dark:focus:border-violet-500"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button type="submit" disabled={saving || !newTitle.trim()} className="bg-gradient-accent text-white">
-              {saving ? "Creating..." : "Create Course"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setCreating(false)}>
-              Cancel
-            </Button>
-          </div>
-        </form>
-      )}
+      {/* Course Wizard */}
+      <CourseWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        onComplete={loadCourses}
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
@@ -286,60 +182,55 @@ export default function CoursesPage() {
 
       {/* Courses list */}
       {courses.length === 0 ? (
-        <div className="glass flex flex-col items-center justify-center rounded-xl py-16 text-center">
-          <BookOpen className="mb-3 h-10 w-10 text-zinc-400" />
-          <p className="font-medium text-zinc-500">No courses yet</p>
-          <p className="mt-1 text-sm text-zinc-400">Create your first course to get started</p>
-          <Button onClick={() => setCreating(true)} className="mt-4 bg-gradient-accent text-white">
-            <Plus className="mr-2 h-4 w-4" /> New Course
-          </Button>
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="No courses yet"
+          description="Create your first course to get started"
+          action={
+            <div className="mt-4">
+              <PrimaryAction onClick={() => setWizardOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" /> New Course
+              </PrimaryAction>
+            </div>
+          }
+        />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-3">
           {courses.map((course) => {
             const langName =
               EXERCISE_LANGUAGES.find((l) => l.code === course.language)?.name ?? course.language;
             return (
-              <div
+              <ListItem
                 key={course.id}
                 onClick={() => router.push(`/dashboard/courses/${course.id}`)}
-                className="glass-subtle rounded-xl border border-zinc-200/40 p-4 transition-all hover:shadow-md dark:border-zinc-700/40 cursor-pointer"
-              >
-                <div className="mb-3 flex items-start justify-between gap-2">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 text-sm font-bold text-white">
-                    {course.cefrLevel}
-                  </div>
+                avatar={<GradientAvatar>{course.cefrLevel}</GradientAvatar>}
+                title={<h3 className="font-semibold truncate">{course.title}</h3>}
+                badges={
                   <Badge
                     variant="secondary"
-                    className={`shrink-0 capitalize ${statusColors[course.status] ?? "bg-zinc-100 text-zinc-600"}`}
+                    className={`shrink-0 capitalize ${STATUS_COLORS[course.status] ?? "bg-zinc-100 text-zinc-600"}`}
                   >
                     {course.status}
                   </Badge>
-                </div>
-                <h3 className="font-semibold leading-snug line-clamp-2">{course.title}</h3>
-                {course.description && (
-                  <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{course.description}</p>
-                )}
-                <div className="mt-3 flex items-center gap-3 text-xs text-zinc-500">
-                  <span>{langName}</span>
-                  <span>&middot;</span>
-                  <span>
-                    {course.lessonCount ?? 0} lesson{(course.lessonCount ?? 0) !== 1 ? "s" : ""}
-                  </span>
-                  {course.estimatedHours && (
-                    <>
-                      <span>&middot;</span>
-                      <span>{course.estimatedHours}h</span>
-                    </>
-                  )}
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-zinc-400">
-                    {new Date(course.createdAt).toLocaleDateString()}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-zinc-400" />
-                </div>
-              </div>
+                }
+                subtitle={
+                  <>
+                    <span>{langName}</span>
+                    <span>&middot;</span>
+                    <span>
+                      {course.lessonCount ?? 0} lesson{(course.lessonCount ?? 0) !== 1 ? "s" : ""}
+                    </span>
+                    {course.estimatedHours && (
+                      <>
+                        <span>&middot;</span>
+                        <span>{course.estimatedHours}h</span>
+                      </>
+                    )}
+                    <span>&middot;</span>
+                    <span>{new Date(course.createdAt).toLocaleDateString()}</span>
+                  </>
+                }
+              />
             );
           })}
         </div>

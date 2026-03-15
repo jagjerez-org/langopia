@@ -1,6 +1,5 @@
 import type { LangopiaClient } from "../client";
 import type {
-  CreateLearningPathRequest,
   UpdateLearningPathRequest,
   QueryLearningPathsParams,
   AddLessonsRequest,
@@ -22,15 +21,6 @@ export class LearningPathsResource {
     });
   }
 
-  create(data: CreateLearningPathRequest): Promise<LearningPathResponse> {
-    return this.client.request({
-      method: "POST",
-      path: "/v1/learning-paths",
-      auth: "apikey",
-      body: data,
-    });
-  }
-
   get(id: string): Promise<LearningPathResponse> {
     return this.client.request({
       method: "GET",
@@ -45,14 +35,6 @@ export class LearningPathsResource {
       path: `/v1/learning-paths/${id}`,
       auth: "apikey",
       body: data,
-    });
-  }
-
-  delete(id: string): Promise<void> {
-    return this.client.request({
-      method: "DELETE",
-      path: `/v1/learning-paths/${id}`,
-      auth: "apikey",
     });
   }
 

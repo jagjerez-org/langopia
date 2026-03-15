@@ -25,3 +25,4 @@ export type * from "./team";
 export type * from "./financings";
 export type * from "./onboarding";
 export type * from "./academy-landing";
+export type * from "./student-app";

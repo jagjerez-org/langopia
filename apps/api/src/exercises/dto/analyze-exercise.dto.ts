@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from "class-validator";
+import { IsOptional, IsString, IsArray } from "class-validator";
+import { Transform } from "class-transformer";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class AnalyzeExerciseDto {
@@ -21,4 +22,11 @@ export class AnalyzeExerciseDto {
   @IsOptional()
   @IsString()
   materialContext?: string;
+
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @Transform(({ value }) => (Array.isArray(value) ? value : [value]))
+  @IsArray()
+  @IsString({ each: true })
+  mediaItemIds?: string[];
 }

@@ -44,6 +44,36 @@ export class Student {
   @Column({ type: "uuid", nullable: true })
   userId!: string | null;
 
+  @Column({ type: "varchar", length: 10, nullable: true })
+  nativeLanguage!: string | null;
+
+  @Column({ type: "varchar", length: 10, nullable: true })
+  learningLanguage!: string | null;
+
+  @Column({ type: "varchar", length: 5, nullable: true })
+  selfAssessedLevel!: string | null;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  learningGoal!: string | null;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  occupation!: string | null;
+
+  @Column({ type: "jsonb", default: [] })
+  interests!: string[];
+
+  @Column({ type: "int", default: 15 })
+  dailyGoalMinutes!: number;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  timezone!: string | null;
+
+  @Column({ type: "varchar", length: 500, nullable: true })
+  profileImageUrl!: string | null;
+
+  @Column({ type: "boolean", default: false })
+  onboardingCompleted!: boolean;
+
   @ManyToOne("Academy", "students")
   @JoinColumn({ name: "academyId" })
   academy!: Relation<Academy>;

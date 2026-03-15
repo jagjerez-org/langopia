@@ -8,6 +8,7 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -21,6 +22,8 @@ import { CreateCourseDto } from "./dto/create-course.dto.js";
 import { UpdateCourseDto } from "./dto/update-course.dto.js";
 import { QueryCoursesDto } from "./dto/query-courses.dto.js";
 import { ManageCourseLessonsDto } from "./dto/manage-course-lessons.dto.js";
+import { GenerateCourseDto } from "./dto/generate-course.dto.js";
+import { RefineCourseDto } from "./dto/refine-course.dto.js";
 
 @ApiTags("Courses")
 @ApiBearerAuth()
@@ -85,5 +88,25 @@ export class CoursesController {
     @Body() dto: ManageCourseLessonsDto,
   ) {
     return this.coursesService.setLessons(academy.id, id, dto);
+  }
+
+  @Post("generate")
+  @ApiOperation({ summary: "Generate course plan with AI" })
+  async generate(
+    @CurrentAcademy() academy: Academy,
+    @Req() req: { ownerId: string },
+    @Body() dto: GenerateCourseDto,
+  ) {
+    return this.coursesService.generate(academy.id, req.ownerId, dto);
+  }
+
+  @Post("generate/refine")
+  @ApiOperation({ summary: "Refine course plan via chat" })
+  async refinePlan(
+    @CurrentAcademy() academy: Academy,
+    @Req() req: { ownerId: string },
+    @Body() dto: RefineCourseDto,
+  ) {
+    return this.coursesService.refinePlan(academy.id, req.ownerId, dto);
   }
 }

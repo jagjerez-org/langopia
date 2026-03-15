@@ -12,7 +12,7 @@ import {
 } from "typeorm";
 import type { Academy } from "./academy.entity.js";
 import type { Lesson } from "./lesson.entity.js";
-import type { AcademyMember } from "./academy-member.entity.js";
+import type { Teacher } from "./teacher.entity.js";
 import type { Room } from "./room.entity.js";
 import type { User } from "./user.entity.js";
 import type { ClassStudent } from "./class-student.entity.js";
@@ -93,9 +93,9 @@ export class Class {
   @JoinColumn({ name: "lessonId" })
   lesson!: Relation<Lesson | null>;
 
-  @ManyToOne("AcademyMember", { nullable: true })
+  @ManyToOne("Teacher", { nullable: true })
   @JoinColumn({ name: "teacherId" })
-  teacher!: Relation<AcademyMember | null>;
+  teacher!: Relation<Teacher | null>;
 
   @ManyToOne("Room", { nullable: true })
   @JoinColumn({ name: "roomId" })

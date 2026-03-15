@@ -8,15 +8,22 @@ import {
   GraduationCap,
   Calendar,
   Clock,
-  Star,
   Users,
   Loader2,
+  CheckCircle,
+  XCircle,
+  Globe,
+  FileText,
+  TrendingUp,
+  UserX,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useApiKeyClient } from "@/hooks/use-api-client";
 import {
   BarChart,
   Bar,
+  AreaChart,
+  Area,
   PieChart,
   Pie,
   Cell,
@@ -27,34 +34,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-
-interface Teacher {
-  id: string;
-  name: string;
-  email: string;
-  roles: string[];
-}
-
-// --- Mock data generators ---
-
-function getMonthLabel(monthsAgo: number): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - monthsAgo);
-  return d.toLocaleString("default", { month: "short", year: "2-digit" });
-}
-
-const teachingHoursData = Array.from({ length: 6 }, (_, i) => ({
-  month: getMonthLabel(5 - i),
-  hours: Math.floor(Math.random() * 30) + 10,
-}));
-
-const ratingDistributionData = [
-  { rating: "5 stars", count: 42, fill: "#8b5cf6" },
-  { rating: "4 stars", count: 28, fill: "#a78bfa" },
-  { rating: "3 stars", count: 12, fill: "#c4b5fd" },
-  { rating: "2 stars", count: 4, fill: "#ddd6fe" },
-  { rating: "1 star", count: 1, fill: "#ede9fe" },
-];
+import type { TeacherDetailResponse } from "@langopia/api-client";
 
 const CEFR_COLORS: Record<string, string> = {
   A1: "#22c55e",
@@ -63,69 +43,29 @@ const CEFR_COLORS: Record<string, string> = {
   B2: "#f97316",
   C1: "#ef4444",
   C2: "#8b5cf6",
+  Unknown: "#a1a1aa",
 };
 
-const studentDistributionData = [
-  { level: "A1", count: 8 },
-  { level: "A2", count: 14 },
-  { level: "B1", count: 22 },
-  { level: "B2", count: 18 },
-  { level: "C1", count: 7 },
-  { level: "C2", count: 3 },
-];
+function formatDate(d: string | null | undefined) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
 
-const recentClassesData = [
-  {
-    date: "2026-03-05",
-    students: "Maria Garcia",
-    course: "Business English B2",
-    duration: "60 min",
-    rating: 5,
-  },
-  {
-    date: "2026-03-04",
-    students: "Lucas Fernandez, Ana Lopez",
-    course: "IELTS Prep",
-    duration: "90 min",
-    rating: 4,
-  },
-  {
-    date: "2026-03-03",
-    students: "Yuki Tanaka",
-    course: "Conversational A2",
-    duration: "45 min",
-    rating: 5,
-  },
-  {
-    date: "2026-03-01",
-    students: "Pierre Dupont",
-    course: "Academic Writing C1",
-    duration: "60 min",
-    rating: 4,
-  },
-  {
-    date: "2026-02-28",
-    students: "Sara Kim, Jin Park",
-    course: "General English B1",
-    duration: "60 min",
-    rating: 5,
-  },
-  {
-    date: "2026-02-27",
-    students: "Marco Rossi",
-    course: "Travel English A1",
-    duration: "45 min",
-    rating: 3,
-  },
-];
-
-// --- Component ---
+function timeAgo(d: string | null | undefined) {
+  if (!d) return "Never";
+  const diff = Date.now() - new Date(d).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 30) return `${days}d ago`;
+  return formatDate(d);
+}
 
 export default function TeacherDetailPage() {
   const params = useParams<{ id: string }>();
   const api = useApiKeyClient();
 
-  const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const [teacher, setTeacher] = useState<TeacherDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -134,7 +74,7 @@ export default function TeacherDetailPage() {
     setError(false);
     try {
       const data = await api.teachers.get(params.id);
-      setTeacher(data as unknown as Teacher);
+      setTeacher(data);
     } catch {
       setError(true);
     } finally {
@@ -148,7 +88,7 @@ export default function TeacherDetailPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex items-center gap-3">
           <div className="h-5 w-5 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
           <div className="h-8 w-48 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
@@ -162,7 +102,7 @@ export default function TeacherDetailPage() {
 
   if (error || !teacher) {
     return (
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
         <Link
           href="/dashboard/teachers"
           className="inline-flex items-center gap-2 text-sm text-zinc-500 transition-colors hover:text-zinc-900 dark:hover:text-white"
@@ -178,44 +118,13 @@ export default function TeacherDetailPage() {
     );
   }
 
-  // Mock KPIs
-  const totalClasses = 87;
-  const totalHours = teachingHoursData.reduce((sum, d) => sum + d.hours, 0);
-  const avgRating = 4.6;
-  const activeStudents = studentDistributionData.reduce(
-    (sum, d) => sum + d.count,
-    0,
+  const totalHours = Math.round(teacher.totalMinutes / 60);
+  const memberSinceDays = Math.floor(
+    (Date.now() - new Date(teacher.createdAt).getTime()) / 86400000,
   );
 
-  const kpis = [
-    {
-      label: "Total Classes",
-      value: totalClasses,
-      icon: Calendar,
-      color: "text-violet-500",
-    },
-    {
-      label: "Total Hours",
-      value: `${totalHours}h`,
-      icon: Clock,
-      color: "text-blue-500",
-    },
-    {
-      label: "Avg. Rating",
-      value: avgRating.toFixed(1),
-      icon: Star,
-      color: "text-amber-500",
-    },
-    {
-      label: "Active Students",
-      value: activeStudents,
-      icon: Users,
-      color: "text-emerald-500",
-    },
-  ];
-
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       {/* Header */}
       <div className="space-y-4">
         <Link
@@ -231,221 +140,259 @@ export default function TeacherDetailPage() {
             {teacher.name.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold tracking-tight">
-              {teacher.name}
-            </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight">
+                {teacher.name}
+              </h1>
+              <Badge variant="secondary" className={teacher.isActive ? "" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}>
+                {teacher.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+            <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
               {teacher.email}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {teacher.roles.map((role) => (
-              <Badge key={role} variant="secondary" className="capitalize">
-                {role}
-              </Badge>
-            ))}
-          </div>
-          <div className="text-right text-xs text-zinc-400">
-            <span>Joined Mar 2025</span>
+          <div className="hidden text-right text-xs text-zinc-400 sm:block">
+            <p>Member since {formatDate(teacher.createdAt)}</p>
+            <p className="mt-0.5">{memberSinceDays} days in the academy</p>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {kpis.map((kpi) => (
+      {/* KPI Cards — 2 rows */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {[
+          { label: "Total Classes", value: teacher.totalClasses, icon: Calendar, color: "text-violet-500 bg-violet-100 dark:bg-violet-900/30" },
+          { label: "Total Hours", value: `${totalHours}h`, icon: Clock, color: "text-amber-500 bg-amber-100 dark:bg-amber-900/30" },
+          { label: "Unique Students", value: teacher.uniqueStudents, icon: Users, color: "text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30" },
+          { label: "Completed", value: teacher.completedClasses, icon: CheckCircle, color: "text-green-500 bg-green-100 dark:bg-green-900/30" },
+          { label: "Cancel Rate", value: `${teacher.cancelRate}%`, icon: XCircle, color: "text-red-500 bg-red-100 dark:bg-red-900/30" },
+          { label: "Avg Duration", value: `${teacher.avgDuration}m`, icon: TrendingUp, color: "text-blue-500 bg-blue-100 dark:bg-blue-900/30" },
+        ].map((kpi) => (
           <div
             key={kpi.label}
-            className="glass-subtle rounded-xl border border-zinc-200/40 p-6 dark:border-zinc-700/40"
+            className="glass-subtle rounded-xl border border-zinc-200/40 p-4 dark:border-zinc-700/40"
           >
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-800 ${kpi.color}`}
-              >
-                <kpi.icon className="h-5 w-5" />
+            <div className="flex items-center gap-2.5">
+              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${kpi.color}`}>
+                <kpi.icon className="h-4 w-4" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{kpi.value}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                  {kpi.label}
-                </p>
+              <div className="min-w-0">
+                <p className="text-xl font-bold">{kpi.value}</p>
+                <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{kpi.label}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Charts Row */}
+      {/* Quick info row */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Languages */}
+        <div className="glass-subtle rounded-xl border border-zinc-200/40 p-5 dark:border-zinc-700/40">
+          <div className="mb-3 flex items-center gap-2">
+            <Globe className="h-4 w-4 text-zinc-400" />
+            <h2 className="text-sm font-semibold">Languages Taught</h2>
+          </div>
+          {teacher.languagesTaught.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {teacher.languagesTaught.map((lang) => (
+                <span
+                  key={lang}
+                  className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-medium capitalize text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
+                >
+                  {lang}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-400">No classes yet</p>
+          )}
+        </div>
+
+        {/* Quick stats */}
+        <div className="glass-subtle rounded-xl border border-zinc-200/40 p-5 dark:border-zinc-700/40">
+          <div className="mb-3 flex items-center gap-2">
+            <UserX className="h-4 w-4 text-zinc-400" />
+            <h2 className="text-sm font-semibold">Student No-Show Rate</h2>
+          </div>
+          <p className="text-3xl font-bold">{teacher.noShowRate}%</p>
+          <p className="mt-1 text-xs text-zinc-500">of enrolled students didn&apos;t attend</p>
+        </div>
+
+        {/* AI reports + last class */}
+        <div className="glass-subtle rounded-xl border border-zinc-200/40 p-5 dark:border-zinc-700/40">
+          <div className="mb-3 flex items-center gap-2">
+            <FileText className="h-4 w-4 text-zinc-400" />
+            <h2 className="text-sm font-semibold">AI Reports</h2>
+          </div>
+          <p className="text-3xl font-bold">{teacher.aiReportsCount}</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Last class: {timeAgo(teacher.lastClassAt)}
+          </p>
+        </div>
+      </div>
+
+      {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Teaching Hours Chart */}
+        {/* Weekly Activity */}
         <div className="glass-subtle rounded-xl border border-zinc-200/40 p-6 dark:border-zinc-700/40">
-          <h2 className="mb-4 text-sm font-semibold">
-            Teaching Hours (Last 6 Months)
-          </h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={teachingHoursData}>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(113,113,122,0.2)"
-                />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 12 }}
-                  stroke="rgba(113,113,122,0.5)"
-                />
-                <YAxis
-                  tick={{ fontSize: 12 }}
-                  stroke="rgba(113,113,122,0.5)"
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(24,24,27,0.9)",
-                    border: "1px solid rgba(113,113,122,0.3)",
-                    borderRadius: "8px",
-                    color: "#fff",
-                  }}
-                />
-                <Bar dataKey="hours" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <h2 className="mb-4 text-sm font-semibold">Weekly Activity (Last 8 Weeks)</h2>
+          <div className="h-52">
+            {teacher.weeklyActivity.some((w) => w.classes > 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={teacher.weeklyActivity}>
+                  <defs>
+                    <linearGradient id="colorTeacherClasses" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(161,161,170,0.2)" />
+                  <XAxis dataKey="week" tick={{ fontSize: 12, fill: "#a1a1aa" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: "#a1a1aa" }} axisLine={false} tickLine={false} allowDecimals={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "rgba(24,24,27,0.9)",
+                      border: "1px solid rgba(63,63,70,0.4)",
+                      borderRadius: "8px",
+                      color: "#fafafa",
+                      fontSize: "13px",
+                    }}
+                  />
+                  <Area type="monotone" dataKey="classes" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorTeacherClasses)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-zinc-400">
+                No activity in the last 8 weeks
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Rating Distribution Chart */}
+        {/* Teaching Hours */}
         <div className="glass-subtle rounded-xl border border-zinc-200/40 p-6 dark:border-zinc-700/40">
-          <h2 className="mb-4 text-sm font-semibold">Rating Distribution</h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={ratingDistributionData} layout="vertical">
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="rgba(113,113,122,0.2)"
-                />
-                <XAxis
-                  type="number"
-                  tick={{ fontSize: 12 }}
-                  stroke="rgba(113,113,122,0.5)"
-                />
-                <YAxis
-                  type="category"
-                  dataKey="rating"
-                  tick={{ fontSize: 12 }}
-                  stroke="rgba(113,113,122,0.5)"
-                  width={60}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "rgba(24,24,27,0.9)",
-                    border: "1px solid rgba(113,113,122,0.3)",
-                    borderRadius: "8px",
-                    color: "#fff",
-                  }}
-                />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                  {ratingDistributionData.map((entry, index) => (
-                    <Cell key={index} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <h2 className="mb-4 text-sm font-semibold">Teaching Hours (Last 6 Months)</h2>
+          <div className="h-52">
+            {teacher.monthlyHours.some((m) => m.hours > 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={teacher.monthlyHours}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(113,113,122,0.2)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="rgba(113,113,122,0.5)" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="rgba(113,113,122,0.5)" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "rgba(24,24,27,0.9)",
+                      border: "1px solid rgba(113,113,122,0.3)",
+                      borderRadius: "8px",
+                      color: "#fff",
+                    }}
+                  />
+                  <Bar dataKey="hours" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-zinc-400">
+                No teaching hours in the last 6 months
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Student Distribution */}
-      <div className="glass-subtle rounded-xl border border-zinc-200/40 p-6 dark:border-zinc-700/40">
-        <h2 className="mb-4 text-sm font-semibold">
-          Student Distribution by CEFR Level
-        </h2>
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={studentDistributionData}
-                dataKey="count"
-                nameKey="level"
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={3}
-                label={({ name, value }: { name?: string; value?: number }) => `${name ?? ""}: ${value ?? 0}`}
-              >
-                {studentDistributionData.map((entry) => (
-                  <Cell
-                    key={entry.level}
-                    fill={CEFR_COLORS[entry.level]}
-                    stroke="none"
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "rgba(24,24,27,0.9)",
-                  border: "1px solid rgba(113,113,122,0.3)",
-                  borderRadius: "8px",
-                  color: "#fff",
-                }}
-              />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+      {teacher.studentLevelDistribution.length > 0 && (
+        <div className="glass-subtle rounded-xl border border-zinc-200/40 p-6 dark:border-zinc-700/40">
+          <h2 className="mb-4 text-sm font-semibold">Students by CEFR Level</h2>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={teacher.studentLevelDistribution}
+                  dataKey="count"
+                  nameKey="level"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={85}
+                  paddingAngle={3}
+                  label={({ name, value }: { name?: string; value?: number }) =>
+                    `${name ?? ""}: ${value ?? 0}`
+                  }
+                >
+                  {teacher.studentLevelDistribution.map((entry) => (
+                    <Cell key={entry.level} fill={CEFR_COLORS[entry.level] ?? "#a1a1aa"} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "rgba(24,24,27,0.9)",
+                    border: "1px solid rgba(113,113,122,0.3)",
+                    borderRadius: "8px",
+                    color: "#fff",
+                  }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Recent Classes Table */}
-      <div className="glass-subtle rounded-xl border border-zinc-200/40 p-6 dark:border-zinc-700/40">
-        <h2 className="mb-4 text-sm font-semibold">Recent Classes</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-zinc-200/40 text-left text-xs text-zinc-500 dark:border-zinc-700/40">
-                <th className="pb-3 pr-4 font-medium">Date</th>
-                <th className="pb-3 pr-4 font-medium">Student(s)</th>
-                <th className="pb-3 pr-4 font-medium">Course</th>
-                <th className="pb-3 pr-4 font-medium">Duration</th>
-                <th className="pb-3 font-medium">Rating</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentClassesData.map((cls, i) => (
-                <tr
-                  key={i}
-                  className="border-b border-zinc-100/40 last:border-0 dark:border-zinc-800/40"
-                >
-                  <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                    {new Date(cls.date).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </td>
-                  <td className="py-3 pr-4">{cls.students}</td>
-                  <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                    {cls.course}
-                  </td>
-                  <td className="py-3 pr-4 text-zinc-600 dark:text-zinc-400">
-                    {cls.duration}
-                  </td>
-                  <td className="py-3">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }, (_, si) => (
-                        <Star
-                          key={si}
-                          className={`h-3.5 w-3.5 ${
-                            si < cls.rating
-                              ? "fill-amber-500 text-amber-500"
-                              : "text-zinc-300 dark:text-zinc-600"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="glass-subtle overflow-hidden rounded-xl border border-zinc-200/40 dark:border-zinc-700/40">
+        <div className="p-5 pb-0">
+          <h2 className="mb-3 text-sm font-semibold">
+            Recent Classes
+            <span className="ml-2 text-xs font-normal text-zinc-400">
+              ({teacher.recentClasses.length})
+            </span>
+          </h2>
         </div>
+        {teacher.recentClasses.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-zinc-200/40 text-left text-xs text-zinc-500 dark:border-zinc-700/40">
+                  <th className="px-5 py-2.5 font-medium">Date</th>
+                  <th className="px-5 py-2.5 font-medium">Title</th>
+                  <th className="px-5 py-2.5 font-medium">Student(s)</th>
+                  <th className="px-5 py-2.5 font-medium">Type</th>
+                  <th className="px-5 py-2.5 font-medium">Lang</th>
+                  <th className="px-5 py-2.5 font-medium">Duration</th>
+                  <th className="px-5 py-2.5 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teacher.recentClasses.map((cls) => (
+                  <tr
+                    key={cls.classId}
+                    className="border-b border-zinc-100/40 last:border-0 hover:bg-zinc-50/50 dark:border-zinc-800/40 dark:hover:bg-zinc-800/30"
+                  >
+                    <td className="whitespace-nowrap px-5 py-2.5 text-zinc-600 dark:text-zinc-400">
+                      {new Date(cls.scheduledAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                    </td>
+                    <td className="px-5 py-2.5 font-medium">{cls.title}</td>
+                    <td className="max-w-[200px] truncate px-5 py-2.5">{cls.students || "—"}</td>
+                    <td className="px-5 py-2.5 capitalize text-zinc-500">{cls.classType}</td>
+                    <td className="px-5 py-2.5 capitalize text-zinc-500">{cls.language}</td>
+                    <td className="px-5 py-2.5 text-zinc-600 dark:text-zinc-400">{cls.durationMinutes}m</td>
+                    <td className="px-5 py-2.5">
+                      <Badge variant="secondary" className="capitalize">
+                        {cls.status.replace(/_/g, " ")}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center py-10 text-sm text-zinc-400">
+            No classes yet
+          </div>
+        )}
       </div>
     </div>
   );

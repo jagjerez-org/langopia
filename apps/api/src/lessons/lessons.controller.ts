@@ -193,4 +193,57 @@ export class LessonsController {
   ) {
     await this.lessonsService.unlinkExercise(academy.id, id, exerciseId);
   }
+
+  // ─── Versions ──────────────────────────────────────────
+
+  @Post(":id/versions")
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: "Snapshot current lesson state as a new version" })
+  async createVersion(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+  ) {
+    return this.lessonsService.createVersion(academy.id, id);
+  }
+
+  @Get(":id/versions")
+  @ApiOperation({ summary: "List versions for a lesson" })
+  async listVersions(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+  ) {
+    return this.lessonsService.listVersions(academy.id, id);
+  }
+
+  @Get(":id/versions/:vid")
+  @ApiOperation({ summary: "Get version with full exercise snapshot" })
+  async getVersion(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+    @Param("vid") vid: string,
+  ) {
+    return this.lessonsService.getVersion(academy.id, id, vid);
+  }
+
+  @Post(":id/versions/:vid/restore")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Restore lesson from a version snapshot" })
+  async restoreVersion(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+    @Param("vid") vid: string,
+  ) {
+    return this.lessonsService.restoreVersion(academy.id, id, vid);
+  }
+
+  // ─── KPIs ──────────────────────────────────────────────
+
+  @Get(":id/kpis")
+  @ApiOperation({ summary: "Get aggregated lesson usage KPIs" })
+  async getKpis(
+    @CurrentAcademy() academy: Academy,
+    @Param("id") id: string,
+  ) {
+    return this.lessonsService.getLessonKpis(academy.id, id);
+  }
 }
