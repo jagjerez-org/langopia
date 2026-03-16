@@ -7,6 +7,7 @@ import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 @Injectable()
 export class StorageService {
@@ -35,6 +36,8 @@ export class StorageService {
           secretAccessKey: this.secretKey,
         },
         forcePathStyle: true,
+        requestChecksumCalculation: "WHEN_REQUIRED",
+        responseChecksumValidation: "WHEN_REQUIRED",
       });
     }
     return this.s3Client;
@@ -46,6 +49,15 @@ export class StorageService {
 
   getUrl(key: string): string {
     return `${this.endpoint}/${this.bucket}/${key}`;
+  }
+
+  async getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
+    const client = this.getS3Client();
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+    return getSignedUrl(client as any, command as any, { expiresIn });
   }
 
   async uploadToS3(

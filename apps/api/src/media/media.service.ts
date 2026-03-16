@@ -40,6 +40,11 @@ export class MediaService {
     private readonly mediaProcessing: MediaProcessingService,
   ) {}
 
+  private async withPreviewUrl(item: MediaItem): Promise<MediaItem & { previewUrl: string }> {
+    const previewUrl = await this.storage.getPresignedUrl(item.storageKey);
+    return Object.assign(item, { previewUrl });
+  }
+
   // POST /v1/media — Upload single file
   async uploadSingle(
     academyId: string,
@@ -87,7 +92,7 @@ export class MediaService {
       where: { academyId, contentHash },
     });
     if (existing) {
-      return { data: existing, duplicate: true };
+      return { data: await this.withPreviewUrl(existing), duplicate: true };
     }
 
     // Upload to MinIO
@@ -130,7 +135,7 @@ export class MediaService {
         this.logger.error("Background media analysis failed:", err),
       );
 
-    return { data: saved, duplicate: false };
+    return { data: await this.withPreviewUrl(saved), duplicate: false };
   }
 
   // GET /v1/media — List media items
@@ -174,7 +179,8 @@ export class MediaService {
       );
     }
 
-    const [data, total] = await qb.getManyAndCount();
+    const [items, total] = await qb.getManyAndCount();
+    const data = await Promise.all(items.map((item) => this.withPreviewUrl(item)));
 
     return { data, total, limit, offset };
   }
@@ -191,7 +197,7 @@ export class MediaService {
       throw new NotFoundException("Media item not found");
     }
 
-    return { data: item };
+    return { data: await this.withPreviewUrl(item) };
   }
 
   // PATCH /v1/media/:id — Edit metadata
@@ -346,7 +352,7 @@ export class MediaService {
         where: { academyId, contentHash },
       });
       if (existing) {
-        results.push({ mediaItem: existing, duplicate: true });
+        results.push({ mediaItem: await this.withPreviewUrl(existing), duplicate: true });
         continue;
       }
 
@@ -391,7 +397,7 @@ export class MediaService {
           ),
         );
 
-      results.push({ mediaItem: saved, duplicate: false });
+      results.push({ mediaItem: await this.withPreviewUrl(saved), duplicate: false });
     }
 
     return { data: results };

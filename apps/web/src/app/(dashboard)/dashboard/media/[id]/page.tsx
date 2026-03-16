@@ -37,6 +37,7 @@ interface MediaItemDetail {
   mimeType: string;
   fileSize: number;
   storageUrl: string;
+  previewUrl: string;
   status: string;
   totalPages: number;
   processedPages: number;
@@ -214,13 +215,13 @@ export default function MediaDetailPage() {
         <div className="flex items-center justify-center bg-zinc-50 dark:bg-zinc-800/30">
           {item.mimeType.startsWith("image/") ? (
             <img
-              src={item.storageUrl}
+              src={item.previewUrl}
               alt={item.filename}
               className="max-h-96 object-contain"
             />
           ) : item.mimeType === "application/pdf" ? (
             <iframe
-              src={item.storageUrl}
+              src={item.previewUrl}
               title={item.filename}
               className="h-[500px] w-full"
             />
@@ -229,7 +230,7 @@ export default function MediaDetailPage() {
               <FileText className="h-12 w-12" />
               <p className="text-sm">Preview not available for this file type</p>
               <a
-                href={item.storageUrl}
+                href={item.previewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-violet-600 underline hover:text-violet-700"
