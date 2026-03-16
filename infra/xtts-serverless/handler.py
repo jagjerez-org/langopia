@@ -26,6 +26,13 @@ import torch
 import torchaudio
 import runpod
 
+# PyTorch 2.6+ defaults weights_only=True which breaks XTTS model loading.
+# Patch torch.load to allow unsafe deserialization (trusted model source).
+_original_torch_load = torch.load
+torch.load = lambda *args, **kwargs: _original_torch_load(
+    *args, **{**kwargs, "weights_only": False}
+)
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 SUPPORTED_LANGS = [
