@@ -16,7 +16,8 @@ RUN pip3 install --no-cache-dir \
     "transformers>=4.33.0,<4.41.0" \
     TTS \
     runpod \
-    torchaudio
+    torchaudio \
+    soundfile
 
 WORKDIR /app
 

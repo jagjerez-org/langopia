@@ -23,7 +23,6 @@ import uuid
 import base64
 import io
 import torch
-import torchaudio
 import runpod
 
 # PyTorch 2.6+ defaults weights_only=True which breaks XTTS model loading.
@@ -32,6 +31,10 @@ _original_torch_load = torch.load
 torch.load = lambda *args, **kwargs: _original_torch_load(
     *args, **{**kwargs, "weights_only": False}
 )
+
+# Force torchaudio to use soundfile backend (avoids torchcodec dependency)
+import torchaudio
+torchaudio.set_audio_backend("soundfile")
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
