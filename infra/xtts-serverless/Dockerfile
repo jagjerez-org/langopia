@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.1.0-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.1.1-cudnn8-runtime-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -8,15 +8,18 @@ ENV COQUI_TOS_AGREED=1
 
 # System deps
 RUN apt-get update && apt-get install -y \
-    python3 python3-pip python3-venv git ffmpeg \
+    python3 python3-pip python3-venv git ffmpeg libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Python deps — install TTS (Coqui XTTS v2) + RunPod SDK
+# Python deps — split installs to avoid index conflicts
+RUN pip3 install --no-cache-dir \
+    "torch>=2.1.0,<2.4.0" \
+    "torchaudio>=2.1.0,<2.4.0"
+
 RUN pip3 install --no-cache-dir \
     "transformers>=4.33.0,<4.41.0" \
     TTS \
     runpod \
-    torchaudio \
     soundfile
 
 WORKDIR /app

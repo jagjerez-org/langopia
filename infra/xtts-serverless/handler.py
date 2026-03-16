@@ -32,9 +32,9 @@ torch.load = lambda *args, **kwargs: _original_torch_load(
     *args, **{**kwargs, "weights_only": False}
 )
 
-# Force torchaudio to use soundfile backend (avoids torchcodec dependency)
+# torchaudio.set_audio_backend() removed in torchaudio >= 2.1
+# soundfile is installed as a dependency — torchaudio auto-detects it
 import torchaudio
-torchaudio.set_audio_backend("soundfile")
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
