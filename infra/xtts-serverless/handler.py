@@ -26,6 +26,13 @@ import torch
 import torchaudio
 import runpod
 
+# PyTorch 2.6+ defaults weights_only=True which breaks XTTS model loading.
+# Patch torch.load to allow unsafe deserialization (trusted model source).
+_original_torch_load = torch.load
+torch.load = lambda *args, **kwargs: _original_torch_load(
+    *args, **{**kwargs, "weights_only": False}
+)
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 SUPPORTED_LANGS = [
@@ -44,13 +51,15 @@ print("XTTS v2 loaded!")
 # Generate a short default reference clip for when no speaker_wav is provided
 DEFAULT_REF = "/tmp/default_speaker.wav"
 if not os.path.exists(DEFAULT_REF):
-    # Use the built-in speaker embedding via tts_to_file with a dummy reference
-    # XTTS v2 requires a reference audio — we'll create a minimal one
-    import numpy as np
+    import wave
+    import struct
     sr = 22050
-    # 1 second of silence as fallback (XTTS will use its default voice characteristics)
-    silence = torch.zeros(1, sr)
-    torchaudio.save(DEFAULT_REF, silence, sr)
+    # 1 second of silence as a valid WAV file (no torchaudio/torchcodec needed)
+    with wave.open(DEFAULT_REF, "w") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sr)
+        wf.writeframes(struct.pack(f"<{sr}h", *([0] * sr)))
 
 
 def handler(event):
