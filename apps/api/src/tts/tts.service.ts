@@ -33,6 +33,7 @@ export class TTSService {
   isTTSAvailable(): boolean {
     return (
       !!this.config.get<string>("ELEVENLABS_API_KEY") ||
+      !!this.config.get<string>("RUNPOD_TTS_ENDPOINT_ID") ||
       !!this.config.get<string>("LOCAL_TTS_URL")
     );
   }
@@ -62,30 +63,90 @@ export class TTSService {
       });
     }
 
+    if (
+      this.config.get<string>("RUNPOD_API_KEY") &&
+      this.config.get<string>("RUNPOD_TTS_ENDPOINT_ID")
+    ) {
+      const apiKey = this.config.get<string>("RUNPOD_API_KEY")!;
+      const endpointId = this.config.get<string>("RUNPOD_TTS_ENDPOINT_ID")!;
+      const baseUrl = `https://api.runpod.ai/v2/${endpointId}`;
+      providers.push({
+        name: "RunPod",
+        synthesize: async (
+          text: string,
+          language: string,
+        ): Promise<Buffer> => {
+          const runRes = await fetch(`${baseUrl}/run`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ input: { text, language } }),
+          });
+          if (!runRes.ok) {
+            throw new Error(
+              `RunPod /run returned ${runRes.status}: ${runRes.statusText}`,
+            );
+          }
+          const { id: jobId } = (await runRes.json()) as { id: string };
+
+          const timeout = 60_000;
+          const interval = 1_000;
+          const start = Date.now();
+          while (Date.now() - start < timeout) {
+            await new Promise((r) => setTimeout(r, interval));
+            const statusRes = await fetch(`${baseUrl}/status/${jobId}`, {
+              headers: { Authorization: `Bearer ${apiKey}` },
+            });
+            if (!statusRes.ok) {
+              throw new Error(
+                `RunPod /status returned ${statusRes.status}: ${statusRes.statusText}`,
+              );
+            }
+            const job = (await statusRes.json()) as {
+              status: string;
+              output?: { audio_base64?: string; error?: string };
+            };
+            if (job.status === "COMPLETED") {
+              if (!job.output?.audio_base64) {
+                throw new Error(
+                  `RunPod job completed without audio: ${JSON.stringify(job.output)}`,
+                );
+              }
+              return Buffer.from(job.output.audio_base64, "base64");
+            }
+            if (job.status === "FAILED") {
+              throw new Error(
+                `RunPod job failed: ${job.output?.error ?? "unknown error"}`,
+              );
+            }
+          }
+          throw new Error(`RunPod job ${jobId} timed out after ${timeout}ms`);
+        },
+      });
+    }
+
     if (this.config.get<string>("LOCAL_TTS_URL")) {
-      const url =
-        this.config.get<string>("LOCAL_TTS_URL") ??
-        "http://192.168.0.17:8020/tts";
+      const url = this.config.get<string>("LOCAL_TTS_URL")!;
       providers.push({
         name: "LocalTTS",
         synthesize: async (
           text: string,
           language: string,
         ): Promise<Buffer> => {
-          const formData = new FormData();
-          formData.append("text", text);
-          formData.append("language", language);
           const response = await fetch(url, {
             method: "POST",
-            body: formData,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text, language }),
           });
           if (!response.ok) {
             throw new Error(
               `Local TTS returned ${response.status}: ${response.statusText}`,
             );
           }
-          const arrayBuffer = await response.arrayBuffer();
-          return Buffer.from(arrayBuffer);
+          const json = (await response.json()) as { audio_base64: string };
+          return Buffer.from(json.audio_base64, "base64");
         },
       });
     }
