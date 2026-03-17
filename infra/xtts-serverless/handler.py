@@ -12,7 +12,7 @@ Input:
 
 Output:
   {
-    "audio_base64": "<base64 encoded WAV>",
+    "audio_base64": "<base64 encoded MP3>",
     "sample_rate": 24000,
     "language": "en"
   }
@@ -21,7 +21,7 @@ Output:
 import os
 import uuid
 import base64
-import io
+import subprocess
 import torch
 import runpod
 
@@ -43,26 +43,14 @@ SUPPORTED_LANGS = [
     "nl", "cs", "ar", "zh-cn", "ja", "ko", "hu", "hi",
 ]
 
-# Default speaker reference (built-in)
-DEFAULT_SPEAKER_WAV = None
+# Built-in XTTS v2 speaker used when no custom speaker_wav is provided.
+# "Ana Florence" is a multilingual female speaker bundled with the model.
+DEFAULT_SPEAKER = "Ana Florence"
 
 print(f"Loading XTTS v2 on {device}...")
 from TTS.api import TTS
 tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 print("XTTS v2 loaded!")
-
-# Generate a short default reference clip for when no speaker_wav is provided
-DEFAULT_REF = "/tmp/default_speaker.wav"
-if not os.path.exists(DEFAULT_REF):
-    import wave
-    import struct
-    sr = 22050
-    # 1 second of silence as a valid WAV file (no torchaudio/torchcodec needed)
-    with wave.open(DEFAULT_REF, "w") as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(sr)
-        wf.writeframes(struct.pack(f"<{sr}h", *([0] * sr)))
 
 
 def handler(event):
@@ -84,27 +72,38 @@ def handler(event):
 
     uid = uuid.uuid4().hex[:8]
     ref_path = None
-    output_path = f"/tmp/out_{uid}.wav"
+    wav_path = f"/tmp/out_{uid}.wav"
+    mp3_path = f"/tmp/out_{uid}.mp3"
 
     try:
-        # Handle speaker reference
+        # Generate speech with XTTS v2
         if speaker_b64:
             ref_path = f"/tmp/ref_{uid}.wav"
             with open(ref_path, "wb") as f:
                 f.write(base64.b64decode(speaker_b64))
+            tts.tts_to_file(
+                text=text,
+                speaker_wav=ref_path,
+                language=lang,
+                file_path=wav_path,
+            )
         else:
-            ref_path = DEFAULT_REF
+            # Use built-in XTTS speaker (no speaker_wav needed)
+            tts.tts_to_file(
+                text=text,
+                speaker=DEFAULT_SPEAKER,
+                language=lang,
+                file_path=wav_path,
+            )
 
-        # Generate speech with XTTS v2
-        tts.tts_to_file(
-            text=text,
-            speaker_wav=ref_path,
-            language=lang,
-            file_path=output_path,
+        # Convert WAV → MP3 so the stored content-type matches the data
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", wav_path, "-codec:a", "libmp3lame", "-b:a", "128k", mp3_path],
+            check=True,
+            capture_output=True,
         )
 
-        # Read and encode output
-        with open(output_path, "rb") as f:
+        with open(mp3_path, "rb") as f:
             audio_b64 = base64.b64encode(f.read()).decode("utf-8")
 
         return {
@@ -117,10 +116,9 @@ def handler(event):
         return {"error": str(e)}
 
     finally:
-        if speaker_b64 and ref_path and os.path.exists(ref_path):
-            os.remove(ref_path)
-        if os.path.exists(output_path):
-            os.remove(output_path)
+        for p in [ref_path, wav_path, mp3_path]:
+            if p and os.path.exists(p):
+                os.remove(p)
 
 
 runpod.serverless.start({"handler": handler})

@@ -14,9 +14,9 @@ Set LOCAL_TTS_URL=http://localhost:8020/tts in your .env
 import os
 import uuid
 import base64
+import subprocess
 
 import torch
-import torchaudio
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -27,17 +27,14 @@ SUPPORTED_LANGS = [
     "nl", "cs", "ar", "zh-cn", "ja", "ko", "hu", "hi",
 ]
 
+# Built-in XTTS v2 speaker used when no custom speaker_wav is provided.
+DEFAULT_SPEAKER = "Ana Florence"
+
 print(f"Loading XTTS v2 on {device}...")
 from TTS.api import TTS  # noqa: E402
 
 tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 print("XTTS v2 loaded!")
-
-# Default speaker reference
-DEFAULT_REF = "/tmp/default_speaker.wav"
-if not os.path.exists(DEFAULT_REF):
-    silence = torch.zeros(1, 22050)
-    torchaudio.save(DEFAULT_REF, silence, 22050)
 
 app = FastAPI(title="XTTS v2 Local Server")
 
@@ -62,22 +59,33 @@ def synthesize(req: TTSRequest):
         raise HTTPException(400, f"Unsupported language '{lang}'. Supported: {SUPPORTED_LANGS}")
 
     uid = uuid.uuid4().hex[:8]
-    output_path = f"/tmp/xtts_out_{uid}.wav"
+    wav_path = f"/tmp/xtts_out_{uid}.wav"
+    mp3_path = f"/tmp/xtts_out_{uid}.mp3"
 
     try:
+        # Use built-in XTTS speaker (no speaker_wav needed)
         tts.tts_to_file(
             text=req.text,
-            speaker_wav=DEFAULT_REF,
+            speaker=DEFAULT_SPEAKER,
             language=lang,
-            file_path=output_path,
+            file_path=wav_path,
         )
-        with open(output_path, "rb") as f:
+
+        # Convert WAV → MP3 so the stored content-type matches the data
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", wav_path, "-codec:a", "libmp3lame", "-b:a", "128k", mp3_path],
+            check=True,
+            capture_output=True,
+        )
+
+        with open(mp3_path, "rb") as f:
             audio_b64 = base64.b64encode(f.read()).decode("utf-8")
 
         return TTSResponse(audio_base64=audio_b64, sample_rate=24000, language=lang)
     finally:
-        if os.path.exists(output_path):
-            os.remove(output_path)
+        for p in [wav_path, mp3_path]:
+            if os.path.exists(p):
+                os.remove(p)
 
 
 if __name__ == "__main__":
