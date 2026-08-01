@@ -9,6 +9,11 @@ export default defineConfig({
   output: "server",
   adapter: vercel(),
   vite: {
+    ssr: {
+      // Evita que `cookie` (CJS) se importe con named exports en el runtime
+      // serverless de Vercel; Astro lo empaqueta como dependencia interna.
+      noExternal: ["cookie"],
+    },
     server: {
       // La app sirve TODOS los dominios de las escuelas: en desarrollo la
       // lista blanca de hosts de Vite bloquearía cualquier `Host` que no sea

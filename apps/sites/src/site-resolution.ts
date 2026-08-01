@@ -11,6 +11,9 @@ export async function resolveSiteForRequest({
   apiUrl,
   request,
 }: ResolveSiteOptions): Promise<SiteResolution | null> {
+  if (!apiUrl || !URL.canParse(apiUrl)) {
+    return null;
+  }
   const host = normalizeHost(request.headers.get("host"));
   const endpoint = new URL("/api/v1/public/sites/resolve", apiUrl);
   endpoint.searchParams.set("host", host);

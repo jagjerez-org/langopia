@@ -23,7 +23,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (!apiUrl) {
     return new Response("API_URL no configurada", { status: 503 });
   }
-  const { pathname, search } = new URL(context.request.url);
+  const { pathname, search } = context.url;
 
   if (pathname.startsWith("/api/")) {
     return fetch(`${apiUrl}${pathname}${search}`, context.request);
