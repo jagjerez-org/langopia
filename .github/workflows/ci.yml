@@ -12,7 +12,9 @@ jobs:
 
     services:
       postgres:
-        image: postgres:17-alpine
+        # pgvector hace falta desde la migración 0007 (embeddings del material
+        # subido): postgres:17-alpine pelado no la trae y db:migrate falla.
+        image: pgvector/pgvector:pg17
         env:
           POSTGRES_USER: langopia
           POSTGRES_PASSWORD: langopia

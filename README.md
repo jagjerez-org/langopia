@@ -30,7 +30,7 @@ npm install
 
 docker run -d --name langopia-pg \
   -e POSTGRES_USER=langopia -e POSTGRES_PASSWORD=langopia -e POSTGRES_DB=langopia \
-  -p 55432:5432 postgres:17-alpine
+  -p 55432:5432 pgvector/pgvector:pg17
 
 cp .env.example .env
 npm run db:reset                          # esquema + políticas RLS + datos de demostración
