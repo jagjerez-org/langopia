@@ -43,7 +43,7 @@ Reglas a codificar:
 - Una unidad `ai_generated` nace en `in_review`, nunca en `published`. Una `uploaded` puede publicarse directamente: el material propio ya lo revisó quien lo subió.
 - El nivel MCER de la unidad debe coincidir con el del curso al que se asocia, si tiene uno.
 
-- [ ] **Paso 1: Escribir las pruebas**
+- [x] **Paso 1: Escribir las pruebas**
 
 ```typescript
 // apps/api/src/contexts/learning/domain/model/content-unit.spec.ts
@@ -125,10 +125,10 @@ describe("ContentUnit", () => {
 
 Comando: `npm run test --workspace @langopia/api -- content-unit`
 
-- [ ] **Paso 3: Implementar identificadores y errores**
-- [ ] **Paso 4: Implementar el agregado con la máquina de estados**
-- [ ] **Paso 5: Ejecutar** — 7 en verde
-- [ ] **Paso 6: Commit** — `feat(learning): agregado ContentUnit con revisión obligatoria`
+- [x] **Paso 3: Implementar identificadores y errores**
+- [x] **Paso 4: Implementar el agregado con la máquina de estados**
+- [x] **Paso 5: Ejecutar** — 7 en verde
+- [x] **Paso 6: Commit** — `feat(learning): agregado ContentUnit con revisión obligatoria`
 
 ---
 
@@ -165,12 +165,12 @@ Reglas transversales:
 - Los tipos con `audioRef` exigen que la unidad tenga un recurso de audio.
 - `cloze` con `openEnded: false` exige opciones; con `true`, no las admite —el hueco abierto obliga a recuperar, y ese es todo su valor pedagógico.
 
-- [ ] **Paso 1: Escribir las pruebas** — un caso válido y al menos un inválido por tipo (22 casos)
-- [ ] **Paso 2: Ejecutar y comprobar que fallan**
-- [ ] **Paso 3: Implementar los esquemas con Zod y `validateExercise`**
-- [ ] **Paso 4: Implementar la entidad `Exercise`**
-- [ ] **Paso 5: Prueba de que un `written_production` sin rúbrica se rechaza**
-- [ ] **Paso 6: Commit** — `feat(learning): validación por esquema de los once tipos de ejercicio`
+- [x] **Paso 1: Escribir las pruebas** — un caso válido y al menos un inválido por tipo (22 casos)
+- [x] **Paso 2: Ejecutar y comprobar que fallan**
+- [x] **Paso 3: Implementar los esquemas con Zod y `validateExercise`**
+- [x] **Paso 4: Implementar la entidad `Exercise`**
+- [x] **Paso 5: Prueba de que un `written_production` sin rúbrica se rechaza**
+- [x] **Paso 6: Commit** — `feat(learning): validación por esquema de los once tipos de ejercicio`
 
 ---
 
@@ -235,12 +235,12 @@ Decisiones del adaptador:
 - El coste se calcula con la tarifa del modelo y se devuelve siempre, también en los fallos —el proveedor cobra igual.
 - Los prompts viven en ficheros aparte, versionados: cambiar un prompt es un cambio de comportamiento y debe verse en el diff.
 
-- [ ] **Paso 1: Definir el puerto**
-- [ ] **Paso 2: Prueba del adaptador con un doble del SDK** — salida válida, salida inválida que se reintenta, dos fallos seguidos
-- [ ] **Paso 3: Ejecutar y comprobar que falla**
-- [ ] **Paso 4: Implementar el adaptador con salida estructurada y reintento**
-- [ ] **Paso 5: Prueba de integración real** contra la API, generando una unidad B1 de español
-- [ ] **Paso 6: Commit** — `feat(learning): generación de contenido con salida estructurada validada`
+- [x] **Paso 1: Definir el puerto**
+- [x] **Paso 2: Prueba del adaptador con un doble del SDK** — salida válida, salida inválida que se reintenta, dos fallos seguidos
+- [x] **Paso 3: Ejecutar y comprobar que falla**
+- [x] **Paso 4: Implementar el adaptador con salida estructurada y reintento**
+- [ ] **Paso 5: Prueba de integración real** contra la API, generando una unidad B1 de español (la prueba existe y se autoactiva con `ANTHROPIC_API_KEY`; pendiente de clave)
+- [x] **Paso 6: Commit** — `feat(learning): generación de contenido con salida estructurada validada`
 
 ---
 
@@ -310,12 +310,12 @@ Reglas:
 - Una generación fallida **devuelve** los créditos: el cliente no paga por lo que no recibió.
 - La renovación del plan concede los créditos incluidos **sin acumular indefinidamente**: el tope es dos veces los del plan, para que no se acumule un año de créditos sin usar.
 
-- [ ] **Paso 1: Pruebas** — conceder, gastar, saldo insuficiente con tope, sin tope, devolución, tope de acumulación
-- [ ] **Paso 2: Ejecutar y comprobar que fallan**
-- [ ] **Paso 3: Implementar el agregado**
-- [ ] **Paso 4: Comando de gasto, que se llama **antes** de generar y confirma después**
-- [ ] **Paso 5: Manejador de la renovación de suscripción**
-- [ ] **Paso 6: Commit** — `feat(billing): créditos de IA con tope duro y libro mayor`
+- [x] **Paso 1: Pruebas** — conceder, gastar, saldo insuficiente con tope, sin tope, devolución, tope de acumulación
+- [x] **Paso 2: Ejecutar y comprobar que fallan**
+- [x] **Paso 3: Implementar el agregado**
+- [x] **Paso 4: Comando de gasto, que se llama **antes** de generar y confirma después**
+- [x] **Paso 5: Manejador de la renovación de suscripción**
+- [x] **Paso 6: Commit** — `feat(billing): créditos de IA con tope duro y libro mayor`
 
 ---
 
@@ -491,7 +491,7 @@ Reglas:
 - **La subida no consume créditos.** Solo generar consume. Cobrar por subir su propio material sería difícil de explicar.
 
 - [x] **Paso 1: Prueba de validación** — formato válido, formato rechazado, fichero de 150 MB rechazado
-- [ ] **Paso 2: Ejecutar y comprobar que falla**
+- [x] **Paso 2: Ejecutar y comprobar que falla**
 - [x] **Paso 3: Implementar `UploadedMaterial` con la validación**
 - [x] **Paso 4: Endpoint multiparte con el fichero a almacenamiento**
 - [x] **Paso 5: Extracción de texto de PDF y DOCX, e indexado con pgvector**
