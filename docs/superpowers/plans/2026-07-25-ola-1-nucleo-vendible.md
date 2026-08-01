@@ -1311,13 +1311,13 @@ Lo que sí se gana separándolo del `PaymentGatewayPort`: cobrar y devolver sigu
 **Interfaces:**
 - Produce: `POST /billing/merchant/onboarding` (devuelve la URL del proveedor), `POST /billing/webhooks/stripe`.
 
-- [ ] **Paso 1: Comando que da de alta al comerciante y devuelve el enlace de onboarding** — a través de `MerchantOnboardingPort`, no llamando a Stripe desde el manejador
-- [ ] **Paso 2: Controlador de webhooks con verificación de firma** — sin verificar la firma, cualquiera puede marcar una factura como pagada. Va en `infrastructure/http/webhooks/`, uno por proveedor: cada uno verifica su firma y traduce su evento a **los mismos comandos**. El dominio no sabe cuál le habló
-- [ ] **Paso 3: Manejar `account.updated`** traduciéndolo a `merchant_status` `active` o `restricted` — el estado que guardamos es nuestro, no el nombre que use Stripe
-- [ ] **Paso 4: Manejar `payment_intent.succeeded` y `charge.refunded`**
-- [ ] **Paso 5: Prueba de que emitir una factura sin comerciante activo la deja en `open` sin intentar cobrar**
-- [ ] **Paso 5b: Prueba de idempotencia del webhook** — el mismo evento entregado dos veces cobra una. Los proveedores reintentan, y un pago duplicado se convierte en una devolución y una llamada del cliente
-- [ ] **Paso 6: Commit** — `feat(billing): alta de comerciante y webhooks con firma verificada`
+- [x] **Paso 1: Comando que da de alta al comerciante y devuelve el enlace de onboarding** — a través de `MerchantOnboardingPort`, no llamando a Stripe desde el manejador
+- [x] **Paso 2: Controlador de webhooks con verificación de firma** — sin verificar la firma, cualquiera puede marcar una factura como pagada. Va en `infrastructure/http/webhooks/`, uno por proveedor: cada uno verifica su firma y traduce su evento a **los mismos comandos**. El dominio no sabe cuál le habló
+- [x] **Paso 3: Manejar `account.updated`** traduciéndolo a `merchant_status` `active` o `restricted` — el estado que guardamos es nuestro, no el nombre que use Stripe
+- [x] **Paso 4: Manejar `payment_intent.succeeded` y `charge.refunded`**
+- [x] **Paso 5: Prueba de que emitir una factura sin comerciante activo la deja en `open` sin intentar cobrar**
+- [x] **Paso 5b: Prueba de idempotencia del webhook** — el mismo evento entregado dos veces cobra una. Los proveedores reintentan, y un pago duplicado se convierte en una devolución y una llamada del cliente
+- [x] **Paso 6: Commit** — `feat(billing): alta de comerciante y webhooks con firma verificada`
 
 ---
 
