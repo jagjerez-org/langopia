@@ -355,18 +355,41 @@ describe("Ola 4 — recorrido completo: web pública, dominios y embudo de matr�
     expect(leadInFunnel).toMatchObject({ status: "new", sourcePage: "/contacto", interestedLanguage: "en" });
 
     // ── Paso 9: la prueba hecha deja el nivel sugerido en el embudo ──────
-    // Contestar la prueba entera por HTTP ya lo recorre la ola 2, y todavía
-    // no existe un oyente de `PlacementTestFinished` que vuelque el resultado
-    // en el candidato (trabajo pendiente, no parte de este recorrido). Se
-    // simula ese vuelco y se comprueba que el panel lo muestra.
-    await adminDb
-      .update(schema.leads)
-      .set({ placementLevel: "B1", placementScore: 72, status: "placement_done" })
-      .where(eq(schema.leads.id, leadId));
+    // La candidata hace la nivelación de verdad: el equipo la administra por
+    // HTTP (igual que en la ola 2) y, al terminar, `assessment` publica
+    // `PlacementTestFinished` y `people` lo escucha para volcar el nivel en
+    // el candidato — sin simulación ni escritura directa en base de datos.
+    let placement = await call(baseUrl, "POST", "/assessment/placement/start", {
+      cookie: ownerCookie,
+      body: { studentProfileId: leadId, language: "en" },
+    });
+    expect(placement.status).toBe(201);
+    let placementBody = placement.body;
+    for (let i = 0; i < 30 && !placementBody.finished; i += 1) {
+      placement = await call(baseUrl, "POST", `/assessment/placement/${placementBody.testId}/answer`, {
+        cookie: ownerCookie,
+        body: {
+          itemId: placementBody.nextQuestion.itemId,
+          snapshot: placementBody.snapshot,
+          response: { correct: 0 },
+        },
+      });
+      expect(placement.status).toBe(201);
+      placementBody = placement.body;
+    }
+    expect(placementBody.finished).toBe(true);
+    expect(placementBody.result.level).toBeTruthy();
 
     const funnelAfter = await call(baseUrl, "GET", "/leads", { cookie: ownerCookie });
     const leadWithLevel = (funnelAfter.body as Json[]).find((lead) => lead.id === leadId);
-    expect(leadWithLevel).toMatchObject({ status: "placement_done", placementLevel: "B1", placementScore: 72 });
+    // El nivel del embudo es el que propuso la prueba, volcado por el oyente
+    // de `PlacementTestFinished`. El evento no lleva puntuación numérica:
+    // `placementScore` queda a null hasta que la escuela confirme o corrija.
+    expect(leadWithLevel).toMatchObject({
+      status: "placement_done",
+      placementLevel: placementBody.result.level,
+      placementScore: null,
+    });
 
     // ── Paso 10: conversión en alumno y matrícula en el grupo ───────────
     const converted = await call(baseUrl, "POST", `/leads/${leadId}/convert`, {

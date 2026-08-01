@@ -149,12 +149,29 @@ export class Lead {
     );
   }
 
-  assignPlacement(params: { level: string; score: number; suggestedCourseId?: string | null }): void {
+  assignPlacement(params: { level: string; score?: number | null; suggestedCourseId?: string | null }): void {
     this.assertOpen();
     this._placementLevel = params.level as CefrLevel;
-    this._placementScore = params.score;
+    this._placementScore = params.score ?? null;
     this._suggestedCourseId = params.suggestedCourseId ?? null;
     this._status = "placement_done";
+  }
+
+  /**
+   * Si se puede volcar el resultado de una nivelación sobre este candidato.
+   *
+   * El vuelco llega por evento (`PlacementTestFinished`) y el oyente no puede
+   * preguntar al emisor: la regla vive aquí. Solo se acepta una vez —un nivel
+   * ya asignado puede venir confirmado o corregido por la escuela a mano— y
+   * nunca sobre un candidato cerrado (convertido, descartado o frío).
+   */
+  acceptsPlacementResult(): boolean {
+    return (
+      this._placementLevel === null &&
+      this._status !== "converted" &&
+      this._status !== "discarded" &&
+      this._status !== "cold"
+    );
   }
 
   markPlacementSent(): void {

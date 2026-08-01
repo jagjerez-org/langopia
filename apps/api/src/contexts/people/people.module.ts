@@ -11,6 +11,7 @@ import { ReleaseTeacherHandler } from "./application/commands/release-teacher/re
 import { SetAvailabilityHandler } from "./application/commands/set-availability/set-availability.handler.js";
 import { UpdateStudentHandler } from "./application/commands/update-student/update-student.handler.js";
 import { UpdateTeacherHandler } from "./application/commands/update-teacher/update-teacher.handler.js";
+import { OnPlacementTestFinishedAssignLevel } from "./application/event-handlers/on-placement-test-finished.handler.js";
 import { PEOPLE_READ_MODEL } from "./application/ports/people-read-model.port.js";
 import { LEAD_CAPTURE_TENANT_RUNNER } from "./application/ports/lead-capture-tenant-runner.port.js";
 import { PUBLISHED_SITE_RESOLVER } from "./application/ports/published-site-resolver.port.js";
@@ -50,6 +51,7 @@ const commandHandlers = [
   ConvertLeadHandler,
 ];
 const queryHandlers = [ListStudentsHandler, ListTeachersHandler, ListLeadsHandler];
+const eventHandlers = [OnPlacementTestFinishedAssignLevel];
 
 /**
  * Contexto acotado de alumnado.
@@ -64,6 +66,7 @@ const queryHandlers = [ListStudentsHandler, ListTeachersHandler, ListLeadsHandle
   providers: [
     ...commandHandlers,
     ...queryHandlers,
+    ...eventHandlers,
     { provide: STUDENT_REPOSITORY, useClass: DrizzleStudentRepository },
     { provide: LEAD_REPOSITORY, useClass: DrizzleLeadRepository },
     { provide: TEACHER_REPOSITORY, useClass: DrizzleTeacherRepository },
