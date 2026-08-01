@@ -1,14 +1,14 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
-import { listImpersonationHistory } from "./api.js";
+import type { SchoolTimezone } from "@langopia/contracts";
+import type { TableColumn } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Table, Tag } from "../../ui/index.js";
+import { useErrorMessage } from "../../i18n/errors.js";
+import { formatDate } from "../../i18n/format.js";
+import { useLocale, useT } from "../../i18n/translate.js";
+import { ApiError } from "../../lib/api-client.js";
+import { getSchoolTimezone, listImpersonationHistory } from "./api.js";
 import type { ImpersonationAuditEntry } from "./types.js";
-
-function formatDuration(seconds: number | null): string {
-  if (seconds === null) return "en curso";
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return `${minutes} min ${rest}s`;
-}
 
 /**
  * Pantalla de auditoría (paso 12 del brief): quién actuó como quién, cuándo
@@ -19,49 +19,124 @@ function formatDuration(seconds: number | null): string {
  *
  * Es lo que separa esto de una puerta trasera: que el cliente pueda
  * auditarte.
+ *
+ * Las fechas son instantes de verdad (`timestamptz`): se pintan en la zona
+ * horaria de LA ESCUELA (`GET /scheduling/school-timezone`, mismo patrón que
+ * `billing` y `calendar`), nunca en la del navegador de quien mira.
  */
 export function ImpersonationHistoryScreen(): ReactElement {
-  const [entries, setEntries] = useState<ImpersonationAuditEntry[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const t = useT();
+  const locale = useLocale();
+  const errorMessage = useErrorMessage();
 
-  useEffect(() => {
-    listImpersonationHistory()
-      .then(setEntries)
-      .catch((err: Error) => setError(err.message));
-  }, []);
+  const historyQuery = useQuery({
+    queryKey: ["impersonation", "history"],
+    queryFn: listImpersonationHistory,
+  });
+  const timezoneQuery = useQuery<SchoolTimezone>({
+    queryKey: ["impersonation", "school-timezone"],
+    queryFn: getSchoolTimezone,
+  });
+  const timeZone = timezoneQuery.data?.timezone;
 
-  if (error) return <p role="alert">No se pudo cargar el historial: {error}</p>;
+  const formatInstant = (isoUtc: string): string =>
+    timeZone ? formatDate(isoUtc, timeZone, locale, { dateStyle: "medium", timeStyle: "short" }) : "";
+
+  const columns: TableColumn<ImpersonationAuditEntry>[] = [
+    {
+      key: "actor",
+      header: t("impersonationHistory.columnActor"),
+      render: (entry) => `${entry.impersonatorName} (${entry.impersonatorEmail})`,
+    },
+    {
+      key: "target",
+      header: t("impersonationHistory.columnTarget"),
+      render: (entry) => `${entry.targetName} — ${entry.targetRole}`,
+    },
+    {
+      key: "reason",
+      header: t("impersonationHistory.columnReason"),
+      render: (entry) => entry.reason,
+    },
+    {
+      key: "minor",
+      header: t("impersonationHistory.columnMinor"),
+      // Acceso de un adulto que no es su tutor a los datos de un menor: se
+      // marca aparte (regla del brief), no como una fila más.
+      render: (entry) =>
+        entry.involvesMinor ? (
+          <Tag variant="warning">{t("impersonationHistory.minorYes")}</Tag>
+        ) : (
+          t("impersonationHistory.minorNo")
+        ),
+    },
+    {
+      key: "startedAt",
+      header: t("impersonationHistory.columnStartedAt"),
+      numeric: true,
+      render: (entry) => formatInstant(entry.startedAt),
+    },
+    {
+      key: "endedAt",
+      header: t("impersonationHistory.columnEndedAt"),
+      numeric: true,
+      render: (entry) => (entry.endedAt ? formatInstant(entry.endedAt) : "—"),
+    },
+    {
+      key: "duration",
+      header: t("impersonationHistory.columnDuration"),
+      numeric: true,
+      render: (entry) =>
+        entry.durationSeconds === null
+          ? t("impersonationHistory.ongoing")
+          : t("impersonationHistory.duration", {
+              minutes: Math.floor(entry.durationSeconds / 60),
+              seconds: entry.durationSeconds % 60,
+            }),
+    },
+  ];
+
+  const firstError = historyQuery.error ?? timezoneQuery.error;
 
   return (
-    <table>
-      <thead>
-        <tr>
-          <th>Quién actuó</th>
-          <th>Como quién</th>
-          <th>Motivo</th>
-          <th>Menor</th>
-          <th>Inicio</th>
-          <th>Fin</th>
-          <th>Duración</th>
-        </tr>
-      </thead>
-      <tbody>
-        {entries.map((entry) => (
-          <tr key={entry.impersonationId}>
-            <td>
-              {entry.impersonatorName} ({entry.impersonatorEmail})
-            </td>
-            <td>
-              {entry.targetName} — {entry.targetRole}
-            </td>
-            <td>{entry.reason}</td>
-            <td>{entry.involvesMinor ? "sí" : "no"}</td>
-            <td>{new Date(entry.startedAt).toLocaleString()}</td>
-            <td>{entry.endedAt ? new Date(entry.endedAt).toLocaleString() : "—"}</td>
-            <td>{formatDuration(entry.durationSeconds)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <main className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">{t("impersonationHistory.title")}</h1>
+
+      <Table
+        columns={columns}
+        rows={historyQuery.data ?? []}
+        getRowKey={(entry) => entry.impersonationId}
+        caption={t("impersonationHistory.caption")}
+        captionVisuallyHidden
+        isLoading={historyQuery.isPending || timezoneQuery.isPending}
+        emptyState={
+          <EmptyState
+            title={t("impersonationHistory.emptyTitle")}
+            description={t("impersonationHistory.emptyDescription")}
+          />
+        }
+        error={
+          firstError ? (
+            <ErrorState
+              title={
+                firstError instanceof ApiError
+                  ? errorMessage(firstError.problem)
+                  : t("impersonationHistory.errorTitle")
+              }
+              action={
+                <Button
+                  onClick={() => {
+                    void historyQuery.refetch();
+                    void timezoneQuery.refetch();
+                  }}
+                >
+                  {t("common.retry")}
+                </Button>
+              }
+            />
+          ) : undefined
+        }
+      />
+    </main>
   );
 }

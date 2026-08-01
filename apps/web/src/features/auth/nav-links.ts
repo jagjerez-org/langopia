@@ -30,6 +30,8 @@ const DIRECTION_LINKS: NavLink[] = [
   { to: "/calendario", labelKey: "nav.calendar" },
   { to: "/contenido", labelKey: "nav.generateContent" },
   { to: "/correcciones", labelKey: "nav.corrections" },
+  // Tarea 17, paso 12: la auditoría de impersonaciones la ve dirección.
+  { to: "/impersonaciones", labelKey: "nav.impersonationHistory" },
 ];
 
 const TEACHER_LINKS: NavLink[] = [

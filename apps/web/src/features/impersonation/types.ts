@@ -21,6 +21,15 @@ export interface ActiveImpersonation {
   expiresAt: string;
 }
 
+/**
+ * Cuerpo de `GET /api/v1/iam/impersonation`: la API lo envuelve siempre en
+ * un objeto (`{ active: … | null }`) porque un `null` pelado se serializaba
+ * como 200 sin cuerpo y rompía el `response.json()` de cada sondeo.
+ */
+export interface ActiveImpersonationResponse {
+  active: ActiveImpersonation | null;
+}
+
 /** Una fila de `GET /api/v1/iam/impersonation/history` (paso 12 del brief). */
 export interface ImpersonationAuditEntry {
   impersonationId: string;

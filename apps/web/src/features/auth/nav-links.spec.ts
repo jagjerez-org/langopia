@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { navLinksForRoles } from "./nav-links.js";
 
 describe("navLinksForRoles (Tarea 11, Paso 1: navegación distinta según el rol)", () => {
-  it("dirección (owner/admin) ve panel, analítica, candidatos, transcripciones, dominios, alumnado, calendario, contenido y correcciones", () => {
+  it("dirección (owner/admin) ve panel, analítica, candidatos, transcripciones, dominios, alumnado, calendario, contenido, correcciones e impersonaciones", () => {
     expect(navLinksForRoles(["owner"]).map((l) => l.to)).toEqual([
       "/",
       "/analitica",
@@ -14,6 +14,7 @@ describe("navLinksForRoles (Tarea 11, Paso 1: navegación distinta según el rol
       "/calendario",
       "/contenido",
       "/correcciones",
+      "/impersonaciones",
     ]);
     expect(navLinksForRoles(["admin"]).map((l) => l.to)).toEqual([
       "/",
@@ -26,6 +27,7 @@ describe("navLinksForRoles (Tarea 11, Paso 1: navegación distinta según el rol
       "/calendario",
       "/contenido",
       "/correcciones",
+      "/impersonaciones",
     ]);
   });
 
@@ -70,6 +72,7 @@ describe("navLinksForRoles (Tarea 11, Paso 1: navegación distinta según el rol
       "/calendario",
       "/contenido",
       "/correcciones",
+      "/impersonaciones",
     ]);
   });
 

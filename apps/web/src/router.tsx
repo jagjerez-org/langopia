@@ -10,6 +10,7 @@ import { CalendarScreen } from "./features/calendar/CalendarScreen.js";
 import { ClassroomScreen } from "./features/classroom/ClassroomScreen.js";
 import { ContentUnitsListScreen } from "./features/content/ContentUnitsListScreen.js";
 import { GenerateUnitScreen } from "./features/content/GenerateUnitScreen.js";
+import { ImpersonationHistoryScreen } from "./features/impersonation/ImpersonationHistoryScreen.js";
 import { LeadsFunnelScreen } from "./features/leads/LeadsFunnelScreen.js";
 import { UploadMaterialScreen } from "./features/content/upload/UploadMaterialScreen.js";
 import { ReviewUnitScreen } from "./features/content/ReviewUnitScreen.js";
@@ -345,6 +346,18 @@ export const correctionsRoute = createRoute({
   component: CorrectionsInboxScreen,
 });
 
+/**
+ * `/impersonaciones` (Tarea 17, paso 12): la auditoría de quién actuó como
+ * quién, cuándo y por qué. El rol (`owner`/`admin`) lo comprueba la API
+ * (`ImpersonationController.history`); el menú solo la ofrece a dirección
+ * (`nav-links.ts`), igual que el resto de enlaces por rol.
+ */
+export const impersonationHistoryRoute = createRoute({
+  getParentRoute: () => protectedRoute,
+  path: "/impersonaciones",
+  component: ImpersonationHistoryScreen,
+});
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   registerRoute,
@@ -383,6 +396,7 @@ const routeTree = rootRoute.addChildren([
     myExercisesRoute,
     myReviewRoute,
     correctionsRoute,
+    impersonationHistoryRoute,
   ]),
 ]);
 

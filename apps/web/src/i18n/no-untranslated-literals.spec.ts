@@ -9,18 +9,19 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(HERE, "..");
 
 /**
- * Componentes previos al sistema de i18n de esta tarea (Tarea 17, escritos
- * antes de que existiera `apps/web`) que todavía no están montados en
- * ninguna ruta. Migrar solo su texto a `useT()` y dejar sus fechas con
+ * Componente previo al sistema de i18n de esta tarea (Tarea 17, escrito
+ * antes de que existiera `apps/web`) que sigue montado con sus literales en
+ * duro. Migrar solo su texto a `useT()` y dejar sus fechas con
  * `toLocaleString()` (zona del navegador, no de la escuela) sería peor que
- * no tocarlos: quien los monte (Tarea 3 en adelante) tendrá ya la zona
- * horaria de la escuela para arreglar las dos cosas juntas. Es la única
- * excepción de este andamiaje — cualquier componente nuevo, incluidos los de
- * las ocho pantallas que siguen a esta tarea, pasa por aquí sin excepción.
+ * no tocarlo: quien lo retoque tendrá ya la zona horaria de la escuela para
+ * arreglar las dos cosas juntas. Es la única excepción de este andamiaje —
+ * cualquier componente nuevo pasa por aquí sin excepción.
+ * `ImpersonationHistoryScreen` salió de la lista al montarse en ruta
+ * (Tarea 17, paso 12): desde entonces está migrado y examinado como los
+ * demás.
  */
 const LEGACY_EXEMPT = new Set([
   "features/impersonation/ImpersonationBanner.tsx",
-  "features/impersonation/ImpersonationHistoryScreen.tsx",
 ]);
 
 function collectTsxFiles(dir: string): string[] {

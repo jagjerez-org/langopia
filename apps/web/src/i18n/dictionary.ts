@@ -969,6 +969,8 @@ export interface Dictionary {
     myExercises: string;
     myReview: string;
     corrections: string;
+    /** Tarea 17, paso 12: auditoría de impersonaciones (owner/admin). */
+    impersonationHistory: string;
   };
 
   leads: {
@@ -1087,6 +1089,32 @@ export interface Dictionary {
       blocked_no_consent: string;
       failed: string;
     };
+  };
+
+  /**
+   * Pantalla de auditoría de impersonaciones (Tarea 17, paso 12): quién
+   * actuó como quién, cuándo y por qué. Que la escuela pueda auditarte es lo
+   * que separa la impersonación de soporte de una puerta trasera.
+   */
+  impersonationHistory: {
+    title: string;
+    errorTitle: string;
+    emptyTitle: string;
+    emptyDescription: string;
+    caption: string;
+    columnActor: string;
+    columnTarget: string;
+    columnReason: string;
+    columnMinor: string;
+    columnStartedAt: string;
+    columnEndedAt: string;
+    columnDuration: string;
+    minorYes: string;
+    minorNo: string;
+    /** Una impersonación aún abierta no tiene duración: se reconoce así. */
+    ongoing: string;
+    /** ICU: «12 min 30 s». Los dos números llegan ya calculados. */
+    duration: string;
   };
 
   sites: {

@@ -842,6 +842,7 @@ export const dictionary: Dictionary = {
     myExercises: "Meine Übungen",
     myReview: "Meine Wiederholung",
     corrections: "Korrekturen",
+    impersonationHistory: "Impersonationen",
   },
 
   leads: {
@@ -960,6 +961,26 @@ export const dictionary: Dictionary = {
       blocked_no_consent: "Blockiert",
       failed: "Fehlgeschlagen",
     },
+  },
+
+  impersonationHistory: {
+    title: "Impersonationsprotokoll",
+    errorTitle: "Der Impersonationsverlauf konnte nicht geladen werden.",
+    emptyTitle: "In dieser Schule hat noch niemand eine andere Person impersoniert.",
+    emptyDescription:
+      "Wenn Support oder Leitung als eine andere Person handeln, wird hier festgehalten, wer es war, wann und warum.",
+    caption: "Impersonationsverlauf der Schule",
+    columnActor: "Gehandelt hat",
+    columnTarget: "Gehandelt als",
+    columnReason: "Grund",
+    columnMinor: "Minderjährig",
+    columnStartedAt: "Beginn",
+    columnEndedAt: "Ende",
+    columnDuration: "Dauer",
+    minorYes: "Ja",
+    minorNo: "Nein",
+    ongoing: "Laufend",
+    duration: "{minutes} Min. {seconds} s",
   },
 
   sites: {

@@ -88,10 +88,19 @@ export class ImpersonationController {
     return this.commands.execute(new EndImpersonationCommand({ impersonationId }));
   }
 
+  /**
+   * Envuelto en `{ active: … }` siempre, también cuando no hay impersonación:
+   * la consulta devuelve `null` y Nest serializa un `null` pelado como 200
+   * SIN cuerpo, con lo que el `response.json()` del panel fallaba y cada
+   * sondeo del aviso permanente registraba «respuesta sin JSON válido». Con
+   * el envoltorio la respuesta es siempre un JSON válido y el contrato no
+   * depende de cómo serialice el framework cada valor extremo.
+   */
   @Roles(...MEMBERSHIP_ROLES)
   @Get()
   async current() {
-    return this.queries.execute(new GetActiveImpersonationQuery());
+    const active = await this.queries.execute(new GetActiveImpersonationQuery());
+    return { active };
   }
 
   /**

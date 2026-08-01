@@ -1741,19 +1741,19 @@ La lista vive en el dominio (`FORBIDDEN_WHILE_IMPERSONATING`), no repartida por 
 - La sesión impersonada **no puede ocultar** el aviso en el panel. Si se puede cerrar, alguien trabajará una hora sin recordar que no es él.
 - Al terminar —a mano o por caducidad— queda registrado el cierre y su duración.
 
-- [ ] **Paso 1: Escribir las pruebas de las reglas** — mínimo 10 casos: cada fila de la tabla de permisos, escalada hacia arriba, en horizontal, a uno mismo, encadenada y caducada
-- [ ] **Paso 2: Ejecutar y comprobar que fallan**
-- [ ] **Paso 3: Implementar `impersonation-rules.ts` y el agregado**
-- [ ] **Paso 4: Pruebas de las acciones prohibidas** — una por fila de la segunda tabla
-- [ ] **Paso 5: Migración del esquema** — `impersonator_membership_id`, el valor nuevo del enum y la tabla `impersonations` con motivo, inicio, fin y `involves_minor`
-- [ ] **Paso 6: Comando `StartImpersonationCommand`** que valida las reglas, escribe la auditoría y emite `ImpersonationStarted`
-- [ ] **Paso 7: Extender el interceptor de tenant** — el CLS lleva la membresía **efectiva** y la **real**. El tenant pasa a ser el de la persona impersonada; RLS sigue mandando, así que un soporte que actúa como alguien de la escuela A no ve la B
-- [ ] **Paso 8: Extender el guardia de roles** con la lista de acciones prohibidas
-- [ ] **Paso 9: Prueba de aislamiento** — actuar como alguien de la escuela A y comprobar que sigue sin verse ni una fila de la B
-- [ ] **Paso 10: Aviso permanente en el panel**, con quién eres, a quién representas y cuánto queda. Botón de salir siempre visible
-- [ ] **Paso 11: Notificación al afectado** — correo al usuario, y al tutor si es menor
-- [ ] **Paso 12: Pantalla de auditoría** para que la escuela vea quién actuó como quién, cuándo y por qué. Que el cliente pueda auditarte es lo que separa esto de una puerta trasera
-- [ ] **Paso 13: Commit** — `feat(iam): impersonación de soporte con auditoría y acciones restringidas`
+- [x] **Paso 1: Escribir las pruebas de las reglas** — mínimo 10 casos: cada fila de la tabla de permisos, escalada hacia arriba, en horizontal, a uno mismo, encadenada y caducada
+- [x] **Paso 2: Ejecutar y comprobar que fallan**
+- [x] **Paso 3: Implementar `impersonation-rules.ts` y el agregado**
+- [x] **Paso 4: Pruebas de las acciones prohibidas** — una por fila de la segunda tabla
+- [x] **Paso 5: Migración del esquema** — `impersonator_membership_id`, el valor nuevo del enum y la tabla `impersonations` con motivo, inicio, fin y `involves_minor`
+- [x] **Paso 6: Comando `StartImpersonationCommand`** que valida las reglas, escribe la auditoría y emite `ImpersonationStarted`
+- [x] **Paso 7: Extender el interceptor de tenant** — el CLS lleva la membresía **efectiva** y la **real**. El tenant pasa a ser el de la persona impersonada; RLS sigue mandando, así que un soporte que actúa como alguien de la escuela A no ve la B
+- [x] **Paso 8: Extender el guardia de roles** con la lista de acciones prohibidas
+- [x] **Paso 9: Prueba de aislamiento** — actuar como alguien de la escuela A y comprobar que sigue sin verse ni una fila de la B
+- [x] **Paso 10: Aviso permanente en el panel**, con quién eres, a quién representas y cuánto queda. Botón de salir siempre visible
+- [x] **Paso 11: Notificación al afectado** — correo al usuario, y al tutor si es menor
+- [x] **Paso 12: Pantalla de auditoría** para que la escuela vea quién actuó como quién, cuándo y por qué. Que el cliente pueda auditarte es lo que separa esto de una puerta trasera
+- [x] **Paso 13: Commit** — `feat(iam): impersonación de soporte con auditoría y acciones restringidas`
 
 ---
 

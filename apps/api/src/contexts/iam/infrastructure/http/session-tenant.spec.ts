@@ -298,3 +298,97 @@ describe("SessionTenantGuard — la impersonación respeta el estado de la escue
     expect(store.get(CLS_IMPERSONATION_ID)).toBe("imp-1");
   });
 });
+
+/* ─── Paso 9 del brief (Tarea 17): prueba de aislamiento ─────────────── */
+
+/**
+ * Actuar como alguien de la escuela A y comprobar que sigue sin verse ni una
+ * fila de la B. La pieza que la impersonación añade a la cadena de
+ * aislamiento es ESTA: con una impersonación activa, el tenant efectivo es
+ * el de la persona impersonada y la petición no puede desviarlo — ni por la
+ * cabecera `x-school-slug` ni por el subdominio — hacia otra escuela. De ahí
+ * en adelante manda lo de siempre: `UnitOfWork` fija `app.school_id` con el
+ * tenant del CLS y RLS no devuelve filas de otra escuela.
+ *
+ * Antes de fijarlo en prueba, el camino de impersonación corría el riesgo de
+ * que alguien «reutilizara» la resolución normal de slug debajo, reabriendo
+ * la puerta que esta rama cierra.
+ */
+describe("SessionTenantGuard — impersonar fija el tenant y ninguna cabecera lo desvía", () => {
+  const impersonacionAtlantico = {
+    impersonationId: "imp-1",
+    schoolId: "s-atl",
+    targetMembershipId: "m-atl",
+    targetRole: "owner",
+    targetSchoolLocale: "es-ES",
+    targetSchoolSlug: "atlantico",
+    targetSchoolStatus: "active",
+    impersonatorMembershipId: null,
+    reason: "ticket 4711: no le carga el calendario",
+    involvesMinor: false,
+    expiresAt: new Date("2099-01-01T00:00:00Z"),
+  };
+
+  function construir(request: {
+    headers: Record<string, string>;
+    host?: string;
+  }) {
+    const store = new Map<string, unknown>();
+    const cls = {
+      set: (key: string, value: unknown) => store.set(key, value),
+      get: (key: string) => store.get(key),
+    } as unknown as ClsService;
+
+    const guard = new SessionTenantGuard(
+      cls,
+      { getAllAndOverride: () => undefined } as unknown as Reflector,
+      { get: () => undefined } as unknown as ConfigService,
+      // Soporte de plataforma no tiene membresía en NINGUNA escuela: si la
+      // petición cayera al camino normal, `resolveTenant` lanzaría «No
+      // perteneces a ninguna escuela» — así que pasar la prueba demuestra
+      // que el tenant salió de la impersonación, no de la cabecera.
+      { activeFor: async () => [] } as unknown as MembershipLookupPort,
+      {
+        isPlatformSupport: async () => true,
+        schoolIdForMembership: async () => "s-atl",
+        activeAsImpersonator: async () => impersonacionAtlantico,
+        isBeingImpersonated: async () => false,
+      } as unknown as ImpersonationDirectoryPort,
+      {
+        api: {
+          getSession: async () => ({ user: { id: "auth-soporte", emailVerified: true } }),
+        },
+      } as unknown as Auth,
+      { debug: () => undefined, warn: () => undefined } as unknown as PinoLogger,
+    );
+
+    const context = {
+      switchToHttp: () => ({
+        getRequest: () => ({
+          path: "/api/v1/students",
+          headers: request.headers,
+          get: (name: string) => (name.toLowerCase() === "host" ? request.host : undefined),
+        }),
+        getResponse: () => ({ setHeader: () => undefined }),
+      }),
+      getHandler: () => ({}),
+      getClass: () => ({}),
+    } as unknown as ExecutionContext;
+
+    return { guard, context, store };
+  }
+
+  it("la cabecera x-school-slug de OTRA escuela no desvía el tenant impersonado", async () => {
+    const { guard, context, store } = construir({ headers: { "x-school-slug": "paulista" } });
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(store.get(CLS_SCHOOL_ID)).toBe("s-atl");
+    expect(store.get(CLS_MEMBERSHIP_ID)).toBe("m-atl");
+    expect(store.get(CLS_IMPERSONATION_ID)).toBe("imp-1");
+  });
+
+  it("el subdominio de OTRA escuela tampoco desvía el tenant impersonado", async () => {
+    const { guard, context, store } = construir({ headers: {}, host: "paulista.localhost" });
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    expect(store.get(CLS_SCHOOL_ID)).toBe("s-atl");
+  });
+});
