@@ -58,8 +58,9 @@ export default defineConfig({
   testDir: "./e2e",
   // Un único recorrido, largo a propósito (registro, puesta en marcha, alta
   // de profesorado y alumnado, importación, calendario, facturación, portal):
-  // más margen que el timeout por defecto de Playwright (30 s).
-  timeout: 10 * 60 * 1000,
+  // más margen que el timeout por defecto de Playwright (30 s). En local dura
+  // unos 5 min; el runner de CI (2 vCPU) superó los 10 min, así que 20.
+  timeout: 20 * 60 * 1000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
