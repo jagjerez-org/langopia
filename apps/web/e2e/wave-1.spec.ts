@@ -618,9 +618,14 @@ test.describe("Ola 1 — recorrido completo del panel (Tarea 13)", () => {
        * Abre el menú de una clase por su franja horaria: las tres comparten
        * `GROUP_NAME`, así que localizar por nombre de grupo no basta.
        * `WeekGrid` pinta cada clase como un botón con
-       * `aria-label="{grupo} · {rango horario} · ..."`. Navega a la semana
-       * siguiente si la clase no está en la semana visible — a lo sumo una
-       * vez, porque ninguna de las tres queda a más de dos días vista.
+       * `aria-label="{grupo} · {rango horario} · ..."`. La vista puede no ser
+       * la semana de la clase ni estar una sola semana por delante: el Paso 9
+       * deja el calendario en la semana siguiente (la sesión A es a dos días
+       * vista y hoy es sábado), así que el Paso 10 —que es hoy— encontraría
+       * la vista DOS semanas adelante si solo se pudiera avanzar. Por eso la
+       * navegación es: «Hoy» primero (cubre las sesiones B y C, de esta
+       * semana, venga de donde venga la vista) y «semana siguiente» después
+       * (cubre la sesión A).
        */
       async function openSessionMenu(startsAt: Date): Promise<void> {
         const timeLabel = new Intl.DateTimeFormat("es-ES", {
@@ -630,9 +635,12 @@ test.describe("Ola 1 — recorrido completo del panel (Tarea 13)", () => {
         }).format(startsAt);
         const sessionButton = page.getByRole("button", { name: new RegExp(timeLabel.replace(":", "\\:")) });
         if ((await sessionButton.count()) === 0) {
+          await page.getByRole("button", { name: t("es-ES", "calendar.today"), exact: true }).click();
+        }
+        if ((await sessionButton.count()) === 0) {
           await page.getByRole("button", { name: t("es-ES", "calendar.nextWeek"), exact: true }).click();
         }
-        await page.getByRole("button", { name: new RegExp(timeLabel.replace(":", "\\:")) }).first().click();
+        await sessionButton.first().click();
       }
 
       async function cancelSessionExpectingRefund(startsAt: Date, refundExpected: boolean): Promise<void> {
