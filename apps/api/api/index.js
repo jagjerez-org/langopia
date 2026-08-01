@@ -1,6 +1,9 @@
-// Vercel solo crea funciones serverless desde el directorio `api/` del
-// proyecto, y el código de verdad lo compila antes `nest build` en `dist/`
-// (ver `buildCommand` en `vercel.json`). Este shim existe para que la
-// función sea un fichero plano que el empaquetador de Vercel traza hasta
-// `dist/vercel.js` y, transitivamente, a toda la aplicación.
-module.exports = require("../dist/vercel.js").default;
+// Vercel ejecuta este fichero como función serverless. El bundle real se
+// genera con `@vercel/ncc` durante el build (ver `vercel.json`).
+// pdfjs-dist (usado por pdf-parse) necesita un `DOMMatrix` global; lo
+// instalamos ANTES de cargar el bundle para que el polyfill esté disponible
+// durante la evaluación de los módulos empaquetados.
+if (typeof globalThis.DOMMatrix === "undefined") {
+  globalThis.DOMMatrix = require("dommatrix");
+}
+module.exports = require("../dist/ncc/index.js");

@@ -1,0 +1,34 @@
+# .github/workflows/cron-jobs.yml
+#
+# Trabajos programados frecuentes contra la API en Vercel. El plan Hobby de
+# Vercel solo permite Cron Jobs diarios (y dos como máximo, ya usados por
+# las dos purgas de madrugada — ver `crons` en `apps/api/vercel.json`), así
+# que los tres trabajos que deben correr más de una vez al día los dispara
+# este workflow llamando a las mismas rutas `GET /api/v1/cron/*`, protegidas
+# con el mismo `CRON_SECRET` que firma Vercel Cron. Al pasar a Pro, basta
+# devolver estos tres `path` al `crons` de `apps/api/vercel.json` y borrar
+# este workflow.
+name: Trabajos programados (frecuentes)
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  disparar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Llamar a las rutas de cron de la API
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          API_ORIGIN: https://langopia-api.vercel.app
+        run: |
+          set -euo pipefail
+          for ruta in verify-site-domains class-reminder import-external-transcripts; do
+            codigo=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "${API_ORIGIN}/api/v1/cron/${ruta}")
+            echo "${ruta}: HTTP ${codigo}"
+            [ "$codigo" = "200" ]
+          done
