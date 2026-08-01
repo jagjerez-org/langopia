@@ -1,0 +1,74 @@
+---
+import { selectedIds } from "../../block-content";
+import type { BlockSnapshot } from "../../public-site";
+
+const { block } = Astro.props as { block: BlockSnapshot };
+const planIds = selectedIds(block.props, "planIds");
+const highlightPlan = typeof block.props.highlightPlan === "string" ? block.props.highlightPlan : null;
+const plans = planIds.length > 0 ? planIds : highlightPlan ? [highlightPlan] : ["base", "growth", "premium"];
+---
+
+<section class="section pricing-block">
+  <div class="section-heading">
+    <p>Precios</p>
+    <h2>Planes publicados</h2>
+  </div>
+  <div class="pricing-grid">
+    {
+      plans.map((plan) => (
+        <article class:list={["price-card", { highlighted: plan === highlightPlan }]}>
+          <h3>{plan}</h3>
+          <p>Condiciones vigentes de la escuela.</p>
+          <a href="/contacto">Consultar disponibilidad</a>
+        </article>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .pricing-block {
+    background: #10211f;
+    color: white;
+  }
+
+  .pricing-block :global(.section-heading p),
+  .pricing-block :global(.section-heading h2) {
+    color: white;
+  }
+
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .price-card {
+    min-height: 190px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .highlighted {
+    border-color: var(--brand-accent);
+  }
+
+  h3 {
+    margin: 0 0 16px;
+    font-size: 1.45rem;
+    text-transform: capitalize;
+  }
+
+  p {
+    margin: 0 0 24px;
+    color: #d7e2df;
+    line-height: 1.55;
+  }
+
+  a {
+    color: var(--brand-accent);
+    font-weight: 700;
+  }
+</style>

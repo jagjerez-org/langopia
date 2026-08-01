@@ -1,0 +1,108 @@
+.viewport {
+  position: fixed;
+  z-index: var(--ink-z-toast);
+  bottom: var(--ink-space-6);
+  right: var(--ink-space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ink-space-3);
+  width: min(24rem, calc(100vw - 2 * var(--ink-space-6)));
+  max-width: 100%;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ink-space-3);
+  padding: var(--ink-space-4);
+  background: var(--ink-bg-surface);
+  border: 1px solid var(--ink-border-default);
+  border-left: 3px solid var(--ink-neutral-soft-text);
+  border-radius: var(--ink-radius-md);
+  box-shadow: var(--ink-shadow-md);
+  font-family: var(--font-sans);
+  animation: ink-toast-in var(--ink-duration-slow) var(--ink-ease-decelerate);
+}
+
+@keyframes ink-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast[data-variant="success"] {
+  border-left-color: var(--ink-success-text);
+}
+
+.toast[data-variant="warning"] {
+  border-left-color: var(--ink-warning-text);
+}
+
+.toast[data-variant="critical"] {
+  border-left-color: var(--ink-critical-text);
+}
+
+.icon {
+  flex-shrink: 0;
+  margin-top: 0.15em;
+  font-size: 1.1em;
+  color: var(--ink-neutral-soft-text);
+}
+
+.toast[data-variant="success"] .icon {
+  color: var(--ink-success-text);
+}
+
+.toast[data-variant="warning"] .icon {
+  color: var(--ink-warning-text);
+}
+
+.toast[data-variant="critical"] .icon {
+  color: var(--ink-critical-text);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--ink-text-base);
+  font-weight: var(--ink-font-weight-semibold);
+  color: var(--ink-text-primary);
+  overflow-wrap: break-word;
+}
+
+.description {
+  margin: var(--ink-space-1) 0 0;
+  font-size: var(--ink-text-sm);
+  color: var(--ink-text-secondary);
+  overflow-wrap: break-word;
+}
+
+.closeButton {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: var(--ink-space-1);
+  border-radius: var(--ink-radius-sm);
+  color: var(--ink-text-tertiary);
+  transition: background-color var(--ink-duration-fast) var(--ink-ease-standard);
+}
+
+.closeButton:hover {
+  background: var(--ink-bg-surface-secondary);
+  color: var(--ink-text-primary);
+}
+
+.closeButton:focus-visible {
+  outline: 2px solid var(--ink-focus-ring);
+  outline-offset: 2px;
+}

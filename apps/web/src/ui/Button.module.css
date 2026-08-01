@@ -1,0 +1,139 @@
+.button {
+  /* Reinicio de <button> nativo: sin esto heredamos estilos de agente de
+     usuario dispares entre navegadores. */
+  appearance: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-weight: var(--ink-font-weight-semibold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ink-space-2);
+  border-radius: var(--ink-radius-md);
+  white-space: nowrap;
+  transition:
+    background-color var(--ink-duration-fast) var(--ink-ease-standard),
+    border-color var(--ink-duration-fast) var(--ink-ease-standard),
+    color var(--ink-duration-fast) var(--ink-ease-standard);
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--ink-focus-ring);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+}
+
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: 1.1em;
+  line-height: 0;
+}
+
+.label {
+  /* El propio label puede envolver en varios renglones si el idioma (p. ej.
+     alemán) produce un literal largo; el botón crece en altura en vez de
+     recortar el texto. */
+  min-width: 0;
+}
+
+/* ---------- Tamaño ---------- */
+.button[data-size="sm"] {
+  font-size: var(--ink-text-sm);
+  min-height: 2rem;
+  padding-inline: var(--ink-space-3);
+}
+
+.button[data-size="md"] {
+  font-size: var(--ink-text-base);
+  min-height: 2.25rem;
+  padding-inline: var(--ink-space-4);
+}
+
+.button[data-size="lg"] {
+  font-size: var(--ink-text-md);
+  min-height: 2.75rem;
+  padding-inline: var(--ink-space-5);
+}
+
+/* ---------- Variante: primary ---------- */
+.button[data-variant="primary"] {
+  background: var(--ink-accent-default);
+  color: var(--ink-text-inverse);
+}
+
+.button[data-variant="primary"]:hover:not(:disabled) {
+  background: var(--ink-accent-hover);
+}
+
+.button[data-variant="primary"]:active:not(:disabled) {
+  background: var(--ink-accent-active);
+}
+
+.button[data-variant="primary"]:disabled {
+  background: var(--ink-bg-sunken);
+  color: var(--ink-text-disabled);
+}
+
+/* ---------- Variante: secondary ---------- */
+.button[data-variant="secondary"] {
+  background: var(--ink-bg-surface);
+  color: var(--ink-text-primary);
+  border-color: var(--ink-border-strong);
+}
+
+.button[data-variant="secondary"]:hover:not(:disabled) {
+  background: var(--ink-bg-surface-secondary);
+}
+
+.button[data-variant="secondary"]:active:not(:disabled) {
+  background: var(--ink-bg-sunken);
+}
+
+.button[data-variant="secondary"]:disabled {
+  background: var(--ink-bg-surface);
+  color: var(--ink-text-disabled);
+  border-color: var(--ink-border-default);
+}
+
+/* ---------- Variante: ghost ---------- */
+.button[data-variant="ghost"] {
+  background: transparent;
+  color: var(--ink-text-secondary);
+}
+
+.button[data-variant="ghost"]:hover:not(:disabled) {
+  background: var(--ink-bg-surface-secondary);
+  color: var(--ink-text-primary);
+}
+
+.button[data-variant="ghost"]:active:not(:disabled) {
+  background: var(--ink-bg-sunken);
+}
+
+.button[data-variant="ghost"]:disabled {
+  color: var(--ink-text-disabled);
+}
+
+/* ---------- Variante: danger ---------- */
+.button[data-variant="danger"] {
+  background: var(--ink-critical-solid);
+  color: var(--ink-text-inverse);
+}
+
+.button[data-variant="danger"]:hover:not(:disabled) {
+  background: var(--ink-critical-solid-hover);
+}
+
+.button[data-variant="danger"]:active:not(:disabled) {
+  background: var(--ink-critical-solid-active);
+}
+
+.button[data-variant="danger"]:disabled {
+  background: var(--ink-bg-sunken);
+  color: var(--ink-text-disabled);
+}

@@ -1,0 +1,16 @@
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ink-space-1);
+}
+
+.name {
+  color: var(--ink-accent-default);
+  font-weight: var(--ink-font-weight-medium);
+  text-decoration: none;
+}
+
+.name:hover,
+.name:focus-visible {
+  text-decoration: underline;
+}

@@ -1,0 +1,86 @@
+---
+import { teacherCards, selectedIds } from "../../block-content";
+import type { BlockSnapshot } from "../../public-site";
+
+const { block } = Astro.props as { block: BlockSnapshot };
+const teachers = teacherCards(block.props);
+const teacherIds = selectedIds(block.props, "teacherProfileIds");
+---
+
+<section class="section teachers-block">
+  <div class="section-heading">
+    <p>Profesorado</p>
+    <h2>Equipo docente</h2>
+  </div>
+  <div class="teacher-grid">
+    {
+      teachers.length > 0
+        ? teachers.map((teacher) => (
+            <article class="teacher-card">
+              {teacher.imageUrl ? (
+                <img src={teacher.imageUrl} alt={teacher.displayName} loading="lazy" />
+              ) : (
+                <div class="avatar" aria-hidden="true">{teacher.displayName.slice(0, 1)}</div>
+              )}
+              <h3>{teacher.displayName}</h3>
+            </article>
+          ))
+        : teacherIds.map((id) => (
+            <article class="teacher-card">
+              <div class="avatar" aria-hidden="true">L</div>
+              <h3>Profesorado publicado</h3>
+              <small>{id}</small>
+            </article>
+          ))
+    }
+  </div>
+</section>
+
+<style>
+  .teachers-block {
+    background: #f5f8f7;
+  }
+
+  .teacher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+  }
+
+  .teacher-card {
+    min-height: 220px;
+    padding: 18px;
+    border-radius: 8px;
+    background: white;
+  }
+
+  .teacher-card img,
+  .avatar {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    object-fit: cover;
+    background: color-mix(in srgb, var(--brand-primary) 14%, white);
+  }
+
+  .avatar {
+    display: grid;
+    place-items: center;
+    color: var(--brand-primary);
+    font-size: 3rem;
+    font-weight: 800;
+  }
+
+  h3 {
+    margin: 14px 0 0;
+    color: #10211f;
+    font-size: 1.05rem;
+  }
+
+  small {
+    display: block;
+    margin-top: 8px;
+    color: #667471;
+    overflow-wrap: anywhere;
+  }
+</style>

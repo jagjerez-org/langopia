@@ -1,0 +1,79 @@
+.wrapper {
+  /* Con textos largos (alemán) o muchas columnas, la tabla desliza en
+     horizontal en vez de recortar o desbordar la pantalla. */
+  overflow-x: auto;
+  border: 1px solid var(--ink-border-default);
+  border-radius: var(--ink-radius-lg);
+  background: var(--ink-bg-surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-sans);
+  font-size: var(--ink-text-sm);
+}
+
+.caption {
+  text-align: left;
+  padding: var(--ink-space-4) var(--ink-space-5);
+  font-size: var(--ink-text-md);
+  font-weight: var(--ink-font-weight-semibold);
+  color: var(--ink-text-primary);
+  border-bottom: 1px solid var(--ink-border-default);
+}
+
+.captionHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.head,
+.headNumeric {
+  text-align: left;
+  padding: var(--ink-space-3) var(--ink-space-4);
+  font-weight: var(--ink-font-weight-semibold);
+  font-size: var(--ink-text-xs);
+  color: var(--ink-text-secondary);
+  background: var(--ink-bg-surface-secondary);
+  border-bottom: 1px solid var(--ink-border-default);
+}
+
+.headNumeric {
+  text-align: right;
+}
+
+.cell,
+.cellNumeric {
+  padding: var(--ink-space-3) var(--ink-space-4);
+  border-bottom: 1px solid var(--ink-border-default);
+  color: var(--ink-text-primary);
+  vertical-align: middle;
+  overflow-wrap: break-word;
+}
+
+.cellNumeric {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.statusCell {
+  padding: 0;
+  border-bottom: none;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover td {
+  background: var(--ink-bg-surface-secondary);
+}

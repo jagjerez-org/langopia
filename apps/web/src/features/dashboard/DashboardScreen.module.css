@@ -1,0 +1,16 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ink-space-6);
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--ink-space-6);
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--ink-text-2xl);
+  font-weight: var(--ink-font-weight-semibold);
+  color: var(--ink-text-primary);
+}

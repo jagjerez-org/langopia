@@ -1,0 +1,41 @@
+---
+import { textContent } from "../../block-content";
+import type { BlockSnapshot } from "../../public-site";
+
+const { block } = Astro.props as { block: BlockSnapshot };
+const nodes = textContent(block.props);
+---
+
+<section class="section text-block">
+  <div class="text-content">
+    {
+      nodes.map((node) =>
+        node.kind === "heading" ? <h2>{node.text}</h2> : <p>{node.text}</p>,
+      )
+    }
+  </div>
+</section>
+
+<style>
+  .text-block {
+    background: white;
+  }
+
+  .text-content {
+    max-width: 820px;
+  }
+
+  h2 {
+    margin: 0 0 18px;
+    color: #10211f;
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1.08;
+  }
+
+  p {
+    margin: 0 0 18px;
+    color: #52615e;
+    font-size: 1.12rem;
+    line-height: 1.7;
+  }
+</style>

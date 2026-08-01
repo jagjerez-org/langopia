@@ -1,0 +1,55 @@
+---
+import { faqItems } from "../../block-content";
+import type { BlockSnapshot } from "../../public-site";
+
+const { block } = Astro.props as { block: BlockSnapshot };
+const items = faqItems(block.props);
+---
+
+<section class="section faq-block">
+  <div class="section-heading">
+    <p>Preguntas</p>
+    <h2>Antes de empezar</h2>
+  </div>
+  <div class="faq-list">
+    {
+      items.map((item) => (
+        <details>
+          <summary>{item.question}</summary>
+          <p>{item.answer}</p>
+        </details>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .faq-block {
+    background: #ffffff;
+  }
+
+  .faq-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  details {
+    border: 1px solid #dce5e2;
+    border-radius: 8px;
+    background: #fbfdfc;
+  }
+
+  summary {
+    cursor: pointer;
+    padding: 18px 20px;
+    color: #10211f;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+    padding: 0 20px 20px;
+    color: #52615e;
+    line-height: 1.55;
+  }
+</style>

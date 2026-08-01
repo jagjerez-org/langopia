@@ -1,0 +1,160 @@
+---
+import { booleanProp } from "../../block-content";
+import type { BlockSnapshot, PublicSiteSummary } from "../../public-site";
+
+const { block, site, pageSlug } = Astro.props as {
+  block: BlockSnapshot;
+  site: PublicSiteSummary;
+  pageSlug: string;
+};
+const title = typeof block.props.title === "string" ? block.props.title : "Hablemos de tus clases";
+const submitLabel = typeof block.props.submitLabel === "string" ? block.props.submitLabel : "Enviar consulta";
+const askLanguage = booleanProp(block.props, "askLanguage");
+const showPhone = booleanProp(block.props, "showPhone");
+---
+
+<section class="section contact-block" id="contacto">
+  <div class="contact-copy">
+    <p>Contacto</p>
+    <h2>{title}</h2>
+  </div>
+  <form data-contact-form data-school-id={site.site.schoolId} data-source-page={pageSlug}>
+    <label>
+      Nombre
+      <input name="name" autocomplete="name" required />
+    </label>
+    <label>
+      Email
+      <input name="email" type="email" autocomplete="email" required />
+    </label>
+    {
+      showPhone && (
+        <label>
+          Teléfono
+          <input name="phone" autocomplete="tel" />
+        </label>
+      )
+    }
+    {
+      askLanguage && (
+        <label>
+          Idioma
+          <input name="interestedLanguage" autocomplete="off" />
+        </label>
+      )
+    }
+    <label>
+      Mensaje
+      <textarea name="message" rows="4"></textarea>
+    </label>
+    <button type="submit">{submitLabel}</button>
+    <p class="form-status" data-contact-status aria-live="polite"></p>
+  </form>
+</section>
+
+<script>
+  for (const form of document.querySelectorAll("[data-contact-form]")) {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const target = event.currentTarget;
+      if (!(target instanceof HTMLFormElement)) return;
+
+      const status = target.querySelector("[data-contact-status]");
+      const button = target.querySelector("button");
+      const payload = Object.fromEntries(new FormData(target).entries());
+      payload.sourcePage = target.dataset.sourcePage ?? "";
+      payload.leadSource = "school_site";
+
+      button?.setAttribute("disabled", "true");
+      if (status) status.textContent = "Enviando...";
+
+      try {
+        const response = await fetch("/api/v1/public/leads", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) throw new Error("lead_capture_failed");
+        target.reset();
+        if (status) status.textContent = "Consulta enviada. Te responderemos pronto.";
+      } catch {
+        if (status) status.textContent = "No se pudo enviar ahora. Inténtalo de nuevo en unos minutos.";
+      } finally {
+        button?.removeAttribute("disabled");
+      }
+    });
+  }
+</script>
+
+<style>
+  .contact-block {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(280px, 1.2fr);
+    gap: clamp(24px, 5vw, 64px);
+    background: #f5f8f7;
+  }
+
+  .contact-copy p {
+    margin: 0 0 12px;
+    color: var(--brand-primary);
+    font-weight: 800;
+  }
+
+  .contact-copy h2 {
+    margin: 0;
+    color: #10211f;
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1.05;
+  }
+
+  form {
+    display: grid;
+    gap: 14px;
+  }
+
+  label {
+    display: grid;
+    gap: 7px;
+    color: #33423f;
+    font-weight: 700;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #c9d5d1;
+    border-radius: 6px;
+    padding: 12px 14px;
+    color: #10211f;
+    font: inherit;
+  }
+
+  button {
+    min-height: 48px;
+    border: 0;
+    border-radius: 6px;
+    background: var(--brand-primary);
+    color: white;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: wait;
+    opacity: 0.68;
+  }
+
+  .form-status {
+    min-height: 24px;
+    margin: 0;
+    color: #52615e;
+  }
+
+  @media (max-width: 760px) {
+    .contact-block {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

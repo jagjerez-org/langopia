@@ -1,0 +1,156 @@
+---
+import BlockRenderer from "../components/blocks/BlockRenderer.astro";
+import Seo from "../components/Seo.astro";
+import { brandStyle, fetchPublicSitePage } from "../public-site";
+import type { PublicSiteSummary } from "../public-site";
+import { buildSeoMetadata, originFromRequest, publicPathForPage } from "../seo";
+
+const site = Astro.locals.site as PublicSiteSummary;
+const pageData = await fetchPublicSitePage({
+  apiUrl: import.meta.env.API_URL,
+  site,
+  pathname: Astro.url.pathname,
+});
+
+if (pageData === null) {
+  return new Response("Página no encontrada", { status: 404 });
+}
+
+const lang = pageData.page.locale.split("-")[0] ?? site.site.defaultLocale.split("-")[0] ?? "es";
+const seo = buildSeoMetadata({
+  site,
+  page: pageData,
+  origin: originFromRequest(Astro.request),
+});
+---
+
+<!doctype html>
+<html lang={lang} style={brandStyle(site)}>
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width" />
+    <Seo metadata={seo} />
+  </head>
+  <body>
+    <header class="site-header">
+      <a href="/" class="brand">{site.site.schoolName}</a>
+      <nav aria-label="Principal">
+        {
+          site.pages.map((page) => (
+            <a href={publicPathForPage(page, site)}>{page.title}</a>
+          ))
+        }
+      </nav>
+    </header>
+    <main>
+      {
+        pageData.blocks.map((block) => (
+          <BlockRenderer block={block} site={site} pageSlug={pageData.page.slug} />
+        ))
+      }
+    </main>
+  </body>
+</html>
+
+<style is:global>
+  :root {
+    color-scheme: light;
+    --page-gutter: clamp(20px, 5vw, 88px);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--brand-font);
+    background: white;
+    color: #10211f;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    min-height: 64px;
+    padding: 0 var(--page-gutter);
+    border-bottom: 1px solid rgba(16, 33, 31, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+  }
+
+  .brand {
+    color: #10211f;
+    font-weight: 850;
+    text-decoration: none;
+  }
+
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px 18px;
+  }
+
+  nav a {
+    color: #52615e;
+    font-size: 0.94rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  nav a:hover {
+    color: var(--brand-primary);
+  }
+
+  .section {
+    padding: clamp(56px, 8vw, 104px) var(--page-gutter);
+  }
+
+  .section-heading {
+    max-width: 720px;
+    margin-bottom: 32px;
+  }
+
+  .section-heading p {
+    margin: 0 0 10px;
+    color: var(--brand-primary);
+    font-weight: 800;
+  }
+
+  .section-heading h2 {
+    margin: 0;
+    color: #10211f;
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    line-height: 1.08;
+  }
+
+  @media (max-width: 720px) {
+    .site-header {
+      align-items: flex-start;
+      flex-direction: column;
+      padding-top: 14px;
+      padding-bottom: 14px;
+    }
+
+    nav {
+      justify-content: flex-start;
+    }
+  }
+</style>

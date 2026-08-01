@@ -1,0 +1,56 @@
+---
+import { testimonialCards } from "../../block-content";
+import type { BlockSnapshot } from "../../public-site";
+
+const { block } = Astro.props as { block: BlockSnapshot };
+const testimonials = testimonialCards(block.props);
+---
+
+<section class="section testimonials-block">
+  <div class="section-heading">
+    <p>Reseñas</p>
+    <h2>Lo que cuentan los alumnos</h2>
+  </div>
+  <div class="testimonial-grid">
+    {
+      testimonials.map((testimonial) => (
+        <figure>
+          <blockquote>{testimonial.quote}</blockquote>
+          <figcaption>{testimonial.authorName}</figcaption>
+        </figure>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .testimonials-block {
+    background: color-mix(in srgb, var(--brand-accent) 9%, white);
+  }
+
+  .testimonial-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  figure {
+    margin: 0;
+    padding: 24px;
+    border-radius: 8px;
+    background: white;
+  }
+
+  blockquote {
+    margin: 0;
+    color: #1f302d;
+    font-size: 1.15rem;
+    line-height: 1.55;
+  }
+
+  figcaption {
+    margin-top: 20px;
+    color: var(--brand-primary);
+    font-weight: 700;
+  }
+</style>

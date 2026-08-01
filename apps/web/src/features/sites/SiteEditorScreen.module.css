@@ -1,0 +1,107 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  gap: 24px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editorColumn,
+.previewColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.blockList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.blockHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.blockTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.blockControls {
+  display: flex;
+  gap: 6px;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.teacherList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.teacherRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.warning {
+  margin: 4px 0 0;
+  color: #9a3412;
+  font-size: 0.875rem;
+}
+
+.preview {
+  width: 100%;
+  min-height: 640px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+@media (max-width: 1024px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .preview {
+    min-height: 520px;
+  }
+}
+
+@media (max-width: 640px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}

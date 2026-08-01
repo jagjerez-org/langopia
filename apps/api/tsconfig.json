@@ -1,27 +1,30 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "node16",
-    "moduleResolution": "node16",
-    "lib": ["ES2022"],
+    // NodeNext emite CommonJS (el package.json de la app no declara "type":
+    // "module") y, a diferencia de la resolución "Node" clásica, entiende el
+    // campo `exports` de @langopia/db. Exige extensión `.js` en los imports
+    // relativos, que es lo que ya usamos en todo el proyecto.
+    //
+    // NodeNext y no Node16 por Better Auth: se publica solo como ESM, y con
+    // Node16 TypeScript prohíbe importarlo desde un módulo CommonJS (TS1479).
+    // Node ≥ 22.12 sabe hacer `require()` de un módulo ESM sin await de nivel
+    // superior, y NodeNext es el modo en el que TypeScript lo permite.
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2023",
     "outDir": "./dist",
     "rootDir": "./src",
-    "declaration": true,
-    "removeComments": true,
+    "baseUrl": "./src",
+    "noEmit": false,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
-    "sourceMap": true,
-    "incremental": true,
-    "skipLibCheck": true,
-    "strictNullChecks": true,
-    "noImplicitAny": false,
     "strictPropertyInitialization": false,
-    "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
-    "resolveJsonModule": true
+    "paths": {
+      "@shared/*": ["contexts/shared/*"],
+      "@contexts/*": ["contexts/*"]
+    }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,0 +1,37 @@
+---
+import type { BlockSnapshot, PublicSiteSummary } from "../../public-site";
+import ContactBlock from "./ContactBlock.astro";
+import CoursesBlock from "./CoursesBlock.astro";
+import FaqBlock from "./FaqBlock.astro";
+import HeroBlock from "./HeroBlock.astro";
+import PricingBlock from "./PricingBlock.astro";
+import TeachersBlock from "./TeachersBlock.astro";
+import TestimonialsBlock from "./TestimonialsBlock.astro";
+import TextBlock from "./TextBlock.astro";
+
+const { block, site, pageSlug } = Astro.props as {
+  block: BlockSnapshot;
+  site: PublicSiteSummary;
+  pageSlug: string;
+};
+---
+
+{
+  block.type === "hero" ? (
+    <HeroBlock block={block} />
+  ) : block.type === "courses" ? (
+    <CoursesBlock block={block} />
+  ) : block.type === "teachers" ? (
+    <TeachersBlock block={block} />
+  ) : block.type === "pricing" ? (
+    <PricingBlock block={block} />
+  ) : block.type === "testimonials" ? (
+    <TestimonialsBlock block={block} />
+  ) : block.type === "faq" ? (
+    <FaqBlock block={block} />
+  ) : block.type === "contact" ? (
+    <ContactBlock block={block} site={site} pageSlug={pageSlug} />
+  ) : block.type === "text" ? (
+    <TextBlock block={block} />
+  ) : null
+}

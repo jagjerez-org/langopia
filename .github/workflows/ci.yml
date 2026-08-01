@@ -1,0 +1,111 @@
+# .github/workflows/ci.yml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: langopia
+          POSTGRES_PASSWORD: langopia
+          POSTGRES_DB: langopia
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://langopia:langopia@localhost:5432/langopia
+      DATABASE_URL_APP: postgres://langopia_app:cambiame@localhost:5432/langopia
+      # La prueba de extremo a extremo (Tarea 10) arranca el `AppModule`
+      # completo, incluido Better Auth (`iam.module.ts` construye `AUTH` con
+      # `createAuth(...)`, que sin estas dos lee `undefined` y no puede
+      # firmar ni verificar sesiones). Los pasos anteriores nunca las
+      # necesitaron: los `*.spec.ts` unitarios jamás construyen el
+      # contenedor de Nest. Secreto de CI, no de producción.
+      BETTER_AUTH_SECRET: ci-e2e-secret-no-es-de-produccion
+      BETTER_AUTH_URL: http://localhost:3000/api/v1/auth
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      # Playwright (Tarea 13) necesita el navegador descargado aparte de
+      # `npm ci`: no viene con el paquete `@playwright/test`.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build --workspace @langopia/db
+      - run: npm run typecheck
+      - run: npm run typecheck:e2e --workspace @langopia/api
+      - run: npm run typecheck:e2e --workspace @langopia/web
+
+      - name: Esquema y políticas de aislamiento
+        run: |
+          npm run db:migrate
+          npm run db:policies
+
+      # El seed comprueba el aislamiento entre escuelas y sale con error si falla.
+      - name: Seed y verificación de aislamiento
+        run: npm run db:seed
+
+      - name: Pruebas (API)
+        run: npm run test --workspace @langopia/api
+
+      # El panel (`apps/web`) tiene su propia batería (formatos, i18n con sus
+      # cinco idiomas, componentes, clientes de API...): sin este paso, nunca
+      # corría en CI y una regresión ahí pasaría desapercibida para siempre.
+      - name: Pruebas (panel web)
+        run: npm run test --workspace @langopia/web
+
+      # Tarea 10 de la ola 1, Tarea 13 de la ola 2 y Tarea 11 de la ola 3:
+      # criterios de «listo»
+      # de la API automatizados. Corren aparte de la batería unitaria de
+      # arriba (arrancan el `AppModule` completo contra Postgres real) para
+      # no alargar ni acoplar el `npm run test` de siempre.
+      - name: Pruebas de extremo a extremo de la API (olas 1, 2 y 3)
+        run: npm run test:e2e --workspace @langopia/api
+
+      # `apps/api/dist/main.js` — el recorrido de Playwright de abajo levanta
+      # la API compilada como un proceso real, no el `AppModule` en memoria.
+      - run: npm run api:build
+
+      # Tarea 13 de la ola 1: el criterio de «listo» del panel ENTERO,
+      # automatizado con un navegador real (Chromium) contra la API
+      # compilada y este mismo Postgres — registro de escuela, puesta en
+      # marcha, alta de profesorado y alumnado (con menor y tutor exigido),
+      # importación por CSV, tres clases con dos cancelaciones y una lista de
+      # asistencia, facturación con su comisión desglosada, y el portal del
+      # alumno viendo solo sus propios datos. Si el panel deja de funcionar
+      # de principio a fin, este paso —y solo este— se pone en rojo.
+      - name: Recorrido de extremo a extremo del panel (ola 1, Playwright)
+        run: npm run test:e2e --workspace @langopia/web
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/test-results
+          retention-days: 7
+
+  desplegar:
+    needs: verificar
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: railwayapp/cli@v3
+        with:
+          command: up --service api --detach
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

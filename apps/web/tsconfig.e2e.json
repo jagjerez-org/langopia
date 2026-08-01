@@ -1,0 +1,12 @@
+{
+  // Aparte de `tsconfig.json` (mismo motivo que `apps/api/tsconfig.e2e.json`,
+  // Tarea 10 del backend): ese tiene un `include` pensado para lo que
+  // `vite build` empaqueta; `e2e/` y `playwright.config.ts` viven fuera de
+  // ese árbol y no deben afectar al build real del panel. Este fichero solo
+  // comprueba tipos (`noEmit`), nunca se compila a `dist`.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "e2e/**/*.ts", "playwright.config.ts"]
+}

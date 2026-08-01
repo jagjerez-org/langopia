@@ -1,0 +1,14 @@
+{
+  // Aparte de `tsconfig.json` (Tarea 10 de la ola 1): ese tiene `rootDir:
+  // "./src"` a propósito, para que `dist/` refleje exactamente `src/`. La
+  // prueba de extremo a extremo vive en `test/`, fuera de ese árbol —
+  // meterla en el mismo proyecto rompería esa correspondencia. Este fichero
+  // solo comprueba tipos (`noEmit`, nunca se compila a `dist`), así que
+  // `rootDir` amplio no tiene ningún efecto sobre el build real de la API.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "noEmit": true
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

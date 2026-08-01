@@ -1,0 +1,162 @@
+.wrapper {
+  border: 1px solid var(--ink-border-default);
+  border-radius: var(--ink-radius-lg);
+  background: var(--ink-bg-surface);
+  overflow: hidden;
+}
+
+.headerRow {
+  display: grid;
+  grid-template-columns: 3.5rem repeat(7, minmax(6.5rem, 1fr));
+  border-bottom: 1px solid var(--ink-border-default);
+  background: var(--ink-bg-surface-secondary);
+}
+
+.cornerCell {
+  border-right: 1px solid var(--ink-border-default);
+}
+
+.dayHeader {
+  padding: var(--ink-space-2) var(--ink-space-2);
+  text-align: center;
+  font-size: var(--ink-text-sm);
+  font-weight: var(--ink-font-weight-semibold);
+  color: var(--ink-text-primary);
+  border-left: 1px solid var(--ink-border-default);
+}
+
+.dayHeader[data-today="true"] {
+  background: var(--ink-accent-subtle-bg);
+  color: var(--ink-accent-subtle-text);
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 3.5rem repeat(7, minmax(6.5rem, 1fr));
+  max-height: 42rem;
+  overflow-y: auto;
+}
+
+.hourLabels {
+  border-right: 1px solid var(--ink-border-default);
+}
+
+.hourLabel {
+  height: 3.5rem;
+  padding-right: var(--ink-space-2);
+  text-align: right;
+  font-size: var(--ink-text-xs);
+  color: var(--ink-text-tertiary);
+  font-family: var(--font-mono);
+  transform: translateY(-0.5em);
+}
+
+.dayColumn {
+  position: relative;
+  border-left: 1px solid var(--ink-border-default);
+}
+
+.hourCell {
+  height: 3.5rem;
+  border-bottom: 1px dashed var(--ink-border-default);
+}
+
+.hourCell[data-drop-target="true"] {
+  background: var(--ink-accent-subtle-bg);
+}
+
+.session {
+  all: unset;
+  position: absolute;
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  padding: var(--ink-space-1) var(--ink-space-2);
+  border-radius: var(--ink-radius-sm);
+  border: 1px solid var(--ink-border-strong);
+  background: var(--ink-neutral-soft-bg);
+  color: var(--ink-neutral-soft-text);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  font-size: var(--ink-text-xs);
+  line-height: var(--ink-leading-xs);
+}
+
+.session:focus-visible {
+  outline: 2px solid var(--ink-focus-ring);
+  outline-offset: 1px;
+  z-index: 5;
+}
+
+.session[data-dragging="true"] {
+  opacity: 0.5;
+}
+
+/* Paleta por profesor: ocho tonos distintos entre sí y del neutro por
+   defecto (sin profesor asignado, ver `.session` de arriba). Los valores
+   concretos son deliberadamente saturados y variados para que un vistazo
+   rápido distinga profesores sin depender del texto — el texto (nombre del
+   profesor) sigue presente siempre, el color nunca es la única señal. */
+.session[data-teacher-color="0"] {
+  background: #e8f0fe;
+  border-color: #a8c5f5;
+  color: #1a3d7c;
+}
+.session[data-teacher-color="1"] {
+  background: #fdece8;
+  border-color: #f3b3a3;
+  color: #7c2b1a;
+}
+.session[data-teacher-color="2"] {
+  background: #e8fbf1;
+  border-color: #9fe0bf;
+  color: #14532d;
+}
+.session[data-teacher-color="3"] {
+  background: #fdf3e8;
+  border-color: #f0cd97;
+  color: #7a4a08;
+}
+.session[data-teacher-color="4"] {
+  background: #f3e8fd;
+  border-color: #d3a8f5;
+  color: #4c1a7c;
+}
+.session[data-teacher-color="5"] {
+  background: #e8f9fd;
+  border-color: #9adaf0;
+  color: #0b4a5e;
+}
+.session[data-teacher-color="6"] {
+  background: #fdf8e8;
+  border-color: #eadd93;
+  color: #5c4e08;
+}
+.session[data-teacher-color="7"] {
+  background: #fdeaf3;
+  border-color: #f2a8cc;
+  color: #7c1a4e;
+}
+
+.session[data-status="canceled_by_school"],
+.session[data-status="canceled_by_student"] {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.sessionTitle {
+  font-weight: var(--ink-font-weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessionMeta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+  opacity: 0.85;
+}

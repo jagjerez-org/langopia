@@ -1,0 +1,44 @@
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ink-space-1);
+  padding: 0.125rem var(--ink-space-2);
+  border-radius: var(--ink-radius-full);
+  font-family: var(--font-sans);
+  font-size: var(--ink-text-xs);
+  font-weight: var(--ink-font-weight-medium);
+  line-height: var(--ink-leading-xs);
+  /* La forma de píldora, distinta del radio de Button/Card, marca a
+     propósito que esto no es interactivo: es una etiqueta. */
+  max-width: 100%;
+}
+
+.icon {
+  flex-shrink: 0;
+  font-size: 0.9em;
+}
+
+.label {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.tag[data-variant="neutral"] {
+  background: var(--ink-neutral-soft-bg);
+  color: var(--ink-neutral-soft-text);
+}
+
+.tag[data-variant="success"] {
+  background: var(--ink-success-bg);
+  color: var(--ink-success-text);
+}
+
+.tag[data-variant="warning"] {
+  background: var(--ink-warning-bg);
+  color: var(--ink-warning-text);
+}
+
+.tag[data-variant="critical"] {
+  background: var(--ink-critical-bg);
+  color: var(--ink-critical-text);
+}

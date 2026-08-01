@@ -1,23 +1,35 @@
 {
   "name": "langopia",
+  "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@9.15.4",
-  "scripts": {
-    "dev": "turbo dev --filter=!@langopia/mobile",
-    "build": "turbo build",
-    "lint": "turbo lint",
-    "type-check": "turbo type-check"
+  "description": "CRM SaaS multi-tenant para academias de idiomas online",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
   },
-  "pnpm": {
-    "overrides": {
-      "react": "19.1.0",
-      "react-dom": "19.1.0"
-    }
+  "scripts": {
+    "api:dev": "npm run start:dev --workspace @langopia/api",
+    "api:build": "npm run build --workspace @langopia/api",
+    "web:dev": "npm run dev --workspace @langopia/web",
+    "web:build": "npm run build --workspace @langopia/web",
+    "sites:dev": "npm run dev --workspace sites",
+    "dev": "npm run api:dev & npm run web:dev",
+    "db:push": "npm run db:push --workspace @langopia/db",
+    "db:generate": "npm run db:generate --workspace @langopia/db",
+    "db:migrate": "npm run db:migrate --workspace @langopia/db",
+    "db:deploy": "npm run db:deploy --workspace @langopia/db",
+    "db:policies": "npm run db:policies --workspace @langopia/db",
+    "db:seed": "npm run db:seed --workspace @langopia/db",
+    "db:studio": "npm run db:studio --workspace @langopia/db",
+    "db:reset": "npm run db:push && npm run db:policies && npm run db:seed",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "devDependencies": {
-    "prettier": "^3.4.2",
-    "turbo": "^2.3.3",
-    "typescript": "^5.7.3",
-    "wait-on": "^9.0.4"
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3"
   }
 }
