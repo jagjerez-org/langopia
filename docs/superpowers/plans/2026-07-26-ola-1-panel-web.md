@@ -464,12 +464,12 @@ El criterio de «listo» de la ola 1, comprobado como lo haría una persona.
 
 - [ ] Una persona que no ha visto el producto registra su escuela, da de alta un alumno menor con su tutor y programa una clase, sin ayuda.
 - [ ] El panel se puede usar entero con teclado.
-- [ ] Cambiando el idioma cambia toda la interfaz, incluidos importes y fechas.
-- [ ] Ningún error muestra «algo salió mal»: todos dicen qué pasó y qué hacer.
+- [x] Cambiando el idioma cambia toda la interfaz, incluidos importes y fechas.
+- [x] Ningún error muestra «algo salió mal»: todos dicen qué pasó y qué hacer.
 - [ ] El recorrido de Playwright pasa en CI.
-- [ ] **Cero lógica de negocio en el frontend**: la decisión de si hay devolución llega de la API, no se calcula aquí.
-- [ ] Un error de la API se ve en el idioma del usuario, y un `code` que el panel no conoce muestra el `title` traducido, nunca el código.
-- [ ] Ninguna pantalla muestra español a quien pidió gallego.
+- [x] **Cero lógica de negocio en el frontend**: la decisión de si hay devolución llega de la API, no se calcula aquí.
+- [x] Un error de la API se ve en el idioma del usuario, y un `code` que el panel no conoce muestra el `title` traducido, nunca el código.
+- [x] Ninguna pantalla muestra español a quien pidió gallego.
 
 ---
 
