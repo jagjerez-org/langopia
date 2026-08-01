@@ -593,12 +593,12 @@ Qué devuelve, y por qué cada cosa:
 
 ## Criterio de «listo» de la ola 2
 
-- [ ] Un profesor genera una unidad completa, la revisa, la publica a un grupo y los alumnos la completan sin salir de Langopia.
-- [ ] El coste de esa unidad aparece descontado de los créditos de la escuela, y el coste real registrado en `ai_generations`.
-- [ ] Ninguna nota cuenta sin firma de una persona.
-- [ ] Con el saldo a cero y tope duro, no se llama a ningún modelo.
-- [ ] Los once tipos de ejercicio se generan, se resuelven y se corrigen.
-- [ ] La prueba de nivelación devuelve un nivel MCER con desglose por destreza.
+- [x] Un profesor genera una unidad completa, la revisa, la publica a un grupo y los alumnos la completan sin salir de Langopia.
+- [x] El coste de esa unidad aparece descontado de los créditos de la escuela, y el coste real registrado en `ai_generations`.
+- [x] Ninguna nota cuenta sin firma de una persona.
+- [x] Con el saldo a cero y tope duro, no se llama a ningún modelo.
+- [x] Los once tipos de ejercicio se generan, se resuelven y se corrigen.
+- [x] La prueba de nivelación devuelve un nivel MCER con desglose por destreza.
 
 ---
 

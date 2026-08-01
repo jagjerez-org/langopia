@@ -313,10 +313,10 @@ Decisiones:
 ## Criterio de «listo» de la ola 3
 
 - [ ] Desde Claude preguntas «¿qué alumnos de B1 llevan tres semanas sin valorar?» y obtienes la respuesta de tu escuela, autenticado y aislado del resto.
-- [ ] Una clase con un participante sin consentimiento **no** genera ni audio ni transcripción, y el motivo queda registrado.
-- [ ] El panel de riesgo de baja señala alumnos con motivos que un profesor entiende y puede accionar.
-- [ ] Revocar un cliente MCP surte efecto de inmediato.
-- [ ] Toda acción vía MCP queda en la auditoría con su cliente.
+- [x] Una clase con un participante sin consentimiento **no** genera ni audio ni transcripción, y el motivo queda registrado.
+- [x] El panel de riesgo de baja señala alumnos con motivos que un profesor entiende y puede accionar.
+- [x] Revocar un cliente MCP surte efecto de inmediato.
+- [x] Toda acción vía MCP queda en la auditoría con su cliente.
 
 ---
 
