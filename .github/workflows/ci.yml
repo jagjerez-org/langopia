@@ -45,6 +45,9 @@ jobs:
       # Playwright (Tarea 13) necesita el navegador descargado aparte de
       # `npm ci`: no viene con el paquete `@playwright/test`.
       - run: npx playwright install --with-deps chromium
+      # Los paquetes se consumen compilados (`dist`): sin este paso, el
+      # typecheck de la API falla con «Cannot find module '@langopia/...'».
+      - run: npm run build --workspace @langopia/contracts
       - run: npm run build --workspace @langopia/db
       - run: npm run typecheck
       - run: npm run typecheck:e2e --workspace @langopia/api
