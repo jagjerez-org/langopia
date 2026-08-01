@@ -120,7 +120,13 @@ const queryHandlers = [
           config.get<string>("PUBLIC_API_URL") ??
           config.get<string>("BETTER_AUTH_URL") ??
           "http://localhost:3000"
-        ).replace(/\/api\/v1\/?$/, "");
+          // El issuer del OAuth de MCP es el ORIGEN de la API: sus rutas viven
+          // en la raíz (`/.well-known/...`, `/mcp/oauth/...`), fuera del
+          // prefijo global. `BETTER_AUTH_URL` trae `/api/v1/auth` a propósito
+          // (Better Auth deduce de ahí su base) y `PUBLIC_API_URL` puede traer
+          // `/api/v1`; hay que recortar ambos o los endpoints que se anuncian
+          // en los metadatos apuntan a rutas que no existen.
+        ).replace(/\/api\/v1(\/auth)?\/?$/, "");
         const tokenSecret =
           config.get<string>("MCP_OAUTH_TOKEN_SECRET") ??
           config.get<string>("BETTER_AUTH_SECRET") ??

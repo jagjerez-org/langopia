@@ -4,6 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module.js";
 import { parseTrustedOrigins } from "./contexts/iam/infrastructure/auth/better-auth.config.js";
+import { mountClsContextForRootPaths } from "./contexts/shared/infrastructure/http/root-cls.middleware.js";
 
 /**
  * Registro único de la API (Tarea 8c): sustituye al `JsonLogger` a mano de la
@@ -65,6 +66,10 @@ async function bootstrap(): Promise<void> {
       { path: "mcp/oauth/{*path}", method: RequestMethod.ALL },
     ],
   });
+  // Las rutas excluidas del prefijo no reciben los middleware del contenedor
+  // —incluido el de nestjs-cls— y sin contexto CLS el guardia de tenant y el
+  // filtro de errores mueren con un 500. Hay que devolvérselo a mano.
+  mountClsContextForRootPaths(app);
   app.enableShutdownHooks();
 
   const port = Number(process.env.PORT ?? 3000);
