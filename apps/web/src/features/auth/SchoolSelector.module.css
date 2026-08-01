@@ -1,0 +1,61 @@
+/* Selector de escuela: misma tarjeta centrada que la pantalla de acceso —
+   es la segunda pantalla «fuera del marco» que ve quien entra, y debe
+   sentirse parte del mismo recorrido. Solo presentación. */
+
+.page {
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ink-space-6);
+  background: var(--ink-bg-canvas);
+}
+
+.card {
+  width: min(26rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ink-space-4);
+  padding: var(--ink-space-6);
+  background: var(--ink-bg-surface);
+  border: 1px solid var(--ink-border-default);
+  border-radius: var(--ink-radius-lg);
+  box-shadow: var(--ink-shadow-md);
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ink-space-1);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--ink-text-2xl);
+  font-weight: var(--ink-font-weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--ink-text-primary);
+}
+
+.description {
+  margin: 0;
+  font-size: var(--ink-text-base);
+  color: var(--ink-text-secondary);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ink-space-2);
+}
+
+/* Cada escuela ocupa todo el ancho de la tarjeta: es una elección entre
+   pocas opciones, no una acción más de un formulario. El `Button` de `ui/`
+   pinta un `<button>` como raíz, así que el hijo directo del `<li>` ES el
+   botón. */
+.item > * {
+  width: 100%;
+}

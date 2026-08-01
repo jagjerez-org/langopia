@@ -52,8 +52,17 @@
 }
 
 .dayColumn {
-  position: relative;
   border-left: 1px solid var(--ink-border-default);
+  overflow-x: auto;
+}
+
+/* Pista del día: contexto de posicionamiento de las tarjetas. Cuando hay
+   muchos carriles solapados crece con `min-width` en línea (ver WeekGrid.tsx)
+   y la columna la desplaza horizontalmente. */
+.dayTrack {
+  position: relative;
+  min-width: 100%;
+  height: 100%;
 }
 
 .hourCell {

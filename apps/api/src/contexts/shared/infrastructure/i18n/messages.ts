@@ -1088,6 +1088,158 @@ export const MESSAGES: Record<string, Partial<Record<Locale, string>>> = {
     "pt-BR": "O item do exame não cumpre o esquema esperado.",
     "gl-ES": "O ítem do exame non cumpre o esquema esperado.",
   },
+  // Los dos siguientes son de `classroom` (transcripción de la clase).
+  // `transcriptId` viaja en `details` para el cliente, no para el texto (mismo
+  // criterio que `teacher_overlap`), y `action` de
+  // `transcript_not_processing` es un fragmento de verbo en español que no se
+  // puede repartir por los cinco idiomas: mensaje fijo.
+  transcript_blocked: {
+    "es-ES": "La transcripción de la clase está bloqueada porque falta el consentimiento de algún participante.",
+    "en-GB": "The class transcript is blocked because a participant's consent is missing.",
+    "de-DE": "Das Transkript des Unterrichts ist blockiert, weil die Einwilligung eines Teilnehmers fehlt.",
+    "pt-BR": "A transcrição da aula está bloqueada porque falta o consentimento de um participante.",
+    "gl-ES": "A transcrición da clase está bloqueada porque falta o consentimento dalgún participante.",
+  },
+  transcript_not_processing: {
+    "es-ES": "Esta transcripción no está procesándose: no admite esa operación en su estado actual.",
+    "en-GB": "This transcript is not being processed: it does not allow that operation in its current state.",
+    "de-DE": "Dieses Transkript wird gerade nicht verarbeitet: In seinem aktuellen Zustand ist diese Operation nicht möglich.",
+    "pt-BR": "Esta transcrição não está sendo processada: ela não admite essa operação no estado atual.",
+    "gl-ES": "Esta transcrición non está procesándose: non admite esa operación no seu estado actual.",
+  },
+  // Los nueve siguientes son de `feedback` (encuestas y reseñas).
+  // `invalid_survey_score` e `invalid_review_rating` llevan siempre los mismos
+  // escalares (`score`/`rating`, `min`, `max`), seguros de interpolar —mismo
+  // criterio que `invalid_review_quality`—. `kind`, `expected` y `actual` son
+  // literales del dominio («nps», «student»...) que no se leen bien en un
+  // mensaje, y los identificadores viajan en `details` para el cliente.
+  invalid_survey_score: {
+    "es-ES": "La puntuación de la encuesta debe ser un entero entre {min} y {max} (recibida: {score}).",
+    "en-GB": "The survey score must be a whole number between {min} and {max} (received: {score}).",
+    "de-DE": "Die Umfragebewertung muss eine ganze Zahl zwischen {min} und {max} sein (erhalten: {score}).",
+    "pt-BR": "A pontuação da pesquisa deve ser um número inteiro entre {min} e {max} (recebida: {score}).",
+    "gl-ES": "A puntuación da enquisa debe ser un enteiro entre {min} e {max} (recibida: {score}).",
+  },
+  inactive_survey: {
+    "es-ES": "Esta encuesta no acepta nuevas respuestas.",
+    "en-GB": "This survey is not accepting new responses.",
+    "de-DE": "Diese Umfrage nimmt keine neuen Antworten mehr an.",
+    "pt-BR": "Esta pesquisa não está aceitando novas respostas.",
+    "gl-ES": "Esta enquisa non acepta novas respostas.",
+  },
+  survey_audience_mismatch: {
+    "es-ES": "Esta encuesta no corresponde al tipo de persona que intenta responder.",
+    "en-GB": "This survey is not meant for the type of person trying to answer it.",
+    "de-DE": "Diese Umfrage richtet sich nicht an die Art von Person, die sie beantworten möchte.",
+    "pt-BR": "Esta pesquisa não se destina ao tipo de pessoa que está tentando responder.",
+    "gl-ES": "Esta enquisa non corresponde ao tipo de persoa que tenta responder.",
+  },
+  survey_session_required: {
+    "es-ES": "Una encuesta post-clase necesita la clase a la que se refiere.",
+    "en-GB": "A post-class survey needs the class it refers to.",
+    "de-DE": "Eine Umfrage nach dem Unterricht benötigt den Unterricht, auf den sie sich bezieht.",
+    "pt-BR": "Uma pesquisa pós-aula precisa da aula à qual se refere.",
+    "gl-ES": "Unha enquisa postclase necesita a clase á que se refire.",
+  },
+  survey_access_denied: {
+    "es-ES": "Solo quien asistió a la clase puede responder esta encuesta post-clase.",
+    "en-GB": "Only people who attended the class can answer this post-class survey.",
+    "de-DE": "Nur wer am Unterricht teilgenommen hat, kann diese Umfrage danach beantworten.",
+    "pt-BR": "Somente quem participou da aula pode responder a esta pesquisa pós-aula.",
+    "gl-ES": "Só quen asistiu á clase pode responder esta enquisa postclase.",
+  },
+  missing_respondent_membership: {
+    "es-ES": "Responder una encuesta requiere una membresía activa en la escuela.",
+    "en-GB": "Answering a survey requires an active membership in the school.",
+    "de-DE": "Um eine Umfrage zu beantworten, braucht es eine aktive Mitgliedschaft in der Schule.",
+    "pt-BR": "Responder a uma pesquisa exige uma associação ativa na escola.",
+    "gl-ES": "Responder unha enquisa require unha membresía activa na escola.",
+  },
+  invalid_review_rating: {
+    "es-ES": "La reseña debe puntuar de {min} a {max} (recibido: {rating}).",
+    "en-GB": "A review must rate from {min} to {max} (received: {rating}).",
+    "de-DE": "Eine Bewertung muss von {min} bis {max} Punkte vergeben (erhalten: {rating}).",
+    "pt-BR": "A avaliação deve pontuar de {min} a {max} (recebido: {rating}).",
+    "gl-ES": "A reseña debe puntuar de {min} a {max} (recibido: {rating}).",
+  },
+  review_already_acknowledged: {
+    "es-ES": "Esta reseña ya estaba marcada como vista.",
+    "en-GB": "This review was already marked as seen.",
+    "de-DE": "Diese Bewertung war bereits als gesehen markiert.",
+    "pt-BR": "Esta avaliação já estava marcada como vista.",
+    "gl-ES": "Esta reseña xa estaba marcada como vista.",
+  },
+  missing_reviewer_membership: {
+    "es-ES": "Crear o marcar una reseña requiere una membresía activa en la escuela.",
+    "en-GB": "Creating or marking a review requires an active membership in the school.",
+    "de-DE": "Um eine Bewertung zu erstellen oder zu markieren, braucht es eine aktive Mitgliedschaft in der Schule.",
+    "pt-BR": "Criar ou marcar uma avaliação exige uma associação ativa na escola.",
+    "gl-ES": "Crear ou marcar unha reseña require unha membresía activa na escola.",
+  },
+  // Los dos siguientes son de `people` (candidatos). `leadId` y `status`
+  // («converted», «discarded») viajan en `details` para el cliente.
+  lead_already_converted: {
+    "es-ES": "Este candidato ya se ha convertido en alumno.",
+    "en-GB": "This lead has already been converted into a student.",
+    "de-DE": "Dieser Interessent wurde bereits in einen Schüler umgewandelt.",
+    "pt-BR": "Este candidato já foi convertido em aluno.",
+    "gl-ES": "Este candidato xa se converteu en alumno.",
+  },
+  lead_already_closed: {
+    "es-ES": "Este candidato ya está cerrado y no admite esa operación.",
+    "en-GB": "This lead is already closed and does not allow that operation.",
+    "de-DE": "Dieser Interessent ist bereits geschlossen und erlaubt diese Operation nicht.",
+    "pt-BR": "Este candidato já está encerrado e não admite essa operação.",
+    "gl-ES": "Este candidato xa está pechado e non admite esa operación.",
+  },
+  // Los seis siguientes son de `sites` (sitio público de la escuela). Solo
+  // `duplicate_site_domain` interpola: su `hostname` es un escalar presente en
+  // la única rama que lo lanza. Los demás varían la forma de `details` según
+  // la regla que falla —`invalid_site_domain` incluso tiene una rama sin
+  // `details`—, así que llevan mensaje fijo (mismo criterio que
+  // `invalid_time_slot`).
+  invalid_site_block: {
+    "es-ES": "El bloque del sitio no cumple las reglas de su tipo.",
+    "en-GB": "The site block does not meet the rules of its type.",
+    "de-DE": "Der Block der Website erfüllt die Regeln seines Typs nicht.",
+    "pt-BR": "O bloco do site não cumpre as regras do seu tipo.",
+    "gl-ES": "O bloque do sitio non cumpre as regras do seu tipo.",
+  },
+  invalid_site_page: {
+    "es-ES": "La página del sitio no es válida.",
+    "en-GB": "The site page is not valid.",
+    "de-DE": "Die Seite der Website ist ungültig.",
+    "pt-BR": "A página do site não é válida.",
+    "gl-ES": "A páxina do sitio non é válida.",
+  },
+  invalid_site: {
+    "es-ES": "La configuración del sitio no es válida.",
+    "en-GB": "The site configuration is not valid.",
+    "de-DE": "Die Konfiguration der Website ist ungültig.",
+    "pt-BR": "A configuração do site não é válida.",
+    "gl-ES": "A configuración do sitio non é válida.",
+  },
+  invalid_site_domain: {
+    "es-ES": "El dominio del sitio no es válido.",
+    "en-GB": "The site domain is not valid.",
+    "de-DE": "Die Domain der Website ist ungültig.",
+    "pt-BR": "O domínio do site não é válido.",
+    "gl-ES": "O dominio do sitio non é válido.",
+  },
+  duplicate_site_domain: {
+    "es-ES": "El dominio {hostname} ya está dado de alta.",
+    "en-GB": "The domain {hostname} is already registered.",
+    "de-DE": "Die Domain {hostname} ist bereits eingetragen.",
+    "pt-BR": "O domínio {hostname} já está cadastrado.",
+    "gl-ES": "O dominio {hostname} xa está dado de alta.",
+  },
+  rate_limited: {
+    "es-ES": "Demasiadas peticiones seguidas. Inténtalo de nuevo en unos segundos.",
+    "en-GB": "Too many requests in a row. Please try again in a few seconds.",
+    "de-DE": "Zu viele Anfragen in kurzer Zeit. Bitte versuche es in ein paar Sekunden erneut.",
+    "pt-BR": "Muitas requisições seguidas. Tente novamente em alguns segundos.",
+    "gl-ES": "Demasiadas peticións seguidas. Téntao de novo nuns segundos.",
+  },
 };
 
 /**

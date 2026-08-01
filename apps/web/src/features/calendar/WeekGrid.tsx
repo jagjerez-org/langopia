@@ -26,6 +26,16 @@ const STATUS_TAG_VARIANT: Record<string, TagVariant> = {
   no_show: "warning",
 };
 
+/**
+ * Hasta este número de carriles solapados, el reparto fluido del ancho sigue
+ * siendo legible. Por encima, la pista del día crece (`LANE_MIN_WIDTH_REM`
+ * por carril) y la columna desplaza horizontalmente: con el seed real (~30
+ * clases solapadas por hueco), repartir el 100 % entre todos dejaba tarjetas
+ * de una palabra por línea.
+ */
+const MAX_FLUID_LANES = 3;
+const LANE_MIN_WIDTH_REM = 8.5;
+
 function pad(value: number): string {
   return String(value).padStart(2, "0");
 }
@@ -80,7 +90,15 @@ export function WeekGrid({
 
     const laidOut = new Map<string, Array<PositionedEntry & { lane: number; laneCount: number }>>();
     for (const [day, items] of byDay) laidOut.set(day, layoutDayLanes(items));
-    return laidOut;
+
+    // Carriles máximos por día: a partir de cierto solape, repartir el ancho
+    // entre todos deja tarjetas ilegibles (una palabra por línea). En vez de
+    // eso, la pista del día crece y la columna desplaza horizontalmente.
+    const maxLanesByDay = new Map<string, number>();
+    for (const [day, items] of laidOut) {
+      maxLanesByDay.set(day, items.reduce((max, item) => Math.max(max, item.laneCount), 1));
+    }
+    return { laidOut, maxLanesByDay };
   }, [entries, days, timeZone]);
 
   const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, index) => HOUR_START + index);
@@ -116,8 +134,15 @@ export function WeekGrid({
             </div>
           ))}
         </div>
-        {days.map((day) => (
+        {days.map((day) => {
+          const dayEntries = entriesByDay.laidOut.get(day) ?? [];
+          const maxLanes = entriesByDay.maxLanesByDay.get(day) ?? 1;
+          return (
           <div key={day} className={styles.dayColumn}>
+            <div
+              className={styles.dayTrack}
+              style={maxLanes > MAX_FLUID_LANES ? { minWidth: `${maxLanes * LANE_MIN_WIDTH_REM}rem` } : undefined}
+            >
             {hours.map((hour) => (
               <div
                 key={hour}
@@ -126,7 +151,7 @@ export function WeekGrid({
                 onDrop={(event) => handleDrop(event, day, hour)}
               />
             ))}
-            {(entriesByDay.get(day) ?? []).map(({ entry, startMinutes, endMinutes, lane, laneCount }) => {
+            {dayEntries.map(({ entry, startMinutes, endMinutes, lane, laneCount }) => {
               const top = Math.max(
                 0,
                 Math.min(100, ((startMinutes - HOUR_START * 60) / TOTAL_MINUTES) * 100),
@@ -168,8 +193,10 @@ export function WeekGrid({
                 </button>
               );
             })}
+            </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

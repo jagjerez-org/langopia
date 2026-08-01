@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button, EmptyState } from "../../ui/index.js";
 import { useT } from "../../i18n/translate.js";
 import { useChooseSchool } from "./session.js";
+import styles from "./SchoolSelector.module.css";
 
 export interface SchoolSelectorProps {
   /** Slugs de las escuelas usables, tal como los devuelve `resolveTenant` (API). */
@@ -60,22 +61,26 @@ export function SchoolSelector({ schools }: SchoolSelectorProps): ReactElement {
   };
 
   return (
-    <main>
-      <h1>{t("auth.schoolPickerTitle")}</h1>
-      <p>{t("auth.schoolPickerDescription")}</p>
-      <ul>
-        {schools.map((slug) => (
-          <li key={slug}>
-            <Button
-              onClick={() => void handleChoose(slug)}
-              isLoading={pendingSlug === slug}
-              disabled={pendingSlug !== null && pendingSlug !== slug}
-            >
-              {slug} — {t("auth.chooseSchool")}
-            </Button>
-          </li>
-        ))}
-      </ul>
+    <main className={styles.page}>
+      <section className={styles.card}>
+        <div className={styles.heading}>
+          <h1 className={styles.title}>{t("auth.schoolPickerTitle")}</h1>
+          <p className={styles.description}>{t("auth.schoolPickerDescription")}</p>
+        </div>
+        <ul className={styles.list}>
+          {schools.map((slug) => (
+            <li key={slug} className={styles.item}>
+              <Button
+                onClick={() => void handleChoose(slug)}
+                isLoading={pendingSlug === slug}
+                disabled={pendingSlug !== null && pendingSlug !== slug}
+              >
+                {slug} — {t("auth.chooseSchool")}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      </section>
     </main>
   );
 }

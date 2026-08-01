@@ -1,0 +1,84 @@
+/* Navegación vertical del marco (sidebar), al estilo de la app anterior:
+   icono + etiqueta, activo con acento sólido y texto blanco, inactivos en
+   gris con hover suave. */
+
+.nav {
+  /* La nav es la única zona de la sidebar que crece y desliza: con muchas
+     entradas (dirección ve diez) el pie con «cerrar sesión» queda siempre
+     visible. */
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ink-space-2);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  gap: var(--ink-space-3);
+  min-height: 2.25rem;
+  padding: 0.25rem var(--ink-space-3);
+  border-radius: var(--ink-radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--ink-text-base);
+  font-weight: var(--ink-font-weight-medium);
+  color: var(--ink-text-secondary);
+  text-decoration: none;
+  transition:
+    background-color var(--ink-duration-fast) var(--ink-ease-standard),
+    color var(--ink-duration-fast) var(--ink-ease-standard);
+}
+
+.link:hover {
+  background: var(--ink-bg-surface-secondary);
+  color: var(--ink-text-primary);
+}
+
+/* TanStack Router marca el enlace de la ruta actual con `data-status`.
+   Acento sólido, no el gradiente de marca: con texto blanco encima da
+   6.09:1 (AA) en claro y 4.55:1 en oscuro; el stop azul del gradiente se
+   quedaba en 4.16:1, por debajo de AA para texto. */
+.link[data-status="active"] {
+  background: var(--ink-accent-default);
+  color: var(--ink-text-inverse);
+  box-shadow:
+    var(--ink-shadow-sm),
+    0 2px 10px color-mix(in oklch, var(--ink-accent-default) 30%, transparent);
+}
+
+.link[data-status="active"]:hover {
+  background: var(--ink-accent-hover);
+  color: var(--ink-text-inverse);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+/* A juego con la sidebar estrecha de `PanelShell.module.css` (< 64rem): solo
+   iconos, centrados. La etiqueta NO usa `display: none` — eso se la
+   quitaría también al lector de pantalla, y es el único nombre accesible
+   del enlace; se oculta visualmente con la receta sr-only. */
+@media (max-width: 64rem) {
+  .link {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  .link span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}

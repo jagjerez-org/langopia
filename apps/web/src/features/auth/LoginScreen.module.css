@@ -1,0 +1,106 @@
+/* Pantalla de acceso: tarjeta centrada sobre el lienzo gris, con la marca
+   (logo en gradiente + nombre) por encima — el mismo aire que la app
+   anterior. Solo presentación: la lógica vive en `LoginScreen.tsx`. */
+
+.page {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ink-space-6);
+  padding: var(--ink-space-6);
+  background: var(--ink-bg-canvas);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--ink-space-3);
+}
+
+.brandMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--ink-radius-md);
+  background: var(--ink-brand-gradient);
+  color: #ffffff;
+  box-shadow: var(--ink-shadow-sm);
+}
+
+.brandName {
+  font-size: var(--ink-text-2xl);
+  font-weight: var(--ink-font-weight-bold);
+  letter-spacing: -0.02em;
+  color: var(--ink-text-primary);
+}
+
+.card {
+  width: min(24rem, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ink-space-4);
+  padding: var(--ink-space-6);
+  background: var(--ink-bg-surface);
+  border: 1px solid var(--ink-border-default);
+  border-radius: var(--ink-radius-lg);
+  box-shadow: var(--ink-shadow-md);
+}
+
+.heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ink-space-1);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--ink-text-2xl);
+  font-weight: var(--ink-font-weight-semibold);
+  letter-spacing: -0.01em;
+  color: var(--ink-text-primary);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: var(--ink-text-base);
+  color: var(--ink-text-secondary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ink-space-4);
+}
+
+.alert {
+  margin: 0;
+  padding: var(--ink-space-3);
+  border-radius: var(--ink-radius-md);
+  background: var(--ink-critical-bg);
+  color: var(--ink-critical-text);
+  font-size: var(--ink-text-sm);
+  font-weight: var(--ink-font-weight-medium);
+}
+
+/* Separador «o» con filetes a ambos lados (estilo shadcn). El literal sigue
+   siendo el del diccionario; los filetes son pseudo-elementos, no texto. */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--ink-space-3);
+  margin: 0;
+  font-size: var(--ink-text-xs);
+  color: var(--ink-text-tertiary);
+  text-transform: uppercase;
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--ink-border-default);
+}

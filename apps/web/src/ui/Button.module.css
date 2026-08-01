@@ -15,7 +15,14 @@
   transition:
     background-color var(--ink-duration-fast) var(--ink-ease-standard),
     border-color var(--ink-duration-fast) var(--ink-ease-standard),
-    color var(--ink-duration-fast) var(--ink-ease-standard);
+    color var(--ink-duration-fast) var(--ink-ease-standard),
+    transform var(--ink-duration-fast) var(--ink-ease-standard);
+}
+
+/* Hundido al presionar, en todas las variantes: la respuesta táctil que
+   pide el lenguaje shadcn de la app anterior. */
+.button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .button:focus-visible {
@@ -61,17 +68,20 @@
 }
 
 /* ---------- Variante: primary ---------- */
+/* Casi negro (tokens `--ink-primary-solid-*`), como el «Add Plan» de la app
+   anterior: el acento azul-violeta se reserva para enlaces, foco y estados
+   activos, no para la acción principal de cada pantalla. */
 .button[data-variant="primary"] {
-  background: var(--ink-accent-default);
-  color: var(--ink-text-inverse);
+  background: var(--ink-primary-solid);
+  color: var(--ink-primary-solid-text);
 }
 
 .button[data-variant="primary"]:hover:not(:disabled) {
-  background: var(--ink-accent-hover);
+  background: var(--ink-primary-solid-hover);
 }
 
 .button[data-variant="primary"]:active:not(:disabled) {
-  background: var(--ink-accent-active);
+  background: var(--ink-primary-solid-active);
 }
 
 .button[data-variant="primary"]:disabled {
@@ -80,10 +90,14 @@
 }
 
 /* ---------- Variante: secondary ---------- */
+/* El «outline» de shadcn: fondo de superficie, borde gris sutil (no el
+   fuerte — el borde fuerte se reserva para inputs, que necesitan más
+   presencia). */
 .button[data-variant="secondary"] {
   background: var(--ink-bg-surface);
   color: var(--ink-text-primary);
-  border-color: var(--ink-border-strong);
+  border-color: var(--ink-border-default);
+  box-shadow: var(--ink-shadow-sm);
 }
 
 .button[data-variant="secondary"]:hover:not(:disabled) {

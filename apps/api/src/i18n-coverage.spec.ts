@@ -35,6 +35,8 @@ import {
   InvalidContractedHoursError,
   InvalidImportFieldError,
   InvalidImportFileError,
+  LeadAlreadyClosedError,
+  LeadAlreadyConvertedError,
   MinorCannotSelfConsentError,
   NotAGuardianError,
   StudentAlreadyLeftError,
@@ -159,6 +161,29 @@ import {
 import { ImpersonationForbiddenActionError } from "./contexts/iam/infrastructure/http/authenticated.guard.js";
 import { NoActiveImpersonationError } from "./contexts/iam/infrastructure/http/impersonation.controller.js";
 import { InvalidExerciseError } from "./contexts/learning/domain/model/exercise-schemas.js";
+import {
+  TranscriptBlockedError,
+  TranscriptNotProcessingError,
+} from "./contexts/classroom/domain/model/transcript.aggregate.js";
+import {
+  AlreadyAcknowledgedReviewError,
+  InactiveSurveyError,
+  InvalidReviewRatingError,
+  InvalidSurveyScoreError,
+  MissingRespondentMembershipError,
+  MissingReviewerMembershipError,
+  SurveyAccessDeniedError,
+  SurveyAudienceMismatchError,
+  SurveySessionRequiredError,
+} from "./contexts/feedback/domain/errors/feedback.errors.js";
+import {
+  DuplicateSiteDomainError,
+  InvalidSiteBlockError,
+  InvalidSiteDomainError,
+  InvalidSiteError,
+  InvalidSitePageError,
+} from "./contexts/sites/domain/errors/sites.errors.js";
+import { PublicSiteRateLimitError } from "./contexts/sites/infrastructure/http/public-sites.controller.js";
 
 // `import.meta.dirname` no vale aquí: este workspace compila a CommonJS y
 // `tsc` rechaza `import.meta` en ese modo (ver `architecture.spec.ts`).
@@ -414,6 +439,32 @@ const ERROR_SAMPLES: readonly DomainError[] = [
   new MaterialNotIndexedError("0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b"),
   // Tarea 11 del panel (publicar a grupos).
   new UnitGroupsMultipleCoursesError(2),
+  // Transcripciones (`classroom`) y encuestas/reseñas (`feedback`).
+  new TranscriptBlockedError("0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b"),
+  new TranscriptNotProcessingError("0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b", "reintentar"),
+  new InvalidSurveyScoreError("nps", 11, 0, 10),
+  new InactiveSurveyError("0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b"),
+  new SurveyAudienceMismatchError("student", "teacher"),
+  new SurveySessionRequiredError("0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b"),
+  new SurveyAccessDeniedError("0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b"),
+  new MissingRespondentMembershipError(),
+  new InvalidReviewRatingError(6),
+  new AlreadyAcknowledgedReviewError("0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b"),
+  new MissingReviewerMembershipError(),
+  // Candidatos (`people`) y sitio público (`sites`).
+  new LeadAlreadyConvertedError("0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b"),
+  new LeadAlreadyClosedError("0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b", "discarded"),
+  new InvalidSiteBlockError("El texto enriquecido solo admite títulos y párrafos.", { kind: "quote" }),
+  new InvalidSitePageError("Una página solo puede tener un bloque hero.", {
+    pageId: "0f0d1a2b-3c4d-4e5f-8a9b-0c1d2e3f4a5b",
+    heroCount: 2,
+  }),
+  new InvalidSiteError("El slug de la página debe ser único dentro del sitio.", { slug: "precios" }),
+  new InvalidSiteDomainError("El dominio no tiene un formato válido.", {
+    hostname: "https://academia.example.com",
+  }),
+  new DuplicateSiteDomainError("academia.example.com"),
+  new PublicSiteRateLimitError(),
 ];
 
 /**

@@ -1577,7 +1577,7 @@ Esperado: 10 en verde.
 > luego `school_not_operational`/`email_not_verified` aparecieron en vivo por
 > el trabajo concurrente). Ver el informe de la tarea para el detalle.
 
-- [ ] **Paso 6: Exponer la resolución de idioma a la capa HTTP** (parcial, ver nota)
+- [x] **Paso 6: Exponer la resolución de idioma a la capa HTTP**
 
 > Hecho: `CLS_LOCALE` añadido a `cls-tenant-context.ts`. `schoolLocale` ya
 > viajaba en `memberships_for_email` antes de empezar esta tarea (obra ajena).
@@ -1585,6 +1585,12 @@ Esperado: 10 en verde.
 > la llamada a `this.cls.set(CLS_LOCALE, resolveLocale(...))` dentro de
 > `SessionTenantGuard`, y el campo `locale` en el usuario de Better Auth (no
 > existe todavía). Detalle completo en el informe de la Tarea 8.
+>
+> Cerrado después por la Tarea 8b: `SessionTenantGuard` fija `CLS_LOCALE` con
+> `resolveLocale({ user: null, school, header })` —la fuente «persona» queda
+> en `null` a propósito, Better Auth no declara ese campo (comentario en el
+> propio guard)— y `AllExceptionsFilter` lo consume, con cobertura en
+> `all-exceptions.spec.ts`.
 
 **No se toca `domain-error.filter.ts`:** ese fichero desaparece en la T8b, sustituido por `AllExceptionsFilter`. Traducir aquí sería escribir código para borrarlo dos tareas después.
 

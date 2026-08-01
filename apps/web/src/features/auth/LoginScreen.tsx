@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
+import { Globe } from "lucide-react";
 import { Button, Input } from "../../ui/index.js";
 import { useT } from "../../i18n/translate.js";
 import type { Translate } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
 import { signInWithGoogle } from "./api.js";
 import { useSession, useSignInWithEmail } from "./session.js";
+import styles from "./LoginScreen.module.css";
 
 type LoginFormValues = { email: string; password: string };
 
@@ -77,39 +79,59 @@ export function LoginScreen(): ReactElement {
   };
 
   return (
-    <main>
-      <h1>{t("auth.loginTitle")}</h1>
-      <p>{t("auth.loginSubtitle")}</p>
-      {session.status === "unverified" && <p role="alert">{t("errors.email_not_verified")}</p>}
-      <form onSubmit={(event) => void onSubmit(event)} noValidate>
-        <Input
-          label={t("auth.emailLabel")}
-          type="email"
-          autoComplete="email"
-          required
-          error={errors.email?.message}
-          {...register("email", {
-            required: t("auth.emailRequired"),
-            pattern: { value: EMAIL_PATTERN, message: t("auth.emailInvalid") },
-          })}
-        />
-        <Input
-          label={t("auth.passwordLabel")}
-          type="password"
-          autoComplete="current-password"
-          required
-          error={errors.password?.message}
-          {...register("password", { required: t("auth.passwordRequired") })}
-        />
-        {formError && <p role="alert">{formError}</p>}
-        <Button type="submit" isLoading={isSubmitting}>
-          {isSubmitting ? t("auth.submitting") : t("auth.submit")}
+    <main className={styles.page}>
+      <div className={styles.brand}>
+        <span className={styles.brandMark}>
+          <Globe size={20} strokeWidth={1.75} aria-hidden />
+        </span>
+        <span className={styles.brandName}>{t("common.appName")}</span>
+      </div>
+      <section className={styles.card}>
+        <div className={styles.heading}>
+          <h1 className={styles.title}>{t("auth.loginTitle")}</h1>
+          <p className={styles.subtitle}>{t("auth.loginSubtitle")}</p>
+        </div>
+        {session.status === "unverified" && (
+          <p role="alert" className={styles.alert}>
+            {t("errors.email_not_verified")}
+          </p>
+        )}
+        <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
+          <Input
+            label={t("auth.emailLabel")}
+            type="email"
+            autoComplete="email"
+            required
+            error={errors.email?.message}
+            {...register("email", {
+              required: t("auth.emailRequired"),
+              pattern: { value: EMAIL_PATTERN, message: t("auth.emailInvalid") },
+            })}
+          />
+          <Input
+            label={t("auth.passwordLabel")}
+            type="password"
+            autoComplete="current-password"
+            required
+            error={errors.password?.message}
+            {...register("password", { required: t("auth.passwordRequired") })}
+          />
+          {formError && (
+            <p role="alert" className={styles.alert}>
+              {formError}
+            </p>
+          )}
+          <Button type="submit" isLoading={isSubmitting}>
+            {isSubmitting ? t("auth.submitting") : t("auth.submit")}
+          </Button>
+        </form>
+        <p aria-hidden="true" className={styles.divider}>
+          {t("auth.orDivider")}
+        </p>
+        <Button variant="secondary" onClick={() => void onGoogleClick()} isLoading={isGoogleSubmitting}>
+          {t("auth.continueWithGoogle")}
         </Button>
-      </form>
-      <p aria-hidden="true">{t("auth.orDivider")}</p>
-      <Button variant="secondary" onClick={() => void onGoogleClick()} isLoading={isGoogleSubmitting}>
-        {t("auth.continueWithGoogle")}
-      </Button>
+      </section>
     </main>
   );
 }

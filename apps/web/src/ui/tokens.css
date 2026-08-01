@@ -1,18 +1,21 @@
 /**
- * Sistema de diseño — tokens (Tarea 4 del panel).
+ * Sistema de diseño — tokens (Tarea 4 del panel, reafinado para recuperar el
+ * lenguaje visual de la aplicación anterior del producto: shadcn/ui con
+ * acento púrpura→azul y tipografía Geist).
  *
  * Prefijo `--ink-*` para el vocabulario propio de Langopia (evita colisión
  * con el espacio de nombres `--color-*` / `--font-*` que Tailwind v4 usa
- * para generar utilidades desde `@theme`). El nombre no es casual: el color
- * de acento del documento de diseño es «azul tinta» — todo lo que este
- * archivo define gira alrededor de esa idea, incluida la progresión de
- * hover/active de los controles con acento (ver más abajo).
+ * para generar utilidades desde `@theme`). El nombre se conserva aunque el
+ * acento ya no es el «azul tinta» original (#2B47C4, h≈229°): la rampa
+ * actual gira alrededor del hue 262° de OKLCH, el azul-violeta del gradiente
+ * de marca de la app anterior — todos los nombres de token se mantienen para
+ * no tocar a los consumidores.
  *
- * Cada valor de color viene de una paleta generada en HSL con el hue del
- * acento (#2B47C4 → h≈229°) para los neutros — sesgo azul, tal como pide el
- * brief — y verificado contra WCAG 2.1 AA (contraste ≥ 4.5:1 para texto,
- * ≥ 3:1 para componentes) con un script de contraste antes de fijarlo aquí.
- * Las razones de contraste relevantes van comentadas junto a cada valor.
+ * Cada valor de color viene de una paleta generada en OKLCH con el hue del
+ * acento (262°) para la rampa de acento, y verificado contra WCAG 2.1 AA
+ * (contraste ≥ 4.5:1 para texto, ≥ 3:1 para componentes) con un script de
+ * contraste antes de fijarlo aquí. Las razones de contraste relevantes van
+ * comentadas junto a cada valor.
  *
  * Tema claro y oscuro: los tokens de propósito (`--ink-bg-*`, `--ink-text-*`,
  * etc.) se redefinen dos veces con los mismos valores — una vez bajo
@@ -24,39 +27,51 @@
  * que una abstracción indirecta.
  */
 
-@import "@fontsource/ibm-plex-sans/400.css";
-@import "@fontsource/ibm-plex-sans/500.css";
-@import "@fontsource/ibm-plex-sans/600.css";
-@import "@fontsource/ibm-plex-sans/700.css";
-@import "@fontsource/ibm-plex-mono/400.css";
-@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-sans/700.css";
+@import "@fontsource/geist-mono/400.css";
+@import "@fontsource/geist-mono/500.css";
 
 /* Tipografía como utilidades Tailwind (`font-sans`, `font-mono`) en toda la
-   app, no solo dentro de `ui/`: una sola fuente de verdad tipográfica para
-   las ocho pantallas que vienen después. */
+   app, no solo dentro de `ui/`: una sola fuente de verdad tipográfica.
+   Geist es la familia de la aplicación anterior del producto — se recupera
+   tal cual, con los mismos cuatro pesos que usa el kit de UI. */
 @theme {
   --font-sans:
-    "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    "Geist Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono:
-    "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 
 :root {
   color-scheme: light;
 
-  /* ---------- Paleta cruda: acento (azul tinta) ---------- */
-  /* h=229° s=64% l=46.9% es #2B47C4, el valor exacto del brief. El resto de
-     la rampa mantiene el mismo hue con luminosidad y saturación variables. */
-  --ink-accent-50: #eceef9;
-  --ink-accent-100: #d7ddf4;
-  --ink-accent-200: #b2bdeb;
-  --ink-accent-300: #8597e0; /* contraste 6.80:1 sobre fondo oscuro #0E101B: acento legible en modo oscuro */
-  --ink-accent-400: #516ad6; /* texto blanco encima: 4.79:1 */
-  --ink-accent-500: #2b47c4; /* = brief. Texto blanco encima: 7.50:1 */
-  --ink-accent-600: #2136a1; /* texto blanco encima: 9.77:1 */
-  --ink-accent-700: #182881; /* texto blanco encima: 12.66:1 */
-  --ink-accent-800: #151f5b;
-  --ink-accent-900: #10153c;
+  /* ---------- Paleta cruda: acento (azul-violeta, hue OKLCH 262°) ---------- */
+  /* El hue sale del extremo azul del gradiente de marca (ver más abajo): el
+     acento sólido es ese azul, y el púrpura aparece solo a través del
+     gradiente (logo, avatar, elementos de marca). Contraste verificado con
+     script: blanco sobre 500/600/700 ≥ 6:1; 400 es el acento del tema oscuro
+     y llega justo a AA con texto blanco. */
+  --ink-accent-50: #e9f1fe;
+  --ink-accent-100: #d6e5ff;
+  --ink-accent-200: #accbff;
+  --ink-accent-300: #80adff; /* contraste 8.42:1 sobre fondo oscuro #0E101B: acento legible en modo oscuro */
+  --ink-accent-400: #2b6ef2; /* texto blanco encima: 4.55:1 */
+  --ink-accent-500: #0154e9; /* texto blanco encima: 6.09:1 */
+  --ink-accent-600: #0042cc; /* texto blanco encima: 7.92:1 */
+  --ink-accent-700: #0033a2; /* texto blanco encima: 10.52:1 */
+  --ink-accent-800: #03266d;
+  --ink-accent-900: #05173f;
+
+  /* ---------- Gradiente de marca (púrpura → azul, el de la app anterior) ---------- */
+  /* Valores OKLCH verbatim del `globals.css` anterior (`.bg-gradient-accent`).
+     Solo para elementos de marca sin texto encima (logo, avatar): el stop
+     azul da 4.16:1 con blanco, por debajo de AA para texto — el estado activo
+     de la navegación usa el acento sólido, no este gradiente. */
+  --ink-brand-gradient: linear-gradient(135deg, oklch(0.55 0.24 275), oklch(0.58 0.22 250));
+  --ink-brand-gradient-hover: linear-gradient(135deg, oklch(0.5 0.26 275), oklch(0.53 0.24 250));
 
   /* ---------- Paleta cruda: neutros con sesgo azul (hue ≈ 227°) ---------- */
   --ink-neutral-0: #ffffff;
@@ -92,7 +107,10 @@
   --ink-critical-solid-active: #5a1117;
 
   /* ---------- Tokens de propósito (tema claro) ---------- */
-  --ink-bg-canvas: var(--ink-neutral-25);
+  /* El lienzo es un gris muy claro (neutral-50) y las tarjetas/sidebar son
+     blancas: la jerarquía «contenido flota sobre el fondo» de la captura de
+     la app anterior, en vez de un lienzo casi blanco que la diluía. */
+  --ink-bg-canvas: var(--ink-neutral-50);
   --ink-bg-surface: var(--ink-neutral-0);
   --ink-bg-surface-secondary: var(--ink-neutral-50);
   --ink-bg-sunken: var(--ink-neutral-100);
@@ -111,8 +129,16 @@
   --ink-accent-hover: var(--ink-accent-600); /* más tinta al posarse el cursor */
   --ink-accent-active: var(--ink-accent-700); /* más tinta aún al presionar */
   --ink-accent-subtle-bg: var(--ink-accent-50);
-  --ink-accent-subtle-text: var(--ink-accent-700);
-  --ink-focus-ring: var(--ink-accent-500); /* 7.50:1 sobre el lienzo claro */
+  --ink-accent-subtle-text: var(--ink-accent-700); /* 9.26:1 sobre accent-50 */
+  --ink-focus-ring: var(--ink-accent-500); /* 6.09:1 sobre el lienzo claro */
+
+  /* Relleno del botón primario: casi negro, como el «Add Plan» de la app
+     anterior (shadcn `primary`), NO el acento — el acento se reserva para
+     enlaces, foco y estados activos de navegación. */
+  --ink-primary-solid: var(--ink-neutral-900); /* texto blanco: 16.70:1 */
+  --ink-primary-solid-hover: var(--ink-neutral-800); /* texto blanco: 13.41:1 */
+  --ink-primary-solid-active: var(--ink-neutral-950); /* texto blanco: 18.94:1 */
+  --ink-primary-solid-text: #ffffff;
 
   --ink-neutral-soft-bg: var(--ink-neutral-100);
   --ink-neutral-soft-text: var(--ink-neutral-700);
@@ -153,9 +179,11 @@
   --ink-space-16: 4rem;
 
   /* ---------- Radio, sombra, movimiento, capas ---------- */
-  --ink-radius-sm: 0.25rem;
+  /* Radios del sistema shadcn de la app anterior: base 0.625rem (tarjetas,
+     tablas, diálogos), un paso menos para controles (botones, inputs). */
+  --ink-radius-sm: 0.375rem;
   --ink-radius-md: 0.5rem;
-  --ink-radius-lg: 0.75rem;
+  --ink-radius-lg: 0.625rem;
   --ink-radius-full: 9999px;
 
   --ink-shadow-sm: 0 1px 2px hsl(227 30% 15% / 6%);
@@ -200,12 +228,19 @@
        hover/active — la misma metáfora de «más tinta al presionar» que en
        claro, con los mismos tres pasos de la rampa desplazados uno hacia
        arriba. */
-    --ink-accent-default: var(--ink-accent-400); /* texto blanco: 4.79:1; vs lienzo: 3.95:1 */
-    --ink-accent-hover: var(--ink-accent-500); /* texto blanco: 7.50:1 */
-    --ink-accent-active: var(--ink-accent-600); /* texto blanco: 9.77:1 */
-    --ink-accent-subtle-bg: #161d3b;
-    --ink-accent-subtle-text: var(--ink-accent-300); /* 5.89:1 sobre accent-subtle-bg oscuro */
-    --ink-focus-ring: var(--ink-accent-300); /* 6.77:1 sobre el lienzo oscuro */
+    --ink-accent-default: var(--ink-accent-400); /* texto blanco: 4.55:1; vs lienzo: 4.16:1 */
+    --ink-accent-hover: var(--ink-accent-500); /* texto blanco: 6.09:1 */
+    --ink-accent-active: var(--ink-accent-600); /* texto blanco: 7.92:1 */
+    --ink-accent-subtle-bg: #11203a;
+    --ink-accent-subtle-text: var(--ink-accent-300); /* 7.23:1 sobre accent-subtle-bg oscuro */
+    --ink-focus-ring: var(--ink-accent-300); /* 8.42:1 sobre el lienzo oscuro */
+
+    /* Primario en oscuro: se invierte la metáfora — botón claro con texto
+       tinta, como el `primary` del tema oscuro de shadcn. */
+    --ink-primary-solid: var(--ink-neutral-50); /* texto tinta #1A1D2D: 15.45:1 */
+    --ink-primary-solid-hover: var(--ink-neutral-200); /* texto tinta: 11.97:1 */
+    --ink-primary-solid-active: var(--ink-neutral-300); /* texto tinta: 9.10:1 */
+    --ink-primary-solid-text: var(--ink-neutral-900);
 
     --ink-success-text: #81dab0; /* 7.44:1 s/success-bg oscuro, 11.36:1 s/lienzo */
     --ink-success-bg: #163b2a;
@@ -249,9 +284,14 @@
   --ink-accent-default: var(--ink-accent-400);
   --ink-accent-hover: var(--ink-accent-500);
   --ink-accent-active: var(--ink-accent-600);
-  --ink-accent-subtle-bg: #161d3b;
+  --ink-accent-subtle-bg: #11203a;
   --ink-accent-subtle-text: var(--ink-accent-300);
   --ink-focus-ring: var(--ink-accent-300);
+
+  --ink-primary-solid: var(--ink-neutral-50);
+  --ink-primary-solid-hover: var(--ink-neutral-200);
+  --ink-primary-solid-active: var(--ink-neutral-300);
+  --ink-primary-solid-text: var(--ink-neutral-900);
 
   --ink-success-text: #81dab0;
   --ink-success-bg: #163b2a;
