@@ -223,8 +223,9 @@ test.describe("Ola 1 — recorrido completo del panel (Tarea 13)", () => {
   // Registro, puesta en marcha, alta de profesorado y alumnado, importación,
   // tres clases con dos cancelaciones y una lista de asistencia (con espera
   // real a que la tercera empiece), facturación y portal: más margen que el
-  // timeout por defecto de Playwright (30 s).
-  test.setTimeout(10 * 60 * 1000);
+  // timeout por defecto de Playwright (30 s). En local dura unos 5 min; el
+  // runner de CI (2 vCPU) superó los 10 min, así que 20.
+  test.setTimeout(20 * 60 * 1000);
 
   let adminDb: Db;
   let closeAdminDb: () => Promise<void>;
