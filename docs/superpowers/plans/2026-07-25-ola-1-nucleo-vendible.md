@@ -1358,7 +1358,7 @@ El criterio de «listo» del spec, automatizado.
 **Ficheros:**
 - Crear: `apps/api/test/e2e/wave-1.e2e-spec.ts`
 
-- [ ] **Paso 1: Escribir la prueba que recorre el camino completo**
+- [x] **Paso 1: Escribir la prueba que recorre el camino completo**
 
 ```typescript
 // Guion, con el detalle de cada llamada al escribirla:
@@ -1376,9 +1376,9 @@ El criterio de «listo» del spec, automatizado.
 // facturas pagadas, una devolución abierta, comisión del 2 % retenida.
 ```
 
-- [ ] **Paso 2: Ejecutar contra una base de datos limpia**
-- [ ] **Paso 3: Añadirla al CI**
-- [ ] **Paso 4: Commit** — `test: recorrido completo de la ola 1`
+- [x] **Paso 2: Ejecutar contra una base de datos limpia**
+- [x] **Paso 3: Añadirla al CI**
+- [x] **Paso 4: Commit** — `test: recorrido completo de la ola 1`
 
 ---
 
