@@ -13,6 +13,7 @@ import { MAILER } from "./domain/ports/mailer.port.js";
 import { PEOPLE_DIRECTORY } from "./domain/ports/people-directory.port.js";
 import { SCHOOL_DIRECTORY } from "./domain/ports/school-directory.port.js";
 import { ResendMailerAdapter } from "./infrastructure/external/resend-mailer.adapter.js";
+import { NotificationsCronController } from "./infrastructure/http/cron.controller.js";
 import { DrizzleClassDirectoryRepository } from "./infrastructure/persistence/drizzle-class-directory.repository.js";
 import { DrizzleInvoiceDirectoryRepository } from "./infrastructure/persistence/drizzle-invoice-directory.repository.js";
 import { DrizzlePeopleDirectoryRepository } from "./infrastructure/persistence/drizzle-people-directory.repository.js";
@@ -31,18 +32,22 @@ const eventHandlers = [
 /**
  * Contexto acotado de notificaciones por correo.
  *
- * Sin controlador: este contexto SOLO escucha eventos de dominio de otros
- * (`scheduling`, `billing`, `people`) y un trabajo programado, nunca
- * responde a una petición HTTP directamente — es la forma en que «si mañana
- * quitas el correo, nada más se entera» (brief de la tarea) se sostiene en
- * el código y no solo en la intención: nada exporta nada de aquí, y nada más
- * importa este módulo (`app.module.ts` se limita a montarlo).
+ * Sin rutas de negocio: este contexto SOLO escucha eventos de dominio de
+ * otros (`scheduling`, `billing`, `people`) y un trabajo programado, nunca
+ * responde a la acción de un usuario — es la forma en que «si mañana quitas
+ * el correo, nada más se entera» (brief de la tarea) se sostiene en el
+ * código y no solo en la intención: nada exporta nada de aquí, y nada más
+ * importa este módulo (`app.module.ts` se limita a montarlo). El único
+ * controlador (`NotificationsCronController`) no es de negocio: es la
+ * entrada HTTP que Vercel Cron necesita para disparar el recordatorio en
+ * serverless, donde `@nestjs/schedule` no corre.
  *
  * `iam.member.invited` queda fuera a propósito: ese evento no existe
  * todavía (depende de la tarea de invitaciones), así que no hay «Invitación
  * a la escuela» que escuchar. Ver el informe de la tarea.
  */
 @Module({
+  controllers: [NotificationsCronController],
   providers: [
     ...eventHandlers,
     ClassReminderJob,

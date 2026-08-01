@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/db && npm run build --workspace @langopia/api",
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    { "path": "/api/v1/cron/verify-site-domains", "schedule": "*/15 * * * *" },
+    { "path": "/api/v1/cron/class-reminder", "schedule": "0 * * * *" },
+    { "path": "/api/v1/cron/import-external-transcripts", "schedule": "0 * * * *" },
+    { "path": "/api/v1/cron/purge-expired-recordings", "schedule": "0 3 * * *" },
+    { "path": "/api/v1/cron/notify-overdue-attempts", "schedule": "0 5 * * *" }
+  ]
+}

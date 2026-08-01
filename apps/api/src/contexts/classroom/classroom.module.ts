@@ -32,6 +32,7 @@ import { TeamsTranscriptAdapter } from "./infrastructure/external/teams-transcri
 import { ZoomRoomAdapter } from "./infrastructure/external/zoom-room.adapter.js";
 import { ZoomTranscriptAdapter } from "./infrastructure/external/zoom-transcript.adapter.js";
 import { ClassroomController } from "./infrastructure/http/classroom.controller.js";
+import { ClassroomCronController } from "./infrastructure/http/cron.controller.js";
 import { DrizzleSchoolDirectoryRepository } from "./infrastructure/persistence/drizzle-school-directory.repository.js";
 import { DrizzleCreditLedgerRepository } from "./infrastructure/persistence/drizzle-credit-ledger.repository.js";
 import { DrizzleSessionParticipationRepository } from "./infrastructure/persistence/drizzle-session-participation.repository.js";
@@ -52,7 +53,7 @@ import { DrizzleTranscriptReadModel } from "./infrastructure/persistence/drizzle
  * contra un noop que nunca tocaba nada real. Ver `object-storage.port.ts`.
  */
 @Module({
-  controllers: [ClassroomController],
+  controllers: [ClassroomController, ClassroomCronController],
   providers: [
     ImportExternalTranscriptsJob,
     PurgeExpiredRecordingsJob,

@@ -20,6 +20,7 @@ import { NoopTlsIssuerAdapter } from "./infrastructure/external/noop-tls-issuer.
 import { SiteDomainsController } from "./infrastructure/http/site-domains.controller.js";
 import { SiteEditorController } from "./infrastructure/http/site-editor.controller.js";
 import { PublicSitesController } from "./infrastructure/http/public-sites.controller.js";
+import { SitesCronController } from "./infrastructure/http/cron.controller.js";
 import { publicSiteReadModelProvider } from "./infrastructure/persistence/drizzle-public-site-read-model.js";
 import { DrizzleSiteEditorRepository } from "./infrastructure/persistence/drizzle-site-editor.repository.js";
 import { DrizzleSiteDomainRepository } from "./infrastructure/persistence/drizzle-site-domain.repository.js";
@@ -30,7 +31,7 @@ const commandHandlers = [AddDomainHandler, PublishSiteHandler, SaveSitePageBlock
 const queryHandlers = [GetEditableSiteHandler, GetPublicSiteByHostHandler, GetPublicSitePageHandler, ListDomainsHandler];
 
 @Module({
-  controllers: [PublicSitesController, SiteDomainsController, SiteEditorController],
+  controllers: [PublicSitesController, SiteDomainsController, SiteEditorController, SitesCronController],
   providers: [
     ...commandHandlers,
     ...queryHandlers,

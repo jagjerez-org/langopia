@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/web",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://langopia-api.vercel.app/api/:path*" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}

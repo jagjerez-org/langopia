@@ -38,6 +38,7 @@ import { SchedulingTeachesStudentAdapter } from "./infrastructure/acl/scheduling
 import { ClaudeExamGeneratorAdapter } from "./infrastructure/external/claude-exam-generator.adapter.js";
 import { ClaudeWritingCorrectorAdapter } from "./infrastructure/external/claude-writing-corrector.adapter.js";
 import { AttemptsController } from "./infrastructure/http/attempts.controller.js";
+import { AssessmentCronController } from "./infrastructure/http/cron.controller.js";
 import { EvaluationsController } from "./infrastructure/http/evaluations.controller.js";
 import { ExamsController } from "./infrastructure/http/exams.controller.js";
 import { PlacementTestController } from "./infrastructure/http/placement.controller.js";
@@ -95,6 +96,7 @@ const queryHandlers = [
     PlacementTestController,
     StudentProgressController,
     ExamsController,
+    AssessmentCronController,
   ],
   providers: [
     ...commandHandlers,
