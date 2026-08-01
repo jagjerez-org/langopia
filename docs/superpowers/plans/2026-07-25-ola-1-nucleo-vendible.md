@@ -1138,13 +1138,13 @@ Reglas a codificar:
 - Marcar a un alumno no matriculado en el grupo es `invariant_violation`.
 - Cuando toda la hoja está cubierta, se cierra la clase con `complete({ anyoneAttended })`. Si nadie asistió, el estado resultante es `no_show`, no `completed`.
 
-- [ ] **Paso 1: Pruebas de la hoja de asistencia** (mínimo 6 casos)
-- [ ] **Paso 2: Ejecutar y comprobar que fallan**
-- [ ] **Paso 3: Implementar `AttendanceSheet`**
-- [ ] **Paso 4: Comando `RecordAttendanceCommand` y su manejador**
-- [ ] **Paso 5: Endpoint** `POST /scheduling/sessions/:id/attendance`
-- [ ] **Paso 6: Verificar contra el seed** — pasar lista de una clase de la Escuela Atlántico y comprobar que su estado pasa a `completed`
-- [ ] **Paso 7: Commit** — `feat(scheduling): hoja de asistencia y cierre de clase`
+- [x] **Paso 1: Pruebas de la hoja de asistencia** (mínimo 6 casos)
+- [x] **Paso 2: Ejecutar y comprobar que fallan**
+- [x] **Paso 3: Implementar `AttendanceSheet`**
+- [x] **Paso 4: Comando `RecordAttendanceCommand` y su manejador**
+- [x] **Paso 5: Endpoint** `POST /scheduling/sessions/:id/attendance`
+- [x] **Paso 6: Verificar contra el seed** — pasar lista de una clase de la Escuela Atlántico y comprobar que su estado pasa a `completed`
+- [x] **Paso 7: Commit** — `feat(scheduling): hoja de asistencia y cierre de clase`
 
 ---
 
@@ -1452,15 +1452,15 @@ Decisiones de diseño:
 - `notifications` es un contexto propio que **solo escucha**. Ningún otro contexto sabe que existe: si mañana quitas el correo, nada más se entera.
 - Un fallo de envío **no** deshace la operación: la clase ya se canceló. Se registra y se reintenta.
 
-- [ ] **Paso 1: Declarar el puerto `MailerPort`**
-- [ ] **Paso 2: Prueba del selector de idioma y destinatario** — adulto, menor con tutor, persona sin locale propio
-- [ ] **Paso 3: Ejecutar y comprobar que falla**
-- [ ] **Paso 4: Implementar el resolutor de destinatario e idioma**
-- [ ] **Paso 5: Adaptador de correo (Resend o similar) y plantillas en los cinco idiomas soportados**
-- [ ] **Paso 6: Un manejador por evento de la tabla**
-- [ ] **Paso 7: Trabajo programado del recordatorio de clase**
-- [ ] **Paso 8: Verificar** — cancelar una clase del seed y comprobar que sale un correo por alumno, cada uno en su idioma
-- [ ] **Paso 9: Commit** — `feat(notifications): avisos por correo en el idioma del destinatario`
+- [x] **Paso 1: Declarar el puerto `MailerPort`**
+- [x] **Paso 2: Prueba del selector de idioma y destinatario** — adulto, menor con tutor, persona sin locale propio
+- [x] **Paso 3: Ejecutar y comprobar que falla**
+- [x] **Paso 4: Implementar el resolutor de destinatario e idioma**
+- [x] **Paso 5: Adaptador de correo (Resend o similar) y plantillas en los cinco idiomas soportados**
+- [x] **Paso 6: Un manejador por evento de la tabla**
+- [x] **Paso 7: Trabajo programado del recordatorio de clase**
+- [x] **Paso 8: Verificar** — cancelar una clase del seed y comprobar que sale un correo por alumno, cada uno en su idioma
+- [x] **Paso 9: Commit** — `feat(notifications): avisos por correo en el idioma del destinatario`
 
 ---
 
@@ -1485,11 +1485,11 @@ Reglas a codificar:
 - Un alumno de baja no se edita: primero se reactiva.
 - Todo cambio deja rastro en la auditoría con `before` y `after`.
 
-- [ ] **Paso 1: Pruebas de los cinco casos anteriores**
-- [ ] **Paso 2: Ejecutar y comprobar que fallan**
-- [ ] **Paso 3: Implementar los métodos de cambio en ambos agregados**
-- [ ] **Paso 4: Comandos y endpoints con `PATCH`**
-- [ ] **Paso 5: Commit** — `feat(people): edición de fichas con rastro de auditoría`
+- [x] **Paso 1: Pruebas de los cinco casos anteriores**
+- [x] **Paso 2: Ejecutar y comprobar que fallan**
+- [x] **Paso 3: Implementar los métodos de cambio en ambos agregados**
+- [x] **Paso 4: Comandos y endpoints con `PATCH`**
+- [x] **Paso 5: Commit** — `feat(people): edición de fichas con rastro de auditoría`
 
 ---
 
