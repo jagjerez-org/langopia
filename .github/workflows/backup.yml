@@ -1,0 +1,36 @@
+# .github/workflows/backup.yml
+#
+# Copia de seguridad diaria de la base de producción (RUNBOOK, «Copias de
+# seguridad automáticas»): pg_dump en formato custom a un bucket S3 dedicado
+# en la UE; la retención de 30 días la aplica una regla de ciclo de vida del
+# propio bucket, no este workflow. Sin los secretos configurados el job
+# falla en el primer paso — a propósito: una copia que no se hace debe
+# hacer ruido, no pasar en silencio.
+name: Copia de seguridad
+
+on:
+  schedule:
+    - cron: "13 3 * * *" # diario, ~03:00 UTC, fuera de horario lectivo
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar cliente de Postgres 17
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17 || sudo apt-get install -y -qq postgresql-client
+      - name: pg_dump a S3
+        env:
+          PROD_DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_DEFAULT_REGION: eu-west-1
+        run: |
+          set -euo pipefail
+          fichero="langopia-$(date -u +%Y%m%dT%H%M%SZ).dump"
+          pg_dump -Fc -d "$PROD_DATABASE_URL" -f "$fichero"
+          aws s3 cp "$fichero" "s3://$AWS_S3_BUCKET/$fichero" --only-show-errors
+          echo "Copia subida: s3://$AWS_S3_BUCKET/$fichero"

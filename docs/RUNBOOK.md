@@ -6,40 +6,55 @@ monitorización) añade aquí sus propias secciones.
 
 ## Arquitectura del despliegue
 
-- **Imagen**: `apps/api/Dockerfile`, build multi-stage (`build` compila
-  `@langopia/db` y `@langopia/api`; `runtime` solo lleva `node_modules` de
-  producción y los artefactos compilados).
-- **Migraciones y políticas RLS**: viajan dentro de la imagen
-  (`packages/db/drizzle` y `packages/db/src/policies.sql`) y se aplican en
-  cada arranque, antes de aceptar tráfico, vía `npm run start:prod`
-  (`apps/api/package.json`): primero `db:deploy` (migra + aplica políticas),
-  luego `node dist/main.js`. Un esquema desactualizado nunca sirve peticiones.
-- **Plataforma**: Railway, configurado por código en `railway.json` (raíz del
-  monorepo). `deploy.startCommand` sustituye al `CMD` de la imagen por
-  `npm run start:prod --workspace @langopia/api` para que las migraciones
-  corran antes de levantar el proceso. `deploy.healthcheckPath` apunta a
-  `/api/v1/health`.
+Tres proyectos de Vercel (uno por app) más un Postgres gestionado (Neon,
+desde el marketplace de Vercel). Cada proyecto tiene su *Root Directory* en
+el monorepo y su propio `vercel.json` con `installCommand`/`buildCommand`
+que suben a la raíz para compilar los paquetes workspace.
+
+- **API (`langopia-api`, `apps/api`)**: función serverless única
+  (`apps/api/api/index.js` → `dist/vercel.js`) que monta la app Nest una vez
+  por instancia caliente y le entrega cada petición; `vercel.json` reescribe
+  todo el tráfico a esa función. En serverless no hay proceso largo:
+  - Las **migraciones y políticas RLS** corren en el job `desplegar` del CI
+    (`npm run db:deploy` contra la base de producción) ANTES de desplegar,
+    no al arrancar el servicio como en Railway.
+  - Los **trabajos programados** (`@nestjs/schedule` no se dispara en una
+    función congelada) los llama Vercel Cron como peticiones HTTP a
+    `GET /api/v1/cron/*`, protegidas por `CronSecretGuard` con `CRON_SECRET`
+    (Vercel firma sus llamadas con ese bearer). Los horarios están
+    declarados en `apps/api/vercel.json` (`crons`).
+- **Panel (`langopia-web`, `apps/web`)**: SPA estática de Vite. Su
+  `vercel.json` reescribe `/api/*` hacia el despliegue de la API (mismo
+  origen de cara al navegador: cookies sin CORS) y el resto a `index.html`.
+- **Sites (`langopia-sites`, `apps/sites`)**: Astro SSR con
+  `@astrojs/vercel`. Resuelve la escuela por el `Host` de cada petición y
+  hace de proxy de `/api/*` hacia la API en su middleware. Cada dominio de
+  escuela se asocia a este proyecto.
 - **Despliegue automático**: el job `desplegar` de `.github/workflows/ci.yml`
-  se dispara tras el job `verificar` en verde, solo en `main`, y ejecuta
-  `railway up --service api --detach` con `RAILWAY_TOKEN` como secreto del
-  repositorio.
+  corre tras `verificar` en verde, solo en `main` y solo si la variable del
+  repositorio `VERCEL_DEPLOY_ENABLED=true` existe. Compila cada proyecto con
+  `vercel build` y lo sube con `vercel deploy --prebuilt --prod` (secretos:
+  `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `PROD_DATABASE_URL`).
 
 ## Variables de entorno en producción
 
 Ninguna va escrita en la imagen ni en un fichero commiteado; todas se
-configuran como variables del servicio en Railway. Ver `.env.example` para
+configuran como variables de entorno del proyecto en Vercel (o como
+secretos del repositorio para el job `desplegar`). Ver `.env.example` para
 la lista completa y su explicación línea a línea. Las que importan para
 producción:
 
-| Variable | Notas en producción |
-|---|---|
-| `DATABASE_URL` | Rol dueño del esquema. Solo lo usan las migraciones y las políticas al arrancar; la aplicación nunca lo usa para servir peticiones. |
-| `DATABASE_URL_APP` | Rol `langopia_app`, sin `BYPASSRLS`. Contraseña **distinta** de la de desarrollo (`cambiame`) — ver más abajo. |
-| `BETTER_AUTH_SECRET` | Secreto propio de producción, nunca el de `.env` local. |
-| `BETTER_AUTH_URL` | Debe incluir la ruta (`https://<dominio>/api/v1/auth`): Better Auth deriva de ahí su `basePath`. |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Credenciales OAuth de producción, si aplica. |
-| `TENANT_BASE_DOMAINS` | Dominios base sobre los que se reconoce el subdominio de una escuela (por defecto `langopia.app,localhost`). El dominio que Railway genera antes de asignar uno propio (`*.up.railway.app`) **no** identifica escuela por subdominio: fuera de la lista de dominios base, la resolución cae a la cabecera `x-school-slug`. Añade aquí el dominio propio en cuanto esté asignado. |
-| `PORT` | Railway la inyecta; el proceso ya la respeta (`apps/api/src/main.ts`). |
+| Variable | Proyecto | Notas en producción |
+|---|---|---|
+| `DATABASE_URL` | secreto CI (`PROD_DATABASE_URL`) | Rol dueño del esquema. Solo lo usan las migraciones y las políticas en el job `desplegar`; la aplicación nunca lo usa para servir peticiones. |
+| `DATABASE_URL_APP` | `langopia-api` | Rol `langopia_app`, sin `BYPASSRLS`. Contraseña **distinta** de la de desarrollo (`cambiame`) — ver más abajo. |
+| `BETTER_AUTH_SECRET` | `langopia-api` | Secreto propio de producción, nunca el de `.env` local. |
+| `BETTER_AUTH_URL` | `langopia-api` | Debe incluir la ruta (`https://<dominio-api>/api/v1/auth`): Better Auth deriva de ahí su `basePath`. |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | `langopia-api` | Orígenes del panel y de las webs de escuela desde los que se puede iniciar sesión, separados por comas. |
+| `CRON_SECRET` | `langopia-api` | Bearer con el que Vercel Cron firma las llamadas a `/api/v1/cron/*`. Sin él, esas rutas responden 503 y los trabajos no corren. |
+| `API_URL` | `langopia-sites` | URL pública de la API (`https://<dominio-api>`), para resolver escuelas y desviar `/api/*`. |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `langopia-api` | Credenciales OAuth de producción, si aplica. |
+| `TENANT_BASE_DOMAINS` | `langopia-api` | Dominios base sobre los que se reconoce el subdominio de una escuela (por defecto `langopia.app,localhost`). El dominio `*.vercel.app` **no** identifica escuela por subdominio: fuera de la lista, la resolución cae a la cabecera `x-school-slug`. |
 
 ## Rol de aplicación en producción
 
@@ -52,7 +67,7 @@ tráfico real, contra la base de datos de producción:
 ALTER ROLE langopia_app WITH PASSWORD '<secreto del gestor de secretos>';
 ```
 
-Después, `DATABASE_URL_APP` en Railway debe llevar esa misma contraseña. No
+Después, `DATABASE_URL_APP` en Vercel debe llevar esa misma contraseña. No
 hace falta tocar `policies.sql`: el `IF NOT EXISTS` ya impide que una
 aplicación de políticas posterior sobrescriba la contraseña real por
 `cambiame`.
@@ -60,21 +75,29 @@ aplicación de políticas posterior sobrescriba la contraseña real por
 ## Verificar un despliegue
 
 ```bash
-curl -s https://api.langopia.app/api/v1/health
+curl -s https://langopia-api.vercel.app/api/v1/health
 ```
 
 Esperado: `{"status":"ok","at":"<ISO-8601>"}`. Comprueba que la base de
 datos responde, no solo que el proceso vive: si la base cae, el balanceador
 debe dejar de mandarle tráfico a esta instancia.
 
-## Primer despliegue de una escuela nueva
+## Primer despliegue
 
-1. Confirmar que `RAILWAY_TOKEN` está configurado como secreto del
-   repositorio de GitHub.
-2. Confirmar que las variables de entorno de la tabla de arriba están
-   fijadas en el servicio de Railway.
-3. Fusionar a `main`: el job `desplegar` del CI despliega automáticamente.
-4. Verificar la sonda de salud (sección anterior).
+1. Crear los tres proyectos en Vercel (`langopia-api`, `langopia-web`,
+   `langopia-sites`), cada uno con su *Root Directory* (`apps/api`,
+   `apps/web`, `apps/sites`).
+2. Crear el Postgres (Neon) desde Storage en el dashboard de Vercel y
+   conectarlo al proyecto `langopia-api`.
+3. Fijar las variables de entorno de la tabla de arriba en cada proyecto.
+4. Fijar los secretos del repositorio (`VERCEL_TOKEN`, `VERCEL_ORG_ID`,
+   `PROD_DATABASE_URL`) y la variable `VERCEL_DEPLOY_ENABLED=true`.
+5. Aplicar una primera vez migraciones y políticas a mano contra la base
+   (`npm run db:deploy` con `DATABASE_URL` de producción) y cambiar la
+   contraseña de `langopia_app` (sección «Rol de aplicación en producción»).
+6. Fusionar a `main`: el job `desplegar` del CI migra y despliega
+   automáticamente.
+7. Verificar la sonda de salud (sección anterior).
 
 ---
 
@@ -84,49 +107,35 @@ La pregunta que importa no es si el servicio se va a caer, sino si alguien
 se va a enterar y si se pueden recuperar los datos de una academia. Esta
 sección da el procedimiento para las dos cosas.
 
-**Estado a fecha de escritura:** no existe todavía un proyecto de Railway
-real para Langopia (`RAILWAY_TOKEN` sin fijar, ver Tarea 10) ni, por tanto,
-un Postgres gestionado en producción. Lo de abajo es el procedimiento exacto
-a seguir en cuanto exista ese Postgres, con los valores (diario, 30 días,
-UE) ya fijados; **lo que sí está verificado de verdad, contra datos reales,
-es el ciclo completo de copia → restauración → comprobación** (siguiente
-sección), ejecutado contra `langopia-pg` (mismo motor, Postgres 17, que
-usará producción) porque es el único Postgres con datos reales al alcance.
+**Estado a fecha de escritura:** el despliegue es Vercel + Neon (sección
+«Arquitectura del despliegue»). Lo de abajo es el procedimiento exacto a
+seguir con los valores (diario, 30 días, UE) ya fijados; **lo que sí está
+verificado de verdad, contra datos reales, es el ciclo completo de copia →
+restauración → comprobación** (siguiente sección), ejecutado contra
+`langopia-pg` (mismo motor, Postgres 17, que usa producción) porque era el
+único Postgres con datos reales al alcance cuando se verificó.
 
 ## Copias de seguridad automáticas
 
-Railway no ofrece un interruptor único de "activar copias con retención de
-N días" sobre su Postgres gestionado: la vía soportada es desplegar, en el
-mismo proyecto, un servicio adicional que hace `pg_dump` por cron y sube el
-resultado a un bucket S3 — la plantilla oficial es
-[Postgres Daily Backups](https://railway.com/deploy/postgres-daily-backups).
-Pasos para activarla, con los valores que pide el brief:
+Neon incluye restauración a un punto en el tiempo (PITR), pero la retención
+larga (30 días) y la independencia del proveedor piden una copia propia:
+un **workflow programado de GitHub Actions** que hace `pg_dump` cada noche
+contra la base de producción y sube el resultado a un bucket S3 dedicado.
 
-1. Desde el proyecto de Railway de producción, desplegar la plantilla
-   `Postgres Daily Backups` como servicio nuevo en el **mismo proyecto y la
-   misma región** que el servicio de Postgres — la región UE que ofrece
-   Railway es `europe-west4` (Ámsterdam); fijar esa región también en el
-   propio servicio de Postgres si aún no está fijada. Es lo que exige el
-   RGPD: los datos personales de las academias no salen de la UE ni para la
-   copia.
-2. Variables del servicio de backups (ninguna en ficheros commiteados, solo
-   en Railway):
-   - `BACKUP_DATABASE_URL`: variable de referencia al `DATABASE_URL` interno
-     del servicio de Postgres (rol dueño del esquema, no `langopia_app`: la
-     copia necesita ver todo el esquema).
-   - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`: credenciales de un
-     bucket S3 dedicado a backups, con permisos solo de escritura/lectura
-     sobre ese bucket.
-   - `AWS_S3_BUCKET`: el bucket dedicado.
-   - `AWS_S3_REGION`: una región de AWS en la UE (p. ej. `eu-west-1`), para
-     que la copia quede en la misma jurisdicción que el original.
-   - `BACKUP_CRON_SCHEDULE=0 3 * * *`: diario a las 03:00 UTC, fuera de
-     horario lectivo habitual.
-3. **Retención de 30 días**: la plantilla no la controla ella misma, así que
-   se fija donde sí es nativo — una regla de ciclo de vida (*lifecycle
-   rule*) en el bucket S3 que expira (borra) objetos con más de 30 días.
-   Así la retención no depende de que el servicio de backups se acuerde de
-   limpiar: la cumple el propio almacenamiento.
+1. Crear el bucket S3 en una región de la UE (p. ej. `eu-west-1`), con una
+   regla de ciclo de vida (*lifecycle rule*) que expira objetos con más de
+   30 días: la retención la cumple el almacenamiento, no el script. Es lo
+   que exige el RGPD: los datos personales de las academias no salen de la
+   UE ni para la copia. La base de Neon también se crea en región UE
+   (Frankfurt).
+2. Secretos del repositorio para el workflow (ninguno en ficheros
+   commiteados): `PROD_DATABASE_URL` (rol dueño del esquema, no
+   `langopia_app`: la copia necesita ver todo el esquema),
+   `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (con permisos solo sobre
+   ese bucket) y `AWS_S3_BUCKET`.
+3. Workflow `.github/workflows/backup.yml` con `schedule: "0 3 * * *"`
+   (diario a las 03:00 UTC, fuera de horario lectivo habitual) que ejecuta
+   `pg_dump -Fc` y sube el fichero al bucket con la fecha en el nombre.
 
 ## Restaurar una copia — probado de verdad
 
@@ -172,11 +181,11 @@ RLS que sí aplican a `langopia_app`.
 
 ## Registro estructurado y `request-id`
 
-`apps/api/src/main.ts` sustituye el logger de Nest por uno propio
-(`JsonLogger`) cuando `NODE_ENV=production` (ya fijado en
-`apps/api/Dockerfile`): cada línea de log es un JSON de una sola línea con
-`timestamp`, `level`, `message`, `context` y `requestId`. Fuera de
-producción se mantiene el logger legible de Nest, para desarrollo local.
+`apps/api/src/bootstrap.ts` sustituye el logger interno de Nest por
+`nestjs-pino` (`app.useLogger(...)`): en producción cada línea de log es un
+JSON de una sola línea con `timestamp`, `level`, `message`, `context` y
+`traceId`; en desarrollo, `pino-pretty`. Fuera de producción se mantiene el
+formato legible, para desarrollo local.
 
 Cada petición recibe un `request-id`: si el cliente (o el proxy delante de
 la API) manda la cabecera `x-request-id`, se reutiliza; si no, se genera
@@ -192,31 +201,32 @@ petición generó, en cualquier capa que use el logger de Nest.
 
 ## Alertas mínimas
 
-Igual que las copias, no hay hoy un proveedor de observabilidad contratado
-ni un proyecto de Railway en producción (Tarea 10): esta tabla fija el
-umbral exacto de cada alerta y el mecanismo más simple para activarla en
-cuanto exista ese proveedor. No es una promesa de que ya avisan a nadie.
+Igual que las copias, esto fija el umbral exacto de cada alerta y el
+mecanismo más simple para activarla; las de plataforma dependen del plan de
+Vercel contratado (la observabilidad avanzada es de pago).
 
 | Alerta | Umbral | Por qué | Cómo se activa |
 |---|---|---|---|
-| Sonda de salud caída | 2 fallos seguidos | El servicio no responde | Railway ya reinicia el servicio solo (`railway.json`: `restartPolicyType: ON_FAILURE`, Tarea 10). Para que además avise a un humano: en el proyecto de Railway, Settings → Notifications, conectar un webhook (Slack/Discord/email) a los eventos "Deployment failed" / "Service crashed". |
-| Errores 5xx > 1 % en 5 minutos | > 1 % en 5 min | Algo se rompió al desplegar | Railway expone métricas HTTP por servicio (tasa de error, `railway metrics` / panel de Observability). Configurar ahí una alerta sobre esa métrica, o agregarla en el proveedor de errores que se contrate (los JSON de `JsonLogger` con `level: "error"` ya llevan `context` y `requestId` listos para agrupar). |
-| Latencia p95 | > 2 s en 10 minutos | La base de datos se está ahogando | Mismas métricas HTTP de Railway (tiempo de respuesta p95); misma alerta de métrica que la fila anterior. |
-| Fallo de cobro en Stripe | cualquiera | Es dinero que no entra | Sin integración de Stripe todavía (`BillingModule` es un contexto vacío en esta ola). Cuando exista: cada webhook de fallo (`invoice.payment_failed`, `charge.failed`) debe registrar un `error` JSON (`context: "Billing"`) **y además** notificar directamente desde el propio manejador (Slack/email) — un log solo no basta para dinero. |
-| Trabajo de purga fallido | cualquiera | Retención de datos incumplida | El trabajo de purga (Tarea 12, en curso) escribe en `audit_logs` con `actor_kind = 'system'`. Cuando falle, debe registrar también un `error` JSON antes de relanzar la excepción; ese log es lo que hay que vigilar con el mismo mecanismo que la fila de errores 5xx hasta que haya un agregador con alertas propias. |
+| Sonda de salud caída | 2 fallos seguidos | La API no responde | Un monitor externo (UptimeRobot, Better Stack, cron propio) llamando a `GET /api/v1/health` cada minuto contra `langopia-api.vercel.app`; Vercel no reintenta funciones caídas — si la sonda falla es la plataforma o el despliegue, no una réplica concreta. |
+| Errores 5xx > 1 % en 5 minutos | > 1 % en 5 min | Algo se rompió al desplegar | Integrar Sentry en la API (cuenta ya disponible, pendiente de añadir el SDK): los JSON de log con `level: "error"` ya llevan `context` y `requestId` listos para agrupar. Complemento sin integración: Vercel → Observability → tasa de errores de la función. |
+| Latencia p95 | > 2 s en 10 minutos | La base de datos se está ahogando | Vercel → Observability (duración de la función p95) o, con el SDK de arriba, trazas de Sentry Performance. |
+| Fallo de cobro en Stripe | cualquiera | Es dinero que no entra | Cada webhook de fallo (`invoice.payment_failed`) registra un `error` JSON **y además** debe notificar directamente desde el propio manejador (Slack/email) — un log solo no basta para dinero. |
+| Trabajo de purga fallido | cualquiera | Retención de datos incumplida | Los trabajos corren vía Vercel Cron → ruta `/api/v1/cron/*`: un fallo es un 5xx de esa ruta (misma vigilancia que la fila de 5xx) y queda en el log de la función con su `requestId`. |
+| Copia de seguridad fallida | cualquiera | Datos sin respaldo | El workflow `backup.yml` falla en rojo si `pg_dump` o la subida a S3 fallan; GitHub avisa por correo del fallo de un workflow programado. |
 
 ## Cómo revertir un despliegue
 
-El despliegue automático (job `desplegar` del CI, Tarea 10) no tiene un
-paso de rollback separado: revertir es desplegar una versión anterior.
+El despliegue automático (job `desplegar` del CI) no tiene un paso de
+rollback separado: revertir es desplegar una versión anterior.
 
-- **Más rápido (sin esperar al CI):** en el dashboard de Railway, pestaña
-  "Deployments" del servicio `api`, elegir el despliegue anterior sano y
-  pulsar "Redeploy". Ojo: si el despliegue roto ya aplicó una migración
-  irreversible, esto vuelve el código atrás pero no la base de datos —
-  comprobar antes si hace falta una migración de vuelta.
+- **Más rápido (sin esperar al CI):** en el dashboard de Vercel, pestaña
+  "Deployments" del proyecto afectado, elegir el despliegue anterior sano y
+  pulsar "Redeploy" (o `vercel rollback` con el CLI). Ojo: si el despliegue
+  roto ya aplicó una migración irreversible, esto vuelve el código atrás
+  pero no la base de datos — comprobar antes si hace falta una migración de
+  vuelta.
 - **Con git (deja rastro en el historial):** `git revert` del commit que
-  rompió `main` y empujarlo; el job `desplegar` construye y despliega esa
+  rompió `main` y empujarlo; el job `desplegar` migra y despliega esa
   reversión igual que cualquier otro cambio.
 - En ambos casos, verificar después con la sonda de salud (sección
   «Verificar un despliegue» de arriba).
@@ -232,10 +242,11 @@ tras una sospecha de fuga (siguiente sección).
    ```sql
    ALTER ROLE langopia_app WITH PASSWORD '<contraseña nueva>';
    ```
-3. Inmediatamente después, actualizar `DATABASE_URL_APP` en las variables
-   del servicio de Railway con esa misma contraseña — cuanto menor sea el
-   hueco entre el paso 2 y este, menos peticiones fallan por credencial
-   caducada.
+3. Inmediatamente después, actualizar `DATABASE_URL_APP` en las variables de
+   entorno del proyecto `langopia-api` en Vercel con esa misma contraseña y
+   redesplegar (las funciones serverless solo leen las variables al
+   arrancar una instancia nueva) — cuanto menor sea el hueco entre el paso
+   2 y este, menos peticiones fallan por credencial caducada.
 4. Forzar que las conexiones ya abiertas con la contraseña vieja se
    reconecten en vez de esperar a que expiren solas:
    ```sql

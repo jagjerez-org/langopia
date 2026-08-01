@@ -105,7 +105,11 @@ jobs:
 
   desplegar:
     needs: verificar
-    if: github.ref == 'refs/heads/main'
+    # Variable (no secreto) de repositorio: VERCEL_DEPLOY_ENABLED=true activa
+    # el despliegue. Sin ella, el job se salta limpio en vez de fallar por
+    # faltar los secretos de Vercel — así un fork o una copia del repo no
+    # hereda un job rojo permanente.
+    if: github.ref == 'refs/heads/main' && vars.VERCEL_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

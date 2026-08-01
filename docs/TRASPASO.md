@@ -117,8 +117,12 @@ Lo importante que quedó anotado durante la ejecución. El detalle completo, con
   en cuanto exista la clave.
 - `STRIPE_SECRET_KEY` — nunca se ha ejercitado un cobro o una devolución completándose de verdad.
 - Credenciales de TTS, imagen y almacenamiento de objetos.
-- No hay proyecto de Railway ni remoto de GitHub: el despliegue y la integración continua están
-  escritos y verificados en local, pero no ejecutados en la nube.
+- No hay proyectos de Vercel ni base de datos Neon creados todavía: el despliegue está escrito
+  (andamiaje serverless, crons HTTP, `vercel.json` por app, job `desplegar` del CI) y verificado en
+  local, pero no ejecutado en la nube. El remoto de GitHub y el CI sí existen y corren en cada push.
+  Bloqueos para ejecutarlo: `VERCEL_TOKEN` en el entorno y crear el Postgres (Neon) desde el
+  dashboard de Vercel. Tras ello: variables de entorno por proyecto, secretos del repo
+  (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, `PROD_DATABASE_URL`) y `VERCEL_DEPLOY_ENABLED=true`.
 
 **Deuda técnica anotada:**
 
