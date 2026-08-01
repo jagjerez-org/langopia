@@ -107,10 +107,43 @@ jobs:
     needs: verificar
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      # Rol dueño del esquema en la base de datos de PRODUCCIÓN (Neon). Solo
+      # lo usa el paso de migraciones; la aplicación nunca lo ve.
+      DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
     steps:
       - uses: actions/checkout@v4
-      - uses: railwayapp/cli@v3
+      - uses: actions/setup-node@v4
         with:
-          command: up --service api --detach
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      # Las migraciones y las políticas RLS corren AQUÍ y no al arrancar la
+      # API: en serverless no hay arranque del proceso donde correrlas (en
+      # Railway las hacía `start:prod` antes del `listen`). Primero el
+      # esquema, luego el despliegue — nunca sirve código que pida columnas
+      # que todavía no existen.
+      - name: Migraciones y políticas (producción)
+        run: npm run db:deploy
+
+      # Un proyecto de Vercel por app (langopia-api, langopia-web,
+      # langopia-sites), cada uno con su Root Directory. `vercel build`
+      # compila en el runner (los buildCommand de cada vercel.json suben a la
+      # raíz del monorepo para construir los paquetes workspace) y
+      # `deploy --prebuilt` sube el resultado: Vercel no necesita acceso al
+      # repo ni volver a compilar.
+      - name: Desplegar los tres proyectos en Vercel
+        run: |
+          npm install --global vercel@latest
+          for app in api web sites; do
+            (
+              cd "apps/$app"
+              vercel link --yes --project "langopia-$app" --token "$VERCEL_TOKEN"
+              vercel pull --yes --environment=production --token "$VERCEL_TOKEN"
+              vercel build --prod --token "$VERCEL_TOKEN"
+              vercel deploy --prebuilt --prod --token "$VERCEL_TOKEN"
+            )
+          done

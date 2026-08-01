@@ -4,7 +4,7 @@ import { eq, like, sql } from "drizzle-orm";
 import IntlMessageFormat from "intl-messageformat";
 import { createAdminDb, schema, type Db } from "@langopia/db";
 import { expect, test } from "@playwright/test";
-import { utcIsoToZonedInputValue } from "../src/features/calendar/zoned-time.js";
+import { utcIsoToZonedInputValue, zonedTimeToUtcIso } from "../src/features/calendar/zoned-time.js";
 import { languageDisplayName } from "../src/features/courses/format.js";
 import { DICTIONARIES } from "../src/i18n/dictionaries.js";
 import { formatDate, formatMoney } from "../src/i18n/format.js";
@@ -667,8 +667,16 @@ test.describe("Ola 1 — recorrido completo del panel (Tarea 13)", () => {
 
       /* ---- Paso 9: cancelar una con más de 24h → anuncia devolución ------ */
       await test.step("Paso 9: cancelar la sesión con más de 24h de aviso → la interfaz anuncia devolución", async () => {
-        const [datePart, timePart] = sessionAStart.split("T") as [string, string];
-        await cancelSessionExpectingRefund(new Date(`${datePart}T${timePart}:00`), true);
+        // `sessionAStart` es hora de pared de Madrid ("YYYY-MM-DDT10:00") y la
+        // app la guarda y la pinta así; `new Date(cadena)` la interpretaría
+        // en la zona del proceso (UTC en el runner de CI) y el menú se
+        // buscaría a una hora que el calendario no muestra — el clic esperaría
+        // para siempre. El instante correcto sale del mismo conversor que usa
+        // la app (`zonedTimeToUtcIso`), igual que las sesiones B y C.
+        await cancelSessionExpectingRefund(
+          new Date(zonedTimeToUtcIso(sessionAStart, "Europe/Madrid")),
+          true,
+        );
       });
 
       /* ---- Paso 10: cancelar otra con menos de 24h → sin devolución ------ */

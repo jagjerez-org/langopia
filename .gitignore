@@ -14,3 +14,9 @@ coverage/
 apps/web/test-results/
 apps/web/playwright-report/
 apps/web/blob-report/
+
+# Vinculación y salida de builds locales de Vercel (`vercel link/build`).
+.vercel/
+
+# Tipos y caché que genera Astro en desarrollo/build.
+.astro/
