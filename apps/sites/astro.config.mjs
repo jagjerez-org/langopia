@@ -10,4 +10,21 @@ export default defineConfig({
   adapter: node({
     mode: "standalone",
   }),
+  vite: {
+    server: {
+      // La app sirve TODOS los dominios de las escuelas: en desarrollo la
+      // lista blanca de hosts de Vite bloquearía cualquier `Host` que no sea
+      // localhost y no se podría probar la resolución multidominio en local.
+      allowedHosts: true,
+      // El formulario de contacto llama a `/api/v1/...` en el MISMO origen
+      // (en producción el borde enruta `/api` a la API). En desarrollo no
+      // hay borde, así que Vite hace de proxy hacia la API local.
+      proxy: {
+        "/api": {
+          target: process.env.API_URL ?? "http://localhost:3100",
+          changeOrigin: true,
+        },
+      },
+    },
+  },
 });

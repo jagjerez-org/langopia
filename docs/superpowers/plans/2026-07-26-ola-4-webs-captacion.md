@@ -53,12 +53,12 @@ Reglas:
 - El bloque `testimonials` solo muestra reseñas marcadas como públicas por su autor.
 - Los precios y cursos salen del catálogo real: una escuela que cambia un precio no debe acordarse de actualizar su web.
 
-- [ ] **Paso 1: Pruebas de validación de bloques** — uno por tipo, más los casos de consentimiento
-- [ ] **Paso 2: Ejecutar y comprobar que fallan**
-- [ ] **Paso 3: Implementar `Block` con su validación por tipo**
-- [ ] **Paso 4: Implementar `Page` y `Site`**
-- [ ] **Paso 5: Prueba de que un profesor sin `image_rights` no aparece**
-- [ ] **Paso 6: Commit** — `feat(sites): modelo de sitio con catálogo cerrado de bloques`
+- [x] **Paso 1: Pruebas de validación de bloques** — uno por tipo, más los casos de consentimiento
+- [x] **Paso 2: Ejecutar y comprobar que fallan**
+- [x] **Paso 3: Implementar `Block` con su validación por tipo**
+- [x] **Paso 4: Implementar `Page` y `Site`**
+- [x] **Paso 5: Prueba de que un profesor sin `image_rights` no aparece**
+- [x] **Paso 6: Commit** — `feat(sites): modelo de sitio con catálogo cerrado de bloques`
 
 ---
 
@@ -99,14 +99,14 @@ Decisiones:
 **Interfaces:**
 - Produce: `npm run sites:dev`; resolución de escuela por hostname en cada petición.
 
-- [ ] **Paso 1: Crear el proyecto**
+- [x] **Paso 1: Crear el proyecto**
 
 ```bash
 cd apps && npm create astro@latest sites -- --template minimal --typescript strict
 cd sites && npx astro add node
 ```
 
-- [ ] **Paso 2: Configurar renderizado en servidor**
+- [x] **Paso 2: Configurar renderizado en servidor**
 
 ```javascript
 // apps/sites/astro.config.mjs
@@ -122,7 +122,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Paso 3: Middleware que resuelve la escuela**
+- [x] **Paso 3: Middleware que resuelve la escuela**
 
 ```typescript
 // apps/sites/src/middleware.ts
@@ -151,9 +151,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 });
 ```
 
-- [ ] **Paso 4: Prueba del middleware** — host conocido resuelve, desconocido da 404, host con puerto se normaliza
-- [ ] **Paso 5: Verificar en local** con `/etc/hosts` apuntando dos dominios falsos
-- [ ] **Paso 6: Commit** — `feat(sites): aplicación Astro con resolución de escuela por hostname`
+- [x] **Paso 4: Prueba del middleware** — host conocido resuelve, desconocido da 404, host con puerto se normaliza
+- [x] **Paso 5: Verificar en local** con `/etc/hosts` apuntando dos dominios falsos
+- [x] **Paso 6: Commit** — `feat(sites): aplicación Astro con resolución de escuela por hostname`
 
 ---
 
@@ -169,11 +169,11 @@ Decisiones:
 - Los estilos salen de los tokens de marca de la escuela (`branding.primaryColor`, `accentColor`), inyectados como variables CSS.
 - Las imágenes pasan por el optimizador de Astro con `loading="lazy"` salvo la del `hero`.
 
-- [ ] **Paso 1: Implementar los ocho componentes de bloque**
-- [ ] **Paso 2: Ruta comodín que pinta la página según sus bloques**
-- [ ] **Paso 3: Aplicar los tokens de marca de la escuela**
-- [ ] **Paso 4: Medir el JavaScript enviado** — una página con hero, cursos y contacto debe quedar bajo 50 KB
-- [ ] **Paso 5: Commit** — `feat(sites): componentes de bloque sin JavaScript salvo el formulario`
+- [x] **Paso 1: Implementar los ocho componentes de bloque**
+- [x] **Paso 2: Ruta comodín que pinta la página según sus bloques**
+- [x] **Paso 3: Aplicar los tokens de marca de la escuela**
+- [x] **Paso 4: Medir el JavaScript enviado** — una página con hero, cursos y contacto debe quedar bajo 50 KB
+- [x] **Paso 5: Commit** — `feat(sites): componentes de bloque sin JavaScript salvo el formulario`
 
 ---
 
@@ -191,12 +191,12 @@ Decisiones:
 - `sitemap.xml` y `robots.txt` **generados por escuela**, no compartidos. Un sitemap con las URLs de otra escuela es una fuga de información y un problema de posicionamiento.
 - Metadatos de redes sociales con la imagen del hero.
 
-- [ ] **Paso 1: Componente de SEO con metadatos y `hreflang`**
-- [ ] **Paso 2: Datos estructurados**
-- [ ] **Paso 3: `sitemap.xml` y `robots.txt` por escuela**
-- [ ] **Paso 4: Prueba de que el sitemap de una escuela no contiene URLs de otra**
+- [x] **Paso 1: Componente de SEO con metadatos y `hreflang`**
+- [x] **Paso 2: Datos estructurados**
+- [x] **Paso 3: `sitemap.xml` y `robots.txt` por escuela**
+- [x] **Paso 4: Prueba de que el sitemap de una escuela no contiene URLs de otra**
 - [ ] **Paso 5: Verificar con la herramienta de resultados enriquecidos**
-- [ ] **Paso 6: Commit** — `feat(sites): SEO, datos estructurados y multiidioma`
+- [x] **Paso 6: Commit** — `feat(sites): SEO, datos estructurados y multiidioma`
 
 ---
 
@@ -212,12 +212,12 @@ Decisiones:
 - Publicar es explícito: los cambios no salen en vivo hasta pulsarlo.
 - Selector de idioma para editar cada versión.
 
-- [ ] **Paso 1: Lista de bloques con reordenación**
-- [ ] **Paso 2: Formulario por tipo de bloque**
-- [ ] **Paso 3: Previsualización en iframe**
-- [ ] **Paso 4: Publicar y despublicar**
-- [ ] **Paso 5: Aviso al añadir un profesor sin derechos de imagen** — explicando por qué no aparecerá
-- [ ] **Paso 6: Commit** — `feat(web): editor de bloques del sitio`
+- [x] **Paso 1: Lista de bloques con reordenación**
+- [x] **Paso 2: Formulario por tipo de bloque**
+- [x] **Paso 3: Previsualización en iframe**
+- [x] **Paso 4: Publicar y despublicar**
+- [x] **Paso 5: Aviso al añadir un profesor sin derechos de imagen** — explicando por qué no aparecerá
+- [x] **Paso 6: Commit** — `feat(web): editor de bloques del sitio`
 
 ---
 
@@ -235,12 +235,12 @@ Flujo:
 4. Al verificar, se emite el certificado TLS y el dominio queda activo.
 5. Si no se verifica en 48 horas, se marca como fallido con instrucciones claras.
 
-- [ ] **Paso 1: Comando de alta de dominio con token de verificación**
-- [ ] **Paso 2: Verificador de DNS**
-- [ ] **Paso 3: Trabajo de comprobación periódica acotado en el tiempo**
-- [ ] **Paso 4: Emisión de certificado**
-- [ ] **Paso 5: Pantalla en el panel con las instrucciones de DNS, copiables**
-- [ ] **Paso 6: Commit** — `feat(sites): dominios propios con verificación por DNS`
+- [x] **Paso 1: Comando de alta de dominio con token de verificación**
+- [x] **Paso 2: Verificador de DNS**
+- [x] **Paso 3: Trabajo de comprobación periódica acotado en el tiempo**
+- [x] **Paso 4: Emisión de certificado**
+- [x] **Paso 5: Pantalla en el panel con las instrucciones de DNS, copiables**
+- [x] **Paso 6: Commit** — `feat(sites): dominios propios con verificación por DNS`
 
 ---
 
@@ -270,15 +270,15 @@ Formulario web  →  Candidato  →  Prueba de nivelación  →  Matrícula  →
 - Convertir crea el alumno reutilizando `EnrolStudentCommand`: **si es menor, pide el tutor igual**. La captación no puede saltarse las reglas del alta.
 - Un candidato sin respuesta en 30 días se marca como frío, no se borra.
 
-- [ ] **Paso 1: Pruebas del ciclo de vida del candidato**
-- [ ] **Paso 2: Ejecutar y comprobar que fallan**
-- [ ] **Paso 3: Implementar `Lead`**
-- [ ] **Paso 4: Captura desde el formulario del bloque de contacto**
-- [ ] **Paso 5: Envío automático de la prueba de nivelación** — manejador de `LeadCaptured` en `assessment`, no una llamada desde `people`
-- [ ] **Paso 6: Conversión a alumno reutilizando el comando de alta**
-- [ ] **Paso 7: Pantalla de embudo en el panel**
-- [ ] **Paso 8: Prueba de que un candidato menor exige tutor al convertir**
-- [ ] **Paso 9: Commit** — `feat(people): candidatos y embudo de matrícula`
+- [x] **Paso 1: Pruebas del ciclo de vida del candidato**
+- [x] **Paso 2: Ejecutar y comprobar que fallan**
+- [x] **Paso 3: Implementar `Lead`**
+- [x] **Paso 4: Captura desde el formulario del bloque de contacto**
+- [x] **Paso 5: Envío automático de la prueba de nivelación** — manejador de `LeadCaptured` en `assessment`, no una llamada desde `people`
+- [x] **Paso 6: Conversión a alumno reutilizando el comando de alta**
+- [x] **Paso 7: Pantalla de embudo en el panel**
+- [x] **Paso 8: Prueba de que un candidato menor exige tutor al convertir**
+- [x] **Paso 9: Commit** — `feat(people): candidatos y embudo de matrícula`
 
 ---
 
@@ -302,7 +302,7 @@ para sacar la prestación de beta.
 
 ## Tarea 10: Recorrido completo de la ola 4
 
-- [ ] **Paso 1: Escribir el recorrido**
+- [x] **Paso 1: Escribir el recorrido**
 
 ```
  1. Crear un sitio desde el panel con hero, cursos y contacto
@@ -318,20 +318,20 @@ para sacar la prestación de beta.
 11. Medir el JavaScript de la portada: por debajo de 50 KB
 ```
 
-- [ ] **Paso 2: Ejecutarlo**
-- [ ] **Paso 3: Añadirlo al CI**
-- [ ] **Paso 4: Commit** — `test: recorrido completo de la ola 4`
+- [x] **Paso 2: Ejecutarlo**
+- [x] **Paso 3: Añadirlo al CI**
+- [x] **Paso 4: Commit** — `test: recorrido completo de la ola 4`
 
 ---
 
 ## Criterio de «listo» de la ola 4
 
-- [ ] Una escuela publica su web, recibe una solicitud de información y ese contacto se convierte en alumno matriculado sin intervención manual.
+- [x] Una escuela publica su web, recibe una solicitud de información y ese contacto se convierte en alumno matriculado sin intervención manual.
 - [ ] Un dominio propio funciona con TLS tras verificar el DNS.
-- [ ] Un hostname desconocido devuelve 404, nunca la web de otra escuela.
-- [ ] El sitemap de una escuela no contiene ni una URL de otra.
-- [ ] La portada envía menos de 50 KB de JavaScript.
-- [ ] Nadie aparece en una web sin haberlo consentido.
+- [x] Un hostname desconocido devuelve 404, nunca la web de otra escuela.
+- [x] El sitemap de una escuela no contiene ni una URL de otra.
+- [x] La portada envía menos de 50 KB de JavaScript.
+- [x] Nadie aparece en una web sin haberlo consentido.
 
 ---
 

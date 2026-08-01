@@ -62,8 +62,11 @@ const showPhone = booleanProp(block.props, "showPhone");
       const status = target.querySelector("[data-contact-status]");
       const button = target.querySelector("button");
       const payload = Object.fromEntries(new FormData(target).entries());
+      // El endpoint público exige `siteId` para saber de qué escuela es el
+      // candidato (sin sesión no hay tenant); el id viaja en el `data-` del
+      // formulario porque el HTML lo genera el servidor, que sí lo conoce.
+      payload.siteId = target.dataset.schoolId ?? "";
       payload.sourcePage = target.dataset.sourcePage ?? "";
-      payload.leadSource = "school_site";
 
       button?.setAttribute("disabled", "true");
       if (status) status.textContent = "Enviando...";

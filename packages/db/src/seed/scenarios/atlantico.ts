@@ -163,6 +163,19 @@ export async function seedAtlantico(db: Db, planIds: Map<string, string>) {
     leftReason: "Traslado a otra ciudad",
   });
 
+  // Consentimiento de imagen para la web pública (ola 4): solo Carla y Dan
+  // autorizan aparecer en el sitio. Sofia y Marc, no: el bloque `teachers`
+  // del sitio sembrado demuestra así el filtrado por `image_rights`.
+  for (const t of [carla, dan]) {
+    await b.consent({
+      subjectMembershipId: t.membership.id,
+      kind: "image_rights",
+      status: "granted",
+      grantedByMembershipId: t.membership.id,
+      grantedAt: weeksAgo(8),
+    });
+  }
+
   for (const t of [carla, dan, sofia, marc]) {
     await b.availability(t.profile.id, [
       { weekday: 1, from: 9, to: 14 },

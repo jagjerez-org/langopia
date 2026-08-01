@@ -54,6 +54,22 @@ export class PublicSitesController {
     return this.queries.execute(new GetPublicSiteByHostQuery({ host: host ?? "" }));
   }
 
+  // La portada tiene slug VACÍO en la base de datos («Vacío para la
+  // portada», ver packages/db/src/schema/sites.ts), y una cadena vacía no
+  // cabe en el parámetro `:slug` de la ruta de abajo: sin esta ruta, la home
+  // de cualquier sitio devolvía 404 aunque estuviera publicada.
+  @Get(":siteId/pages")
+  @Header("Cache-Control", CACHE_CONTROL)
+  async homePage(
+    @Param("siteId") siteId: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.checkRateLimit(clientIp(req));
+    res.setHeader("Cache-Control", CACHE_CONTROL);
+    return this.queries.execute(new GetPublicSitePageQuery({ siteId, slug: "" }));
+  }
+
   @Get(":siteId/pages/:slug")
   @Header("Cache-Control", CACHE_CONTROL)
   async page(

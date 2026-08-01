@@ -11,6 +11,8 @@
  * banco de nivelación calibrado, autorizaciones MCP vivas e histórico
  * suficiente para que una media móvil signifique algo.
  */
+import { and, eq, inArray } from "drizzle-orm";
+
 import * as s from "../schema/index.js";
 import type { SchoolBuilder } from "./builders.js";
 import { daysAgo, daysFromNow, isoDate, NOW, pick, randomInt, weeksAgo } from "./helpers.js";
@@ -70,8 +72,55 @@ export async function seedSite(
     }
   }
 
+  // Profesorado con su nombre y su consentimiento de imagen: el bloque
+  // `teachers` solo puede enseñar a quien autorizó `image_rights` (ola 4,
+  // Tarea 1), así que el seed guarda el consentimiento junto a la tarjeta.
+  const profesores =
+    opts.teacherProfileIds.length === 0
+      ? []
+      : await b.db
+          .select({
+            teacherId: s.teacherProfiles.id,
+            membershipId: s.teacherProfiles.membershipId,
+            displayName: s.users.name,
+          })
+          .from(s.teacherProfiles)
+          .innerJoin(s.memberships, eq(s.memberships.id, s.teacherProfiles.membershipId))
+          .innerJoin(s.users, eq(s.users.id, s.memberships.userId))
+          .where(inArray(s.teacherProfiles.id, opts.teacherProfileIds));
+
+  const imagenConsentida = new Set(
+    profesores.length === 0
+      ? []
+      : (
+          await b.db
+            .select({ subjectMembershipId: s.consents.subjectMembershipId })
+            .from(s.consents)
+            .where(
+              and(
+                inArray(
+                  s.consents.subjectMembershipId,
+                  profesores.map((profesor) => profesor.membershipId),
+                ),
+                eq(s.consents.kind, "image_rights"),
+                eq(s.consents.status, "granted"),
+              ),
+            )
+        ).map((row) => row.subjectMembershipId),
+  );
+
+  const profesorado = {
+    teachers: profesores.map((profesor) => ({
+      teacherId: profesor.teacherId,
+      displayName: profesor.displayName,
+      imageUrl: null,
+      imageRights: imagenConsentida.has(profesor.membershipId),
+    })),
+  };
+
   // Bloques de cada página. La portada lleva el catálogo completo; el resto,
-  // lo suyo. Es el catálogo cerrado del plan de la ola 4.
+  // lo suyo. Es el catálogo cerrado del plan de la ola 4, con las formas que
+  // valida `Block` en la API (apps/api/.../sites/domain/model/block.vo.ts).
   for (const { page, kind } of creadas) {
     const bloques: Array<{ type: (typeof s.blockType.enumValues)[number]; content: Record<string, unknown> }> =
       kind === ""
@@ -80,43 +129,83 @@ export async function seedSite(
               type: "hero",
               content: {
                 headline: "Aprende idiomas con profesorado que te conoce",
-                subheadline: "Grupos de cinco alumnos como máximo. Clases de 60 minutos.",
-                imageKey: `${b.spec.slug}/site/hero.webp`,
-                cta: { label: "Prueba tu nivel gratis", href: "/contacto" },
+                subtitle: "Grupos de cinco alumnos como máximo. Clases de 60 minutos.",
+                image: { url: `/${b.spec.slug}/site/hero.webp`, alt: "Clase de idiomas" },
+                callToAction: { label: "Prueba tu nivel gratis", href: "/contacto" },
               },
             },
-            { type: "courses", content: { courseIds: opts.courseIds.slice(0, 3), showPrices: true } },
-            { type: "teachers", content: { teacherProfileIds: opts.teacherProfileIds.slice(0, 4) } },
+            { type: "courses", content: { source: { kind: "selected", courseIds: opts.courseIds.slice(0, 3) } } },
+            { type: "teachers", content: profesorado },
             {
               type: "testimonials",
-              content: { maxItems: 3, minRating: 4 },
+              content: {
+                testimonials: [
+                  {
+                    testimonialId: `${b.spec.slug}-resena-1`,
+                    authorName: "Marina",
+                    quote: "Pasé de B1 a B2 en un curso, con grupo de cuatro.",
+                    public: true,
+                  },
+                  {
+                    testimonialId: `${b.spec.slug}-resena-2`,
+                    authorName: "Andrés",
+                    quote: "La prueba de nivel acertó de lleno con mi grupo.",
+                    public: true,
+                  },
+                  {
+                    testimonialId: `${b.spec.slug}-resena-3`,
+                    authorName: "Anónimo",
+                    quote: "Reseña sin permiso de publicación: no debe salir.",
+                    public: false,
+                  },
+                ],
+              },
             },
             {
               type: "faq",
               content: {
                 items: [
-                  { q: "¿Cuánto dura cada clase?", a: "Sesenta minutos, con un máximo de cinco alumnos." },
-                  { q: "¿Puedo cambiar de horario?", a: "Sí, avisando con 24 horas de antelación." },
-                  { q: "¿Hay prueba de nivel?", a: "Sí, gratuita y en cinco minutos." },
+                  { question: "¿Cuánto dura cada clase?", answer: "Sesenta minutos, con un máximo de cinco alumnos." },
+                  { question: "¿Puedo cambiar de horario?", answer: "Sí, avisando con 24 horas de antelación." },
+                  { question: "¿Hay prueba de nivel?", answer: "Sí, gratuita y en cinco minutos." },
                 ],
               },
             },
-            { type: "contact", content: { showPhone: true, askLanguage: true } },
+            { type: "contact", content: { title: "Pide información", submitLabel: "Te llamamos", leadSource: "school_site" } },
           ]
         : kind === "cursos"
           ? [
-              { type: "text", content: { html: "<h1>Nuestros cursos</h1><p>De A1 a C2, con material propio.</p>" } },
-              { type: "courses", content: { courseIds: opts.courseIds, showPrices: true } },
-              { type: "pricing", content: { highlightPlan: "growth" } },
+              {
+                type: "text",
+                content: {
+                  content: [
+                    { kind: "heading", text: "Nuestros cursos" },
+                    { kind: "paragraph", text: "De A1 a C2, con material propio." },
+                  ],
+                },
+              },
+              { type: "courses", content: { source: { kind: "selected", courseIds: opts.courseIds } } },
+              { type: "pricing", content: { planIds: ["base", "growth", "premium"] } },
             ]
           : kind === "profesorado"
             ? [
-                { type: "text", content: { html: "<h1>Quién te va a dar clase</h1>" } },
-                { type: "teachers", content: { teacherProfileIds: opts.teacherProfileIds } },
+                {
+                  type: "text",
+                  content: { content: [{ kind: "heading", text: "Quién te va a dar clase" }] },
+                },
+                { type: "teachers", content: profesorado },
               ]
             : [
-                { type: "text", content: { html: "<h1>Hablemos</h1><p>Te respondemos en menos de 24 horas.</p>" } },
-                { type: "contact", content: { showPhone: true, askLanguage: true } },
+                {
+                  type: "text",
+                  content: {
+                    content: [
+                      { kind: "heading", text: "Hablemos" },
+                      { kind: "paragraph", text: "Te respondemos en menos de 24 horas." },
+                    ],
+                  },
+                },
+                { type: "contact", content: { title: "Pide información", submitLabel: "Te llamamos", leadSource: "school_site" } },
               ];
 
     await b.db.insert(s.siteBlocks).values(
