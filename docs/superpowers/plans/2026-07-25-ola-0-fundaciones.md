@@ -1609,7 +1609,7 @@ Las tres fuentes en su orden de prioridad, que es justo lo que `resolveLocale` i
 
 Añadir `CLS_LOCALE` a `cls-tenant-context.ts` y `schoolLocale` a la consulta de membresías del repositorio.
 
-- [ ] **Paso 7: Verificar de extremo a extremo** (no ejecutable en esta tarea, ver nota)
+- [x] **Paso 7: Verificar de extremo a extremo** (no ejecutable en esta tarea, ver nota)
 
 > `domain-error.filter.ts` sigue sin traducir a propósito (lo dice el propio
 > Paso 6: desaparece en la T8b) y `SessionTenantGuard` no fija `CLS_LOCALE`
@@ -2085,18 +2085,18 @@ git commit -m "chore: copias verificadas, registro estructurado y alertas"
 
 ## Criterio de «listo» de la ola 0
 
-- [ ] `npm run test --workspace @langopia/api` pasa, con la guardia de arquitectura incluida.
-- [ ] `npm run db:seed` termina con «Aislamiento verificado» y código de salida 0.
-- [ ] Una petición con `x-school-id` inventado devuelve **403**, no datos.
-- [ ] Los errores salen traducidos según `Accept-Language`, **interpolados** y sin marcadores sueltos.
-- [ ] Los **13 códigos** de error del dominio tienen mensaje en los **cinco** idiomas, y la prueba de cobertura lo garantiza.
-- [ ] **Los cuatro tipos de error** —dominio, validación, Postgres y desconocido— devuelven la **misma estructura**, con `code` y `traceId`.
-- [ ] Un error desconocido no filtra su mensaje al cliente, y aun así queda entero en el registro.
-- [ ] El `traceId` de una respuesta fallida encuentra la línea del fallo en el registro.
-- [ ] La guardia falla si alguien escribe un `catch` vacío o un `.catch(() => null)`.
-- [ ] Ningún registro contiene un correo, un teléfono ni una fecha de nacimiento.
+- [x] `npm run test --workspace @langopia/api` pasa, con la guardia de arquitectura incluida.
+- [x] `npm run db:seed` termina con «Aislamiento verificado» y código de salida 0.
+- [x] Una petición con `x-school-id` inventado devuelve **403**, no datos.
+- [x] Los errores salen traducidos según `Accept-Language`, **interpolados** y sin marcadores sueltos.
+- [x] Los **13 códigos** de error del dominio tienen mensaje en los **cinco** idiomas, y la prueba de cobertura lo garantiza.
+- [x] **Los cuatro tipos de error** —dominio, validación, Postgres y desconocido— devuelven la **misma estructura**, con `code` y `traceId`.
+- [x] Un error desconocido no filtra su mensaje al cliente, y aun así queda entero en el registro.
+- [x] El `traceId` de una respuesta fallida encuentra la línea del fallo en el registro.
+- [x] La guardia falla si alguien escribe un `catch` vacío o un `.catch(() => null)`.
+- [x] Ningún registro contiene un correo, un teléfono ni una fecha de nacimiento.
 - [ ] CI en verde sobre una base de datos limpia, partiendo de migraciones.
-- [ ] Better Auth **validado sobre Nest** o decisión alternativa tomada y documentada.
+- [x] Better Auth **validado sobre Nest** o decisión alternativa tomada y documentada.
 - [ ] API desplegada en producción con dominio propio y sonda de salud verde.
 - [ ] Una copia de seguridad **restaurada con éxito**, no solo programada.
 - [x] El trabajo de purga borra lo vencido y lo deja registrado en la auditoría.

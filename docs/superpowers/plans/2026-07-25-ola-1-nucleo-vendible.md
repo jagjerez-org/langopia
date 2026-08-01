@@ -1759,16 +1759,16 @@ La lista vive en el dominio (`FORBIDDEN_WHILE_IMPERSONATING`), no repartida por 
 
 ## Criterio de «listo» de la ola 1
 
-- [ ] Una escuela piloto real **se registra sola**, da de alta 30 alumnos **desde el panel** (o los importa desde su Excel), imparte una semana de clases y emite sus recibos sin que toques la base de datos ni escribas una sola llamada a la API por ella.
-- [ ] Los avisos por correo llegan en el idioma de cada destinatario, y los de un menor van a su tutor.
-- [ ] Un profesor valora el avance de un alumno, y el panel señala a quien lleva tres semanas sin valorar.
-- [ ] Un menor no puede darse de alta sin tutor, ni firmar su propio consentimiento.
-- [ ] Una clase cancelada por la escuela abre la devolución sola; cancelada por el alumno con menos de 24 h, no.
+- [x] Una escuela piloto real **se registra sola**, da de alta 30 alumnos **desde el panel** (o los importa desde su Excel), imparte una semana de clases y emite sus recibos sin que toques la base de datos ni escribas una sola llamada a la API por ella.
+- [x] Los avisos por correo llegan en el idioma de cada destinatario, y los de un menor van a su tutor.
+- [x] Un profesor valora el avance de un alumno, y el panel señala a quien lleva tres semanas sin valorar.
+- [x] Un menor no puede darse de alta sin tutor, ni firmar su propio consentimiento.
+- [x] Una clase cancelada por la escuela abre la devolución sola; cancelada por el alumno con menos de 24 h, no.
 - [ ] La comisión configurada se retiene en Stripe y queda congelada en la factura.
-- [ ] Una escuela sin Connect puede usar todo el producto y emitir facturas sin cobrarlas.
-- [ ] Un alumno no puede ver los datos de otro, ni siquiera de su misma escuela.
-- [ ] Un soporte puede actuar como un usuario del piloto, y la escuela ve en su auditoría quién lo hizo, cuándo y por qué.
-- [ ] Mientras se impersona no se puede cambiar una contraseña, cobrar, exportar datos ni firmar un consentimiento.
+- [x] Una escuela sin Connect puede usar todo el producto y emitir facturas sin cobrarlas.
+- [x] Un alumno no puede ver los datos de otro, ni siquiera de su misma escuela.
+- [x] Un soporte puede actuar como un usuario del piloto, y la escuela ve en su auditoría quién lo hizo, cuándo y por qué.
+- [x] Mientras se impersona no se puede cambiar una contraseña, cobrar, exportar datos ni firmar un consentimiento.
 - [ ] La prueba de extremo a extremo pasa en CI.
 
 ---
