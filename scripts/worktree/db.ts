@@ -63,3 +63,12 @@ export function createDatabase(dbName: string, env: { user: string; password: st
   }
   return { ok: true };
 }
+
+export function dropDatabase(dbName: string, env: { user: string; password: string; host: string; port: string }): boolean {
+  spawnSync(
+    'psql',
+    ['-U', env.user, '-h', env.host, '-p', env.port, '-d', 'postgres', '-c', `DROP DATABASE IF EXISTS "${dbName}"`],
+    { encoding: 'utf-8', stdio: 'pipe', env: { ...process.env, PGPASSWORD: env.password } },
+  );
+  return true;
+}
