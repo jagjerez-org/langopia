@@ -1,0 +1,31 @@
+# .github/workflows/preview-cleanup.yml
+#
+# Se ejecuta cuando una PR se cierra o mergea.
+#
+# La base de datos preview fue creada por la integración nativa Vercel-Neon y
+# está ligada al ciclo de vida del preview deployment de Vercel. Cuando Vercel
+# elimine el preview (tras el cierre de la PR), Neon eliminará la rama asociada
+# automáticamente. Este workflow solo comunica el cierre al equipo.
+
+name: Preview Cleanup
+
+on:
+  pull_request:
+    types: [closed]
+
+concurrency:
+  group: preview-${{ github.event.number }}
+  cancel-in-progress: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Actualizar comentario de previews
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          comment_tag: langopia-preview
+          message: |
+            🔒 La PR se ha cerrado. Los preview deployments y la base de datos aislada de Neon se eliminarán automáticamente por Vercel.

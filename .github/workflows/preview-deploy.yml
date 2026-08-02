@@ -1,0 +1,152 @@
+# .github/workflows/preview-deploy.yml
+#
+# Despliega un entorno preview aislado por PR.
+#
+#   - langopia-api se despliega primero. Vercel (con Neon como integración de
+#     marketplace) crea la base de datos preview e inyecta DATABASE_URL y
+#     DATABASE_URL_APP. El build de la API ejecuta db:push + db:policies +
+#     db:seed cuando VERCEL_ENV == preview.
+#   - langopia-web y langopia-sites se despliegan después, apuntando a la URL
+#     de la API preview de esta misma PR.
+#   - Al cerrar la PR, preview-cleanup.yml se encarga del teardown.
+#
+# Los despliegues de Vercel se hacen con --prebuilt: GitHub Actions compila en
+# el runner y Vercel solo sube el resultado. Esto evita que Vercel vuelva a
+# compilar y perda variables generadas dinámicamente (vercel.json de web,
+# .env de sites).
+
+name: Preview Deploy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: preview-${{ github.event.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-api:
+    runs-on: ubuntu-latest
+    outputs:
+      api_url: ${{ steps.deploy.outputs.api_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm install --global vercel@latest
+
+      - name: Desplegar API preview
+        id: deploy
+        working-directory: apps/api
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel link --yes --project langopia-api --token "$VERCEL_TOKEN"
+          vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
+          vercel build --token "$VERCEL_TOKEN"
+          API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+
+  deploy-web:
+    needs: deploy-api
+    runs-on: ubuntu-latest
+    outputs:
+      web_url: ${{ steps.deploy.outputs.web_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm install --global vercel@latest
+
+      - name: Configurar vercel.json apuntando a la API preview
+        working-directory: apps/web
+        env:
+          API_URL: ${{ needs.deploy-api.outputs.api_url }}
+        run: |
+          cat > vercel.json <<EOF
+          {
+            "\$schema": "https://openapi.vercel.sh/vercel.json",
+            "installCommand": "cd ../.. && npm ci",
+            "buildCommand": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/web",
+            "rewrites": [
+              { "source": "/api/:path*", "destination": "${API_URL}/api/:path*" },
+              { "source": "/((?!api/).*)", "destination": "/index.html" }
+            ]
+          }
+          EOF
+
+      - name: Desplegar web preview
+        id: deploy
+        working-directory: apps/web
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel link --yes --project langopia-web --token "$VERCEL_TOKEN"
+          vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
+          vercel build --token "$VERCEL_TOKEN"
+          WEB_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          echo "web_url=$WEB_URL" >> "$GITHUB_OUTPUT"
+
+  deploy-sites:
+    needs: deploy-api
+    runs-on: ubuntu-latest
+    outputs:
+      sites_url: ${{ steps.deploy.outputs.sites_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm install --global vercel@latest
+
+      - name: Configurar API_URL para sites
+        working-directory: apps/sites
+        env:
+          API_URL: ${{ needs.deploy-api.outputs.api_url }}
+        run: |
+          echo "API_URL=$API_URL" > .env
+
+      - name: Desplegar sites preview
+        id: deploy
+        working-directory: apps/sites
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel link --yes --project langopia-sites --token "$VERCEL_TOKEN"
+          vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
+          vercel build --token "$VERCEL_TOKEN"
+          SITES_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          echo "sites_url=$SITES_URL" >> "$GITHUB_OUTPUT"
+
+  comment:
+    needs: [deploy-api, deploy-web, deploy-sites]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Comentar previews en la PR
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          comment_tag: langopia-preview
+          message: |
+            🚀 Previews desplegados para esta PR:
+
+            | App | URL |
+            | --- | --- |
+            | API | ${{ needs.deploy-api.outputs.api_url }} |
+            | Web | ${{ needs.deploy-web.outputs.web_url }} |
+            | Sites | ${{ needs.deploy-sites.outputs.sites_url }} |
+
+            La base de datos es aislada y se ha sembrado con el seed de demo.

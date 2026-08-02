@@ -9,7 +9,7 @@
     "start:dev": "nest start --watch",
     "start:prod": "npm run db:deploy --workspace @langopia/db && node dist/main.js",
     "bundle:workspace-deps": "node scripts/bundle-workspace-deps.js",
-    "vercel-build": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/db && npm run build --workspace @langopia/api && npx @vercel/ncc build apps/api/dist/vercel.js -o apps/api/dist/ncc --external @napi-rs/canvas --external canvas",
+    "vercel-build": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/db && if [ \"$VERCEL_ENV\" = \"preview\" ]; then npm run db:push --workspace @langopia/db && npm run db:policies --workspace @langopia/db && npm run db:seed --workspace @langopia/db; fi && npm run build --workspace @langopia/api && npx @vercel/ncc build apps/api/dist/vercel.js -o apps/api/dist/ncc --external @napi-rs/canvas --external canvas",
     "typecheck": "tsc --noEmit",
     "typecheck:e2e": "tsc -p tsconfig.e2e.json",
     "test": "vitest run",
