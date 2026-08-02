@@ -5,7 +5,7 @@ import { parseArgs } from '../args.ts';
 import { createDatabase, databaseExists, deriveDbName, parseDatabaseUrl, readDbRegistry, registerDb } from '../db.ts';
 
 export function db(root: string, args: string[]): void {
-  const { flags, positional } = parseArgs(args);
+  const { positional } = parseArgs(args);
   const name = positional[0];
   const subcommand = positional[1];
 
