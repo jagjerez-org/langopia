@@ -135,7 +135,7 @@ jobs:
       - name: Migraciones y políticas (producción)
         run: |
           cd packages/db
-          npx drizzle-kit migrate
+          npx drizzle-kit migrate 2>&1 | tee migration.log || (cat migration.log; exit 1)
           npx tsx src/apply-policies.ts
 
       # Un proyecto de Vercel por app (langopia-api, langopia-web,
