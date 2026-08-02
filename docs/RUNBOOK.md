@@ -47,7 +47,8 @@ producción:
 | Variable | Proyecto | Notas en producción |
 |---|---|---|
 | `DATABASE_URL` | secreto CI (`PROD_DATABASE_URL`) | Rol dueño del esquema. Solo lo usan las migraciones y las políticas en el job `desplegar`; la aplicación nunca lo usa para servir peticiones. |
-| `DATABASE_URL_APP` | `langopia-api` | Rol `langopia_app`, sin `BYPASSRLS`. Contraseña **distinta** de la de desarrollo (`cambiame`) — ver más abajo. |
+| `DATABASE_URL_APP` | `langopia-api` | Rol `langopia_app`, sin `BYPASSRLS`. Contraseña **distinta** de la de desarrollo — ver más abajo. |
+| `APP_DATABASE_PASSWORD` | secreto CI (`PROD_DATABASE_URL_APP_PASSWORD`) | Contraseña con la que `policies.sql` crea el rol `langopia_app`. Debe coincidir con la de `DATABASE_URL_APP`. |
 | `BETTER_AUTH_SECRET` | `langopia-api` | Secreto propio de producción, nunca el de `.env` local. |
 | `BETTER_AUTH_URL` | `langopia-api` | Debe incluir la ruta (`https://<dominio-api>/api/v1/auth`): Better Auth deriva de ahí su `basePath`. |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | `langopia-api` | Orígenes del panel y de las webs de escuela desde los que se puede iniciar sesión, separados por comas. |
@@ -58,19 +59,25 @@ producción:
 
 ## Rol de aplicación en producción
 
-`packages/db/src/policies.sql` crea el rol `langopia_app` con la contraseña
-`cambiame` solo si el rol **no existe todavía** (`IF NOT EXISTS`); no la
-reasigna en cada aplicación de políticas. Antes de que la aplicación reciba
-tráfico real, contra la base de datos de producción:
+`packages/db/src/policies.sql` crea el rol `langopia_app` usando la variable
+de entorno `APP_DATABASE_PASSWORD`. En el job `desplegar` de CI ese valor viene
+del secreto `PROD_DATABASE_URL_APP_PASSWORD`.
+
+Antes del primer despliegue (o al rotar la contraseña):
+
+1. Generar una contraseña segura en Neon o en tu gestor de secretos.
+2. Guardarla en el secreto de repositorio `PROD_DATABASE_URL_APP_PASSWORD`.
+3. Actualizar la variable de entorno `DATABASE_URL_APP` del proyecto
+   `langopia-api` en Vercel para que use esa misma contraseña.
+
+Como el bloque usa `IF NOT EXISTS`, si el rol ya existe con otra contraseña
+no se reescribe automáticamente. Para cambiar la contraseña de un rol
+existente, ejecutar manualmente contra la base de datos de producción con un
+rol dueño:
 
 ```sql
-ALTER ROLE langopia_app WITH PASSWORD '<secreto del gestor de secretos>';
+ALTER ROLE langopia_app WITH PASSWORD '<nueva contraseña>';
 ```
-
-Después, `DATABASE_URL_APP` en Vercel debe llevar esa misma contraseña. No
-hace falta tocar `policies.sql`: el `IF NOT EXISTS` ya impide que una
-aplicación de políticas posterior sobrescriba la contraseña real por
-`cambiame`.
 
 ## Verificar un despliegue
 

@@ -81,11 +81,28 @@ type TableRow = {
   tiene_school_id: boolean;
 };
 
+function passwordFromUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  try {
+    const parsed = new URL(url);
+    return decodeURIComponent(parsed.password) || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("Falta DATABASE_URL");
 
-  const sqlText = await readFile(join(here, "policies.sql"), "utf8");
+  const appPassword =
+    process.env.APP_DATABASE_PASSWORD ??
+    passwordFromUrl(process.env.DATABASE_URL_APP) ??
+    "cambiame";
+  const sqlText = (await readFile(join(here, "policies.sql"), "utf8")).replace(
+    /\$\{APP_DATABASE_PASSWORD\}/g,
+    appPassword.replace(/'/g, "''"),
+  );
   const client = postgres(url, { max: 1, onnotice: () => {} });
 
   try {

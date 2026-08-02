@@ -116,6 +116,9 @@ jobs:
       # Rol dueño del esquema en la base de datos de PRODUCCIÓN (Neon). Solo
       # lo usa el paso de migraciones; la aplicación nunca lo ve.
       DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+      # Contraseña del rol de aplicación `langopia_app`. Debe coincidir con
+      # la usada en la env var `DATABASE_URL_APP` desplegada en Vercel.
+      APP_DATABASE_PASSWORD: ${{ secrets.PROD_DATABASE_URL_APP_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

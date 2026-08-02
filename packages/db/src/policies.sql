@@ -24,7 +24,7 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'langopia_app') THEN
-    CREATE ROLE langopia_app LOGIN PASSWORD 'cambiame';
+    CREATE ROLE langopia_app LOGIN PASSWORD '${APP_DATABASE_PASSWORD}';
   END IF;
 END
 $$;
