@@ -80,7 +80,7 @@ jobs:
           npm run db:seed --workspace @langopia/db
 
           vercel build --token "$VERCEL_TOKEN"
-          API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN" --env DATABASE_URL_APP="$DATABASE_URL_APP")
           API_ALIAS="pr-${PR_NUMBER}.api.langopia.com"
           vercel alias set "$API_URL" "$API_ALIAS" --token "$VERCEL_TOKEN"
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
