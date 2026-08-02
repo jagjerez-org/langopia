@@ -55,14 +55,27 @@ jobs:
         run: |
           vercel link --yes --project langopia-api --token "$VERCEL_TOKEN"
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
+
           # Sobreescribir DATABASE_URL con el secreto del repo; esto evita que
           # un valor inválido o vacío traído por Vercel rompa db:push/db:seed.
           echo "DATABASE_URL=$PREVIEW_DATABASE_URL" >> .vercel/.env.preview.local
+
           # La aplicación se conecta con el rol langopia_app (sin BYPASSRLS).
           # Construimos su URL a partir de PREVIEW_DATABASE_URL para que el
           # preview use la misma contraseña que crea db:policies.
           DATABASE_URL_APP=$(echo "$PREVIEW_DATABASE_URL" | sed -E 's|://[^:@]+:[^@]+@|://langopia_app:Lang0p1a!DevApp_2025_Secure@|')
           echo "DATABASE_URL_APP=$DATABASE_URL_APP" >> .vercel/.env.preview.local
+
+          # Ejecutar migraciones, políticas y seed fuera del vercel build para
+          # no consumir el timeout de Vercel ni depender de su entorno.
+          export DATABASE_URL="$PREVIEW_DATABASE_URL"
+          export DATABASE_URL_APP="$DATABASE_URL_APP"
+          npm run build --workspace @langopia/contracts
+          npm run build --workspace @langopia/db
+          npm run db:push --workspace @langopia/db
+          npm run db:policies --workspace @langopia/db
+          npm run db:seed --workspace @langopia/db
+
           vercel build --token "$VERCEL_TOKEN"
           API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
