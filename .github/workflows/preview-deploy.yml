@@ -2,10 +2,11 @@
 #
 # Despliega un entorno preview aislado por PR.
 #
-#   - langopia-api se despliega primero. Vercel (con Neon como integración de
-#     marketplace) crea la base de datos preview e inyecta DATABASE_URL y
-#     DATABASE_URL_APP. El build de la API ejecuta db:push + db:policies +
-#     db:seed cuando VERCEL_ENV == preview.
+#   - langopia-api se despliega primero. DATABASE_URL para preview se toma del
+#     secreto PREVIEW_DATABASE_URL y se inyecta en .vercel/.env.preview.local
+#     tras `vercel pull`, sobreescribiendo cualquier valor previo de Vercel.
+#     El build de la API ejecuta db:push + db:policies + db:seed cuando
+#     VERCEL_ENV == preview.
 #   - langopia-web y langopia-sites se despliegan después, apuntando a la URL
 #     de la API preview de esta misma PR.
 #   - Al cerrar la PR, preview-cleanup.yml se encarga del teardown.
@@ -50,9 +51,13 @@ jobs:
         working-directory: apps/api
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PREVIEW_DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
         run: |
           vercel link --yes --project langopia-api --token "$VERCEL_TOKEN"
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
+          # Sobreescribir DATABASE_URL con el secreto del repo; esto evita que
+          # un valor inválido o vacío traído por Vercel rompa db:push/db:seed.
+          echo "DATABASE_URL=$PREVIEW_DATABASE_URL" >> .vercel/.env.preview.local
           vercel build --token "$VERCEL_TOKEN"
           API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
