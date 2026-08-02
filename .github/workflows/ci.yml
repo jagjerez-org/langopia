@@ -133,7 +133,10 @@ jobs:
       # esquema, luego el despliegue — nunca sirve código que pida columnas
       # que todavía no existen.
       - name: Migraciones y políticas (producción)
-        run: npm run db:deploy
+        run: |
+          cd packages/db
+          npx drizzle-kit migrate
+          npx tsx src/apply-policies.ts
 
       # Un proyecto de Vercel por app (langopia-api, langopia-web,
       # langopia-sites), cada uno con su Root Directory. `vercel build`
