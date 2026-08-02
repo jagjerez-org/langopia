@@ -69,6 +69,11 @@ jobs:
           DATABASE_URL_APP=$(echo "$PREVIEW_DATABASE_URL" | sed -E 's|://[^:@]+:[^@]+@|://langopia_app:Lang0p1a!DevApp_2025_Secure@|')
           echo "DATABASE_URL_APP=$DATABASE_URL_APP" >> .vercel/.env.preview.local
 
+          # Secreto para firmar tokens MCP OAuth. En preview generamos uno
+          # aleatorio por despliegue; en producción debe ser un secreto estable.
+          MCP_OAUTH_TOKEN_SECRET=$(openssl rand -hex 32)
+          echo "MCP_OAUTH_TOKEN_SECRET=$MCP_OAUTH_TOKEN_SECRET" >> .vercel/.env.preview.local
+
           # Ejecutar migraciones, políticas y seed fuera del vercel build para
           # no consumir el timeout de Vercel ni depender de su entorno.
           export DATABASE_URL="$PREVIEW_DATABASE_URL"
@@ -80,7 +85,9 @@ jobs:
           npm run db:seed --workspace @langopia/db
 
           vercel build --token "$VERCEL_TOKEN"
-          API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN" --env DATABASE_URL_APP="$DATABASE_URL_APP")
+          API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN" \
+            --env DATABASE_URL_APP="$DATABASE_URL_APP" \
+            --env MCP_OAUTH_TOKEN_SECRET="$MCP_OAUTH_TOKEN_SECRET")
           API_ALIAS="pr-${PR_NUMBER}.api.langopia.com"
           vercel alias set "$API_URL" "$API_ALIAS" --token "$VERCEL_TOKEN"
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
