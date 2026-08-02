@@ -1,3 +1,4 @@
+import { spawnSync } from 'child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
@@ -38,4 +39,27 @@ export function parseDatabaseUrl(url: string): { user: string; password: string;
     port: match[4],
     db: match[5],
   };
+}
+
+export function databaseExists(dbName: string, env: { user: string; password: string; host: string; port: string }): boolean {
+  const r = spawnSync(
+    'psql',
+    ['-U', env.user, '-h', env.host, '-p', env.port, '-d', 'postgres', '-t', '-c', `SELECT 1 FROM pg_database WHERE datname='${dbName}'`],
+    { encoding: 'utf-8', stdio: 'pipe', env: { ...process.env, PGPASSWORD: env.password } },
+  );
+  return r.status === 0 && r.stdout.trim().includes('1');
+}
+
+export function createDatabase(dbName: string, env: { user: string; password: string; host: string; port: string }): { ok: boolean; error?: string } {
+  const r = spawnSync(
+    'psql',
+    ['-U', env.user, '-h', env.host, '-p', env.port, '-d', 'postgres', '-c', `CREATE DATABASE "${dbName}"`],
+    { encoding: 'utf-8', stdio: 'pipe', env: { ...process.env, PGPASSWORD: env.password } },
+  );
+  if (r.status !== 0) {
+    const msg = (r.stderr || '').trim();
+    if (msg.includes('already exists')) return { ok: true };
+    return { ok: false, error: msg };
+  }
+  return { ok: true };
 }
