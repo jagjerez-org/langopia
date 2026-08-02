@@ -36,6 +36,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       api_url: ${{ steps.deploy.outputs.api_url }}
+      api_alias: ${{ steps.deploy.outputs.api_alias }}
+    env:
+      PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -78,7 +81,10 @@ jobs:
 
           vercel build --token "$VERCEL_TOKEN"
           API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          API_ALIAS="api-pr-${PR_NUMBER}.langopia.com"
+          vercel alias set "$API_URL" "$API_ALIAS" --token "$VERCEL_TOKEN"
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+          echo "api_alias=$API_ALIAS" >> "$GITHUB_OUTPUT"
 
   deploy-web:
     if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
@@ -86,6 +92,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       web_url: ${{ steps.deploy.outputs.web_url }}
+      web_alias: ${{ steps.deploy.outputs.web_alias }}
+    env:
+      PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -104,7 +113,7 @@ jobs:
           cat > vercel.json <<EOF
           {
             "\$schema": "https://openapi.vercel.sh/vercel.json",
-            "installCommand": "cd ../.. && npm ci",
+            "installCommand": "cd ../.. && test -d node_modules/.bin || npm ci",
             "buildCommand": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/web",
             "rewrites": [
               { "source": "/api/:path*", "destination": "${API_URL}/api/:path*" },
@@ -123,7 +132,10 @@ jobs:
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
           vercel build --token "$VERCEL_TOKEN"
           WEB_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          WEB_ALIAS="pr-${PR_NUMBER}.langopia.com"
+          vercel alias set "$WEB_URL" "$WEB_ALIAS" --token "$VERCEL_TOKEN"
           echo "web_url=$WEB_URL" >> "$GITHUB_OUTPUT"
+          echo "web_alias=$WEB_ALIAS" >> "$GITHUB_OUTPUT"
 
   deploy-sites:
     if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
@@ -131,6 +143,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       sites_url: ${{ steps.deploy.outputs.sites_url }}
+      sites_alias: ${{ steps.deploy.outputs.sites_alias }}
+    env:
+      PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -158,7 +173,10 @@ jobs:
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
           vercel build --token "$VERCEL_TOKEN"
           SITES_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          SITES_ALIAS="sites-pr-${PR_NUMBER}.langopia.com"
+          vercel alias set "$SITES_URL" "$SITES_ALIAS" --token "$VERCEL_TOKEN"
           echo "sites_url=$SITES_URL" >> "$GITHUB_OUTPUT"
+          echo "sites_alias=$SITES_ALIAS" >> "$GITHUB_OUTPUT"
 
   comment:
     if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
@@ -174,10 +192,10 @@ jobs:
           message: |
             🚀 Previews desplegados para esta PR:
 
-            | App | URL |
-            | --- | --- |
-            | API | ${{ needs.deploy-api.outputs.api_url }} |
-            | Web | ${{ needs.deploy-web.outputs.web_url }} |
-            | Sites | ${{ needs.deploy-sites.outputs.sites_url }} |
+            | App | URL Vercel | Alias PR |
+            | --- | --- | --- |
+            | API | ${{ needs.deploy-api.outputs.api_url }} | https://${{ needs.deploy-api.outputs.api_alias }} |
+            | Web | ${{ needs.deploy-web.outputs.web_url }} | https://${{ needs.deploy-web.outputs.web_alias }} |
+            | Sites | ${{ needs.deploy-sites.outputs.sites_url }} | https://${{ needs.deploy-sites.outputs.sites_alias }} |
 
             La base de datos es aislada y se ha sembrado con el seed de demo.
