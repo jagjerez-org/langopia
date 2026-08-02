@@ -6,5 +6,5 @@
     { "source": "/api/:path*", "destination": "https://api.langopia.com/api/:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ],
-  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"preview\" ]; then exit 0; else exit 1; fi"
+  "ignoreCommand": "echo 'Deployment handled by GitHub Actions CI' && exit 0"
 }

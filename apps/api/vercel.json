@@ -4,7 +4,7 @@
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "public",
   "rewrites": [{ "source": "/(.*)", "destination": "/api" }],
-  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"preview\" ]; then exit 0; else exit 1; fi",
+  "ignoreCommand": "echo 'Deployment handled by GitHub Actions CI' && exit 0",
   "functions": {
     "api/index.js": {
       "maxDuration": 60
