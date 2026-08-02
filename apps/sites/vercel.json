@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd ../.. && npm ci",
+  "installCommand": "cd ../.. && test -d node_modules/.bin || npm ci",
   "buildCommand": "cd ../.. && npm run build --workspace sites",
   "ignoreCommand": "echo 'Deployment handled by GitHub Actions CI' && exit 0"
 }

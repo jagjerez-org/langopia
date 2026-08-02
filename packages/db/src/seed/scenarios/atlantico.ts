@@ -74,11 +74,8 @@ export async function seedAtlantico(db: Db, planIds: Map<string, string>) {
     branding: { primaryColor: "#13314B", accentColor: "#2B47C4" },
   });
 
-  console.log("[seed:atlantico] before b.create");
   await b.create(planIds.get("growth")!);
-  console.log("[seed:atlantico] after b.create");
   await b.addDomain("atlantico.langopia.app", true, true);
-  console.log("[seed:atlantico] after addDomain");
 
   /* ── Dirección y administración ──────────────────────────────────────── */
 
@@ -87,13 +84,11 @@ export async function seedAtlantico(db: Db, planIds: Map<string, string>) {
     role: "owner",
     authProvider: "google",
   });
-  console.log("[seed:atlantico] after marta");
   const ruben = await b.person({
     name: "Rubén Ariza",
     role: "admin",
     authProvider: "microsoft",
   });
-  console.log("[seed:atlantico] after ruben");
 
   /* ── Profesorado ─────────────────────────────────────────────────────── */
   // Las tarifas siguen los tramos reales de italki y Preply (julio 2026).
@@ -109,7 +104,6 @@ export async function seedAtlantico(db: Db, planIds: Map<string, string>) {
     certifications: ["ELE Instituto Cervantes"],
     bio: "Profesora de español con nueve años de experiencia en preparación de DELE.",
   });
-  console.log("[seed:atlantico] after carla");
 
   // Da clase también en São Paulo: mismo usuario, dos escuelas. Es el caso que
   // demuestra que la identidad es global y el acceso está aislado por tenant.
