@@ -81,7 +81,7 @@ jobs:
 
           vercel build --token "$VERCEL_TOKEN"
           API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
-          API_ALIAS="api-pr-${PR_NUMBER}.langopia.com"
+          API_ALIAS="pr-${PR_NUMBER}.api.langopia.com"
           vercel alias set "$API_URL" "$API_ALIAS" --token "$VERCEL_TOKEN"
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
           echo "api_alias=$API_ALIAS" >> "$GITHUB_OUTPUT"
@@ -132,7 +132,7 @@ jobs:
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
           vercel build --token "$VERCEL_TOKEN"
           WEB_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
-          WEB_ALIAS="pr-${PR_NUMBER}.langopia.com"
+          WEB_ALIAS="pr-${PR_NUMBER}.web.langopia.com"
           vercel alias set "$WEB_URL" "$WEB_ALIAS" --token "$VERCEL_TOKEN"
           echo "web_url=$WEB_URL" >> "$GITHUB_OUTPUT"
           echo "web_alias=$WEB_ALIAS" >> "$GITHUB_OUTPUT"
@@ -173,7 +173,7 @@ jobs:
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
           vercel build --token "$VERCEL_TOKEN"
           SITES_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
-          SITES_ALIAS="sites-pr-${PR_NUMBER}.langopia.com"
+          SITES_ALIAS="pr-${PR_NUMBER}.sites.langopia.com"
           vercel alias set "$SITES_URL" "$SITES_ALIAS" --token "$VERCEL_TOKEN"
           echo "sites_url=$SITES_URL" >> "$GITHUB_OUTPUT"
           echo "sites_alias=$SITES_ALIAS" >> "$GITHUB_OUTPUT"
