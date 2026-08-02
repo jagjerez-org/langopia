@@ -266,7 +266,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // `.stack`—, para que el serializador de Pino la despliegue con
       // mensaje, pila y tipo. Nunca al revés.
       level = "error";
-      logMessage = error instanceof Error ? error.message : String(error);
+      logMessage =
+        error instanceof Error
+          ? `internal_error: ${error.message} | stack: ${error.stack ?? "(no stack)"}`
+          : String(error);
       logError = error instanceof Error ? error : new Error(String(error));
     }
 
