@@ -26,10 +26,18 @@
     "db:studio": "npm run db:studio --workspace @langopia/db",
     "db:reset": "npm run db:push && npm run db:policies && npm run db:seed",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "wt:add": "tsx scripts/worktree.ts add",
+    "wt:remove": "tsx scripts/worktree.ts remove",
+    "wt:list": "tsx scripts/worktree.ts list",
+    "wt:open": "tsx scripts/worktree.ts open",
+    "wt:dev": "tsx scripts/worktree.ts dev",
+    "wt:db": "tsx scripts/worktree.ts db",
+    "wt:clean": "tsx scripts/worktree.ts clean"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
+    "tsx": "^4.20.0",
     "typescript": "^5.8.3"
   }
 }
