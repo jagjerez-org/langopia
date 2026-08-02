@@ -50,12 +50,14 @@ function bodyFrom(json: ReturnType<typeof vi.fn>) {
  * uno (petición que nunca pasó por `SessionTenantGuard`), y un mock que
  * ignorara `set` dejaría ese camino sin probar de verdad.
  */
-function makeCls(locale: string | undefined) {
+function makeCls(locale: string | undefined, active = true) {
   const store = new Map<string, unknown>();
   if (locale !== undefined) store.set(CLS_LOCALE, locale);
   return {
     get: vi.fn((key: string) => store.get(key)),
     set: vi.fn((key: string, value: unknown) => store.set(key, value)),
+    isActive: vi.fn(() => active),
+    runWith: vi.fn(<T>(_store: unknown, callback: () => T) => callback()),
   };
 }
 
@@ -63,8 +65,8 @@ function makeLogger() {
   return { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
 }
 
-function makeFilter(locale: string | undefined) {
-  const cls = makeCls(locale);
+function makeFilter(locale: string | undefined, active = true) {
+  const cls = makeCls(locale, active);
   const logger = makeLogger();
   const filter = new AllExceptionsFilter(cls as never, logger as never);
   return { filter, cls, logger };
@@ -278,5 +280,25 @@ describe("AllExceptionsFilter", () => {
       // respuesta y el registro tendrían identificadores distintos.
       expect(cls.get(CLS_TRACE_ID)).toBe(traceId);
     }
+  });
+
+  /**
+   * Reproduce el fallo real de Vercel: rutas excluidas del middleware de
+   * `nestjs-cls` (OAuth en raíz, `/favicon.ico`, rutas no reconocidas) no
+   * tienen contexto CLS activo. Sin el guarda, `cls.set(CLS_TRACE_ID, ...)`
+   * lanzaba «No CLS context available» y Express devolvía un 500 pelado.
+   */
+  it("sin contexto CLS activo entra en runWith y sigue devolviendo problem details", () => {
+    const { filter, cls } = makeFilter("es-ES", false);
+    const { host, status, json } = mockHost({ url: "/favicon.ico" });
+
+    filter.catch(new Error("boom fuera de CLS"), host);
+
+    expect(cls.isActive).toHaveBeenCalledTimes(1);
+    expect(cls.runWith).toHaveBeenCalledTimes(1);
+    expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    const body = bodyFrom(json);
+    expect(body.code).toBe("internal_error");
+    expect(body.traceId).toBeTruthy();
   });
 });

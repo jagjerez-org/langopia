@@ -160,6 +160,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
   ) {}
 
   catch(error: unknown, host: ArgumentsHost): void {
+    // Las rutas excluidas del prefijo global (OAuth de MCP en raíz) y las
+    // peticiones que no coinciden con ninguna ruta de Nest no pasan por el
+    // middleware de `nestjs-cls`. Sin este guarda, `this.cls.set` lanzaría
+    // «No CLS context available» y la respuesta sería un 500 pelado de Express
+    // en vez del problema detallado que construimos aquí.
+    if (this.cls.isActive()) {
+      this.handle(error, host);
+    } else {
+      this.cls.runWith({}, () => this.handle(error, host));
+    }
+  }
+
+  private handle(error: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();

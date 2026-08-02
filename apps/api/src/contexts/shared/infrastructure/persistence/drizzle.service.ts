@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { drizzle, type PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "@langopia/db/schema";
+import { normalizeDatabaseUrl } from "./normalize-database-url.js";
 
 export type DrizzleDb = PostgresJsDatabase<typeof schema>;
 
@@ -33,7 +34,7 @@ export class DrizzleService implements OnModuleDestroy {
     @Inject(DATABASE_URL) url: string,
     private readonly cls: ClsService,
   ) {
-    this.client = postgres(url, { max: 10, onnotice: () => {} });
+    this.client = postgres(normalizeDatabaseUrl(url), { max: 10, onnotice: () => {} });
     this.root = drizzle(this.client, { schema });
   }
 
