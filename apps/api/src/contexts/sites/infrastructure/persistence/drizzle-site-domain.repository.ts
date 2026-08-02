@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, lte, sql } from "drizzle-orm";
 import * as schema from "@langopia/db/schema";
 import {
   SiteDomain,
@@ -69,13 +69,11 @@ export class DrizzleSiteDomainRepository implements SiteDomainRepository {
   }
 
   async pendingBefore(now: Date): Promise<SiteDomain[]> {
-    const rows = await this.drizzle.connection.execute<SchoolDomainRow>(sql`
-      SELECT *
-      FROM school_domains
-      WHERE status = 'pending'
-        AND created_at <= ${now}
-      ORDER BY created_at
-    `);
+    const rows = await this.drizzle.connection
+      .select()
+      .from(schema.schoolDomains)
+      .where(and(eq(schema.schoolDomains.status, "pending"), lte(schema.schoolDomains.createdAt, now)))
+      .orderBy(schema.schoolDomains.createdAt);
     return rows.map(mapDomain);
   }
 
