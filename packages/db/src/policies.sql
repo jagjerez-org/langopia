@@ -24,7 +24,9 @@
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'langopia_app') THEN
-    CREATE ROLE langopia_app LOGIN PASSWORD 'cambiame';
+    -- Contraseña de desarrollo/preview. En producción rotarla con
+    -- ALTER ROLE langopia_app WITH PASSWORD '<secreto>'; inmediatamente.
+    CREATE ROLE langopia_app LOGIN PASSWORD 'Lang0p1a!DevApp_2025_Secure';
   END IF;
 END
 $$;

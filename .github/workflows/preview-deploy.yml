@@ -58,6 +58,11 @@ jobs:
           # Sobreescribir DATABASE_URL con el secreto del repo; esto evita que
           # un valor inválido o vacío traído por Vercel rompa db:push/db:seed.
           echo "DATABASE_URL=$PREVIEW_DATABASE_URL" >> .vercel/.env.preview.local
+          # La aplicación se conecta con el rol langopia_app (sin BYPASSRLS).
+          # Construimos su URL a partir de PREVIEW_DATABASE_URL para que el
+          # preview use la misma contraseña que crea db:policies.
+          DATABASE_URL_APP=$(echo "$PREVIEW_DATABASE_URL" | sed -E 's|://[^:@]+:[^@]+@|://langopia_app:Lang0p1a!DevApp_2025_Secure@|')
+          echo "DATABASE_URL_APP=$DATABASE_URL_APP" >> .vercel/.env.preview.local
           vercel build --token "$VERCEL_TOKEN"
           API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
