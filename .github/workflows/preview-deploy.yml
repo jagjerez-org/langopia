@@ -2,10 +2,11 @@
 #
 # Despliega un entorno preview aislado por PR.
 #
-#   - langopia-api se despliega primero. Vercel (con Neon como integración de
-#     marketplace) crea la base de datos preview e inyecta DATABASE_URL y
-#     DATABASE_URL_APP. El build de la API ejecuta db:push + db:policies +
-#     db:seed cuando VERCEL_ENV == preview.
+#   - langopia-api se despliega primero. DATABASE_URL para preview se toma del
+#     secreto PREVIEW_DATABASE_URL y se inyecta en .vercel/.env.preview.local
+#     tras `vercel pull`, sobreescribiendo cualquier valor previo de Vercel.
+#     El build de la API ejecuta db:push + db:policies + db:seed cuando
+#     VERCEL_ENV == preview.
 #   - langopia-web y langopia-sites se despliegan después, apuntando a la URL
 #     de la API preview de esta misma PR.
 #   - Al cerrar la PR, preview-cleanup.yml se encarga del teardown.
@@ -14,6 +15,10 @@
 # el runner y Vercel solo sube el resultado. Esto evita que Vercel vuelva a
 # compilar y perda variables generadas dinámicamente (vercel.json de web,
 # .env de sites).
+#
+# Cada job tiene `if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'` para que,
+# igual que el despliegue a producción en ci.yml, un repo sin la integración
+# de preview configurada no falle las PRs por un problema de infraestructura.
 
 name: Preview Deploy
 
@@ -27,9 +32,13 @@ concurrency:
 
 jobs:
   deploy-api:
+    if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     outputs:
       api_url: ${{ steps.deploy.outputs.api_url }}
+      api_alias: ${{ steps.deploy.outputs.api_alias }}
+    env:
+      PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -45,18 +54,66 @@ jobs:
         working-directory: apps/api
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PREVIEW_DATABASE_URL: ${{ secrets.PREVIEW_DATABASE_URL }}
         run: |
           vercel link --yes --project langopia-api --token "$VERCEL_TOKEN"
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
+
+          # Sobreescribir DATABASE_URL con el secreto del repo; esto evita que
+          # un valor inválido o vacío traído por Vercel rompa db:push/db:seed.
+          echo "DATABASE_URL=$PREVIEW_DATABASE_URL" >> .vercel/.env.preview.local
+
+          # La aplicación se conecta con el rol langopia_app (sin BYPASSRLS).
+          # Construimos su URL a partir de PREVIEW_DATABASE_URL para que el
+          # preview use la misma contraseña que crea db:policies.
+          DATABASE_URL_APP=$(echo "$PREVIEW_DATABASE_URL" | sed -E 's|://[^:@]+:[^@]+@|://langopia_app:Lang0p1a!DevApp_2025_Secure@|')
+          echo "DATABASE_URL_APP=$DATABASE_URL_APP" >> .vercel/.env.preview.local
+
+          # Secreto para firmar tokens MCP OAuth. En preview generamos uno
+          # aleatorio por despliegue; en producción debe ser un secreto estable.
+          MCP_OAUTH_TOKEN_SECRET=$(openssl rand -hex 32)
+          echo "MCP_OAUTH_TOKEN_SECRET=$MCP_OAUTH_TOKEN_SECRET" >> .vercel/.env.preview.local
+
+          # Better Auth deduce su basePath (/api/v1/auth) de BETTER_AUTH_URL.
+          # Sin esto usa /api/auth por defecto y todas las rutas de auth dan 404.
+          # Los orígenes de confianza deben incluir el dominio desde el que la
+          # web preview enviará el header Origin en sign-in/sign-up.
+          API_ALIAS="pr-${PR_NUMBER}.api.langopia.com"
+          WEB_ALIAS="pr-${PR_NUMBER}.web.langopia.com"
+          BETTER_AUTH_URL="https://${API_ALIAS}/api/v1/auth"
+          BETTER_AUTH_TRUSTED_ORIGINS="https://${WEB_ALIAS}"
+          echo "BETTER_AUTH_URL=$BETTER_AUTH_URL" >> .vercel/.env.preview.local
+          echo "BETTER_AUTH_TRUSTED_ORIGINS=$BETTER_AUTH_TRUSTED_ORIGINS" >> .vercel/.env.preview.local
+
+          # Ejecutar migraciones, políticas y seed fuera del vercel build para
+          # no consumir el timeout de Vercel ni depender de su entorno.
+          export DATABASE_URL="$PREVIEW_DATABASE_URL"
+          export DATABASE_URL_APP="$DATABASE_URL_APP"
+          npm run build --workspace @langopia/contracts
+          npm run build --workspace @langopia/db
+          npm run db:push --workspace @langopia/db
+          npm run db:policies --workspace @langopia/db
+          npm run db:seed --workspace @langopia/db
+
           vercel build --token "$VERCEL_TOKEN"
-          API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN" \
+            --env DATABASE_URL_APP="$DATABASE_URL_APP" \
+            --env MCP_OAUTH_TOKEN_SECRET="$MCP_OAUTH_TOKEN_SECRET" \
+            --env BETTER_AUTH_URL="$BETTER_AUTH_URL" \
+            --env BETTER_AUTH_TRUSTED_ORIGINS="$BETTER_AUTH_TRUSTED_ORIGINS")
+          vercel alias set "$API_URL" "$API_ALIAS" --token "$VERCEL_TOKEN"
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+          echo "api_alias=$API_ALIAS" >> "$GITHUB_OUTPUT"
 
   deploy-web:
+    if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
     needs: deploy-api
     runs-on: ubuntu-latest
     outputs:
       web_url: ${{ steps.deploy.outputs.web_url }}
+      web_alias: ${{ steps.deploy.outputs.web_alias }}
+    env:
+      PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -75,7 +132,7 @@ jobs:
           cat > vercel.json <<EOF
           {
             "\$schema": "https://openapi.vercel.sh/vercel.json",
-            "installCommand": "cd ../.. && npm ci",
+            "installCommand": "cd ../.. && test -d node_modules/.bin || npm ci",
             "buildCommand": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/web",
             "rewrites": [
               { "source": "/api/:path*", "destination": "${API_URL}/api/:path*" },
@@ -94,13 +151,20 @@ jobs:
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
           vercel build --token "$VERCEL_TOKEN"
           WEB_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          WEB_ALIAS="pr-${PR_NUMBER}.web.langopia.com"
+          vercel alias set "$WEB_URL" "$WEB_ALIAS" --token "$VERCEL_TOKEN"
           echo "web_url=$WEB_URL" >> "$GITHUB_OUTPUT"
+          echo "web_alias=$WEB_ALIAS" >> "$GITHUB_OUTPUT"
 
   deploy-sites:
+    if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
     needs: deploy-api
     runs-on: ubuntu-latest
     outputs:
       sites_url: ${{ steps.deploy.outputs.sites_url }}
+      sites_alias: ${{ steps.deploy.outputs.sites_alias }}
+    env:
+      PR_NUMBER: ${{ github.event.number }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -128,9 +192,13 @@ jobs:
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
           vercel build --token "$VERCEL_TOKEN"
           SITES_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          SITES_ALIAS="pr-${PR_NUMBER}.sites.langopia.com"
+          vercel alias set "$SITES_URL" "$SITES_ALIAS" --token "$VERCEL_TOKEN"
           echo "sites_url=$SITES_URL" >> "$GITHUB_OUTPUT"
+          echo "sites_alias=$SITES_ALIAS" >> "$GITHUB_OUTPUT"
 
   comment:
+    if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
     needs: [deploy-api, deploy-web, deploy-sites]
     runs-on: ubuntu-latest
     permissions:
@@ -143,10 +211,10 @@ jobs:
           message: |
             🚀 Previews desplegados para esta PR:
 
-            | App | URL |
-            | --- | --- |
-            | API | ${{ needs.deploy-api.outputs.api_url }} |
-            | Web | ${{ needs.deploy-web.outputs.web_url }} |
-            | Sites | ${{ needs.deploy-sites.outputs.sites_url }} |
+            | App | URL Vercel | Alias PR |
+            | --- | --- | --- |
+            | API | ${{ needs.deploy-api.outputs.api_url }} | https://${{ needs.deploy-api.outputs.api_alias }} |
+            | Web | ${{ needs.deploy-web.outputs.web_url }} | https://${{ needs.deploy-web.outputs.web_alias }} |
+            | Sites | ${{ needs.deploy-sites.outputs.sites_url }} | https://${{ needs.deploy-sites.outputs.sites_alias }} |
 
             La base de datos es aislada y se ha sembrado con el seed de demo.

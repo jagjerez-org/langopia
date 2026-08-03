@@ -26,7 +26,7 @@ jobs:
 
     env:
       DATABASE_URL: postgres://langopia:langopia@localhost:5432/langopia
-      DATABASE_URL_APP: postgres://langopia_app:cambiame@localhost:5432/langopia
+      DATABASE_URL_APP: postgres://langopia_app:Lang0p1a!DevApp_2025_Secure@localhost:5432/langopia
       # La prueba de extremo a extremo (Tarea 10) arranca el `AppModule`
       # completo, incluido Better Auth (`iam.module.ts` construye `AUTH` con
       # `createAuth(...)`, que sin estas dos lee `undefined` y no puede
