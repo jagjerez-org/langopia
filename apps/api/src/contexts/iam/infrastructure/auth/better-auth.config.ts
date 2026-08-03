@@ -64,9 +64,10 @@ function isPreview(): boolean {
 /**
  * Resuelve los orígenes que Better Auth debe considerar de confianza.
  *
- * - Producción: cualquier subdominio de `langopia.com` más los declarados
- *   explícitamente en `BETTER_AUTH_TRUSTED_ORIGINS`. Así no hace falta tocar
- *   variables de Vercel cada vez que se añade un nuevo frontend.
+ * - Producción: dominios propios de Langopia (`langopia.com`, `langopia.app` y
+ *   sus subdominios) más los declarados explícitamente en
+ *   `BETTER_AUTH_TRUSTED_ORIGINS`. Así no hace falta tocar variables de Vercel
+ *   cada vez que se añade un nuevo frontend.
  * - Preview: el entorno es efímero y la URL de la web preview se genera después
  *   de desplegar la API, por lo que no se puede incluir de antemano en una
  *   lista fija. Se delega en `disableCSRFCheck` del lado de Better Auth y en
@@ -83,10 +84,17 @@ export function resolveTrustedOrigins(logger?: PinoLogger): string[] {
   }
 
   if (isProduction()) {
-    const origins = new Set(["https://langopia.com", ".langopia.com", ...envOrigins]);
+    const origins = new Set([
+      "https://langopia.com",
+      ".langopia.com",
+      "https://www.langopia.com",
+      "https://langopia.app",
+      ".langopia.app",
+      ...envOrigins,
+    ]);
     if (!raw && logger) {
       logger.warn(
-        "Falta BETTER_AUTH_TRUSTED_ORIGINS: se usa el fallback .langopia.com. " +
+        "Falta BETTER_AUTH_TRUSTED_ORIGINS: se usan los fallbacks de dominios propios. " +
           "Añade dominios adicionales explícitamente si los hay.",
       );
     }

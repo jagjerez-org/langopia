@@ -43,21 +43,53 @@ describe("resolveTrustedOrigins", () => {
     process.env = { ...originalEnv };
   });
 
-  it("en producción confía en langopia.com y cualquier subdominio", () => {
+  it("en producción confía en los dominios propios de Langopia y sus subdominios", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL_ENV", "production");
     vi.stubEnv("BETTER_AUTH_TRUSTED_ORIGINS", "");
 
-    expect(resolveTrustedOrigins()).toEqual(expect.arrayContaining(["https://langopia.com", ".langopia.com"]));
+    expect(resolveTrustedOrigins()).toEqual(
+      expect.arrayContaining([
+        "https://langopia.com",
+        ".langopia.com",
+        "https://www.langopia.com",
+        "https://langopia.app",
+        ".langopia.app",
+      ]),
+    );
   });
 
   it("en producción mezcla los orígenes declarados en la variable de entorno", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("VERCEL_ENV", "production");
-    vi.stubEnv("BETTER_AUTH_TRUSTED_ORIGINS", "https://partner.langopia.com");
+    vi.stubEnv("BETTER_AUTH_TRUSTED_ORIGINS", "https://partner.langopia.app");
 
     expect(resolveTrustedOrigins()).toEqual(
-      expect.arrayContaining(["https://langopia.com", ".langopia.com", "https://partner.langopia.com"]),
+      expect.arrayContaining([
+        "https://langopia.com",
+        ".langopia.com",
+        "https://www.langopia.com",
+        "https://langopia.app",
+        ".langopia.app",
+        "https://partner.langopia.app",
+      ]),
+    );
+  });
+
+  it("en producción confía en el origen exacto del panel cuando se declara", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("BETTER_AUTH_TRUSTED_ORIGINS", "https://panel.langopia.app,https://www.langopia.com");
+
+    expect(resolveTrustedOrigins()).toEqual(
+      expect.arrayContaining([
+        "https://langopia.com",
+        ".langopia.com",
+        "https://www.langopia.com",
+        "https://langopia.app",
+        ".langopia.app",
+        "https://panel.langopia.app",
+      ]),
     );
   });
 
