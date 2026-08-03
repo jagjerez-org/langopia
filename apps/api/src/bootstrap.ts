@@ -4,7 +4,7 @@ import { NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { Logger } from "nestjs-pino";
 import { AppModule } from "./app.module.js";
-import { parseTrustedOrigins } from "./contexts/iam/infrastructure/auth/better-auth.config.js";
+import { resolveTrustedOrigins } from "./contexts/iam/infrastructure/auth/better-auth.config.js";
 import { mountClsContextForRootPaths } from "./contexts/shared/infrastructure/http/root-cls.middleware.js";
 
 /**
@@ -61,11 +61,14 @@ export async function createApp(): Promise<NestExpressApplication> {
   // El panel (`apps/web`) es una SPA servida desde otro origen (otro puerto en
   // desarrollo, otro dominio en producción): el navegador exige CORS además de
   // que Better Auth valide `Origin`. Misma lista de orígenes de confianza que
-  // usa Better Auth (`BETTER_AUTH_TRUSTED_ORIGINS`), para no mantener dos
-  // listas que puedan divergir. `credentials: true` es imprescindible para que
-  // la cookie de sesión viaje en peticiones entre orígenes distintos.
+  // usa Better Auth, para no mantener dos listas que puedan divergir.
+  // `credentials: true` es imprescindible para que la cookie de sesión viaje en
+  // peticiones entre orígenes distintos.
+  // En preview no conocemos la URL del frontend de antemano, así que se permite
+  // cualquier origen; en producción se restringe a los dominios de Langopia.
+  const isPreview = process.env.VERCEL_ENV === "preview";
   app.enableCors({
-    origin: parseTrustedOrigins(process.env.BETTER_AUTH_TRUSTED_ORIGINS),
+    origin: isPreview ? true : resolveTrustedOrigins(),
     credentials: true,
   });
 

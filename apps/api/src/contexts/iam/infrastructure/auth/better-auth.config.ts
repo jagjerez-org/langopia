@@ -53,22 +53,56 @@ export function parseTrustedOrigins(raw: string | undefined): string[] {
   return declarados.length > 0 ? declarados : [...DEFAULT_TRUSTED_ORIGINS];
 }
 
-function resolveTrustedOrigins(logger: PinoLogger): string[] {
+function isProduction(): boolean {
+  return process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production";
+}
+
+function isPreview(): boolean {
+  return process.env.VERCEL_ENV === "preview";
+}
+
+/**
+ * Resuelve los orígenes que Better Auth debe considerar de confianza.
+ *
+ * - Producción: cualquier subdominio de `langopia.com` más los declarados
+ *   explícitamente en `BETTER_AUTH_TRUSTED_ORIGINS`. Así no hace falta tocar
+ *   variables de Vercel cada vez que se añade un nuevo frontend.
+ * - Preview: el entorno es efímero y la URL de la web preview se genera después
+ *   de desplegar la API, por lo que no se puede incluir de antemano en una
+ *   lista fija. Se delega en `disableCSRFCheck` del lado de Better Auth y en
+ *   CORS abierto desde `bootstrap.ts`.
+ * - Desarrollo/local: `http://localhost:5173` por defecto, mezclado con lo que
+ *   venga en `BETTER_AUTH_TRUSTED_ORIGINS`.
+ */
+export function resolveTrustedOrigins(logger?: PinoLogger): string[] {
   const raw = process.env.BETTER_AUTH_TRUSTED_ORIGINS;
-  const origins = parseTrustedOrigins(raw);
-  if (!raw && process.env.NODE_ENV === "production") {
-    logger.warn(
-      `Falta BETTER_AUTH_TRUSTED_ORIGINS: solo se confía en ${origins.join(", ")} y en el origen ` +
-        "de BETTER_AUTH_URL. Cualquier panel servido desde otro dominio recibirá 403 al entrar.",
-    );
+  const envOrigins = parseTrustedOrigins(raw);
+
+  if (isPreview()) {
+    return envOrigins;
   }
-  return origins;
+
+  if (isProduction()) {
+    const origins = new Set(["https://langopia.com", ".langopia.com", ...envOrigins]);
+    if (!raw && logger) {
+      logger.warn(
+        "Falta BETTER_AUTH_TRUSTED_ORIGINS: se usa el fallback .langopia.com. " +
+          "Añade dominios adicionales explícitamente si los hay.",
+      );
+    }
+    return Array.from(origins);
+  }
+
+  return envOrigins;
 }
 
 export function createAuth(connectionString: string, logger: PinoLogger) {
   return betterAuth({
     database: new Pool(parseDatabaseUrl(connectionString)),
     trustedOrigins: resolveTrustedOrigins(logger),
+    advanced: {
+      disableCSRFCheck: isPreview(),
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
