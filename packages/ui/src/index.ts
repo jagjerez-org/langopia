@@ -1,7 +1,7 @@
 /**
  * Barrel público de @langopia/ui.
  */
-export { ThemeToggle, type ThemeToggleProps, type ThemeToggleLabels } from "./atoms/ThemeToggle/ThemeToggle.js";
+export * from "./atoms/index.js";
 export {
   applyTheme,
   getInitialTheme,

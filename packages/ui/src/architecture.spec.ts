@@ -50,8 +50,10 @@ function importSpecifiers(content: string): string[] {
 }
 
 function isInside(file: string, dir: string): boolean {
-  const relative = file.slice(dir.length);
-  return relative.startsWith(sep) || relative === "";
+  // Comprueba el prefijo antes de recortar: sin esto, cualquier fichero cuya
+  // ruta tenga la misma longitud que `dir` (p. ej. `lib/cx.js` vs `molecules`)
+  // se marca como contenido por coincidencia de longitud.
+  return file === dir || file.startsWith(dir + sep);
 }
 
 describe("Arquitectura de @langopia/ui", () => {
