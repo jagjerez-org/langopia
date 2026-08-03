@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { parseTrustedOrigins } from "./better-auth.config.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { parseTrustedOrigins, resolveTrustedOrigins } from "./better-auth.config.js";
 
 /**
  * La lista viaja en una variable de entorno, así que llega como texto suelto:
@@ -28,5 +28,51 @@ describe("parseTrustedOrigins", () => {
 
   it("una variable declarada pero vacía no deja la lista sin orígenes", () => {
     expect(parseTrustedOrigins("   ")).toEqual(["http://localhost:5173"]);
+  });
+});
+
+describe("resolveTrustedOrigins", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    process.env = { ...originalEnv };
+  });
+
+  it("en producción confía en langopia.com y cualquier subdominio", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("BETTER_AUTH_TRUSTED_ORIGINS", "");
+
+    expect(resolveTrustedOrigins()).toEqual(expect.arrayContaining(["https://langopia.com", ".langopia.com"]));
+  });
+
+  it("en producción mezcla los orígenes declarados en la variable de entorno", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("BETTER_AUTH_TRUSTED_ORIGINS", "https://partner.langopia.com");
+
+    expect(resolveTrustedOrigins()).toEqual(
+      expect.arrayContaining(["https://langopia.com", ".langopia.com", "https://partner.langopia.com"]),
+    );
+  });
+
+  it("en preview devuelve solo los orígenes declarados en la variable", () => {
+    vi.stubEnv("VERCEL_ENV", "preview");
+    vi.stubEnv("BETTER_AUTH_TRUSTED_ORIGINS", "https://preview.langopia.com");
+
+    expect(resolveTrustedOrigins()).toEqual(["https://preview.langopia.com"]);
+  });
+
+  it("en desarrollo conserva el fallback localhost si no hay variable", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("VERCEL_ENV", "");
+    vi.stubEnv("BETTER_AUTH_TRUSTED_ORIGINS", "");
+
+    expect(resolveTrustedOrigins()).toEqual(["http://localhost:5173"]);
   });
 });
