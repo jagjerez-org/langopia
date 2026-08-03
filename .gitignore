@@ -21,5 +21,9 @@ apps/web/blob-report/
 # Tipos y caché que genera Astro en desarrollo/build.
 .astro/
 
+# Storybook: salida del build estático y logs locales.
+storybook-static/
+*storybook.log
+
 # Git worktrees
 .worktrees/

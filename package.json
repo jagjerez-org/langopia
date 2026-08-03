@@ -27,6 +27,7 @@
     "db:reset": "npm run db:push && npm run db:policies && npm run db:seed",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "storybook:build": "npm run storybook:build --workspaces --if-present",
     "wt:add": "tsx scripts/worktree.ts add",
     "wt:remove": "tsx scripts/worktree.ts remove",
     "wt:list": "tsx scripts/worktree.ts list",
