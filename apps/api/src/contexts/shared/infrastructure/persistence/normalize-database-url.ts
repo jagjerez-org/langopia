@@ -1,3 +1,8 @@
+import {
+  parse as parseConnectionString,
+  type ConnectionOptions as PgConnectionOptions,
+} from "pg-connection-string";
+
 /**
  * Asegura que una URL de conexión a Postgres sea parseable.
  *
@@ -57,4 +62,66 @@ function encodeUserinfoPart(part: string): string {
     // escapa tal cual.
     return encodeURIComponent(part);
   }
+}
+
+/**
+ * Opciones de conexión a base de datos, listas para usar con `pg.Pool` o
+ * con el cliente `postgres` de Drizzle.
+ *
+ * A diferencia de una URL string, este objeto transporta la contraseña ya
+ * separada del resto de componentes, por lo que caracteres reservados como
+ * `#` no pueden volver a romper el parser de ningún driver.
+ */
+export interface DatabaseConnectionOptions {
+  host: string;
+  port?: number;
+  database: string;
+  user: string;
+  password?: string;
+  ssl?: boolean | object;
+  application_name?: string;
+  fallback_application_name?: string;
+  client_encoding?: string;
+  options?: string;
+  keepalives?: number;
+}
+
+/**
+ * Convierte una URL de conexión en un objeto de opciones robusto.
+ *
+ * Primero normaliza la URL para escapar caracteres reservados en las
+ * credenciales y luego la parsea con `pg-connection-string`, que es el mismo
+ * parser que usa `pg`. El objeto resultante se puede pasar directamente a
+ * `postgres(...)` o a `new Pool(...)` sin depender de que el driver vuelva a
+ * parsear una URL string.
+ */
+export function parseDatabaseUrl(url: string): DatabaseConnectionOptions {
+  const normalized = normalizeDatabaseUrl(url);
+  const parsed = parseConnectionString(normalized);
+
+  if (!parsed.user) {
+    throw new Error("La URL de conexión no incluye usuario");
+  }
+  if (!parsed.host) {
+    throw new Error("La URL de conexión no incluye host");
+  }
+  if (!parsed.database) {
+    throw new Error("La URL de conexión no incluye nombre de base de datos");
+  }
+
+  const port = parsed.port ? Number(parsed.port) : undefined;
+
+  return {
+    host: parsed.host,
+    port,
+    database: parsed.database,
+    user: parsed.user,
+    password: parsed.password,
+    ssl: typeof parsed.ssl === "string" ? { sslmode: parsed.ssl } : parsed.ssl,
+    application_name: parsed.application_name,
+    fallback_application_name: parsed.fallback_application_name,
+    client_encoding: parsed.client_encoding,
+    options: parsed.options,
+    keepalives: parsed.keepalives,
+  };
 }

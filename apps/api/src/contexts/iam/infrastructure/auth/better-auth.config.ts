@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import type { PinoLogger } from "nestjs-pino";
 import { Pool } from "pg";
-import { normalizeDatabaseUrl } from "../../../shared/infrastructure/persistence/normalize-database-url.js";
+import { parseDatabaseUrl } from "../../../shared/infrastructure/persistence/normalize-database-url.js";
 
 /**
  * Better Auth gestiona SUS propias tablas (`user`, `session`, `account`,
@@ -67,7 +67,7 @@ function resolveTrustedOrigins(logger: PinoLogger): string[] {
 
 export function createAuth(connectionString: string, logger: PinoLogger) {
   return betterAuth({
-    database: new Pool({ connectionString: normalizeDatabaseUrl(connectionString) }),
+    database: new Pool(parseDatabaseUrl(connectionString)),
     trustedOrigins: resolveTrustedOrigins(logger),
     emailAndPassword: {
       enabled: true,
