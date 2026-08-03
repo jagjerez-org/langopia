@@ -326,6 +326,9 @@
   --color-border-strong: var(--ink-border-strong);
   --color-text: var(--ink-text-primary);
   --color-muted: var(--ink-text-secondary);
+  --color-text-inverse: var(--ink-text-inverse);
+  --color-primary: var(--ink-primary-solid);
+  --color-primary-text: var(--ink-primary-solid-text);
   --color-accent: var(--ink-accent-default);
   --color-accent-hover: var(--ink-accent-hover);
   --color-success: var(--ink-success-text);
