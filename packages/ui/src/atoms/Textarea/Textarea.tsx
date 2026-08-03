@@ -30,7 +30,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
 ): ReactElement {
   const generatedId = useId();
   const textareaId = id ?? generatedId;
-  const hintId = hint ? `${textareaId}-hint` : undefined;
+  // El hint no se renderiza cuando hay error: no referenciarlo en aria-describedby.
+  const hintId = hint && !error ? `${textareaId}-hint` : undefined;
   const errorId = error ? `${textareaId}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 

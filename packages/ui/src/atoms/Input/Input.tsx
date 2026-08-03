@@ -47,7 +47,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 ): ReactElement {
   const generatedId = useId();
   const inputId = id ?? generatedId;
-  const hintId = hint ? `${inputId}-hint` : undefined;
+  // El hint no se renderiza cuando hay error: no referenciarlo en aria-describedby.
+  const hintId = hint && !error ? `${inputId}-hint` : undefined;
   const errorId = error ? `${inputId}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 
