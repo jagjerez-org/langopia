@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgendaEntry } from "@langopia/contracts";
 import { ApiError } from "../../lib/api-client.js";
 
@@ -54,13 +54,30 @@ const session: AgendaEntry = {
 };
 
 describe("CalendarScreen (Tarea 9)", () => {
+  const fixedDate = new Date("2026-07-27T10:00:00.000Z");
+  const OriginalDate = globalThis.Date;
+
   beforeEach(() => {
+    globalThis.Date = class extends OriginalDate {
+      constructor(...args: unknown[]) {
+        if (args.length === 0) super(fixedDate);
+        else super(...(args as []));
+      }
+      static override now(): number {
+        return fixedDate.getTime();
+      }
+    } as typeof Date;
+
     getSchoolTimezoneMock.mockReset();
     getAgendaMock.mockReset();
     getSessionMock.mockReset().mockResolvedValue({
       session: { id: "sess-1", expiresAt: "2099-01-01T00:00:00.000Z" },
       user: { id: "user-1", email: "marta.colomer@atlantico.example", name: "Marta", emailVerified: true },
     });
+  });
+
+  afterEach(() => {
+    globalThis.Date = OriginalDate;
   });
 
   it("estado de carga: se anuncia mientras se resuelve la zona horaria de la escuela", () => {
