@@ -74,6 +74,17 @@ jobs:
           MCP_OAUTH_TOKEN_SECRET=$(openssl rand -hex 32)
           echo "MCP_OAUTH_TOKEN_SECRET=$MCP_OAUTH_TOKEN_SECRET" >> .vercel/.env.preview.local
 
+          # Better Auth deduce su basePath (/api/v1/auth) de BETTER_AUTH_URL.
+          # Sin esto usa /api/auth por defecto y todas las rutas de auth dan 404.
+          # Los orígenes de confianza deben incluir el dominio desde el que la
+          # web preview enviará el header Origin en sign-in/sign-up.
+          API_ALIAS="pr-${PR_NUMBER}.api.langopia.com"
+          WEB_ALIAS="pr-${PR_NUMBER}.web.langopia.com"
+          BETTER_AUTH_URL="https://${API_ALIAS}/api/v1/auth"
+          BETTER_AUTH_TRUSTED_ORIGINS="https://${WEB_ALIAS}"
+          echo "BETTER_AUTH_URL=$BETTER_AUTH_URL" >> .vercel/.env.preview.local
+          echo "BETTER_AUTH_TRUSTED_ORIGINS=$BETTER_AUTH_TRUSTED_ORIGINS" >> .vercel/.env.preview.local
+
           # Ejecutar migraciones, políticas y seed fuera del vercel build para
           # no consumir el timeout de Vercel ni depender de su entorno.
           export DATABASE_URL="$PREVIEW_DATABASE_URL"
@@ -87,8 +98,9 @@ jobs:
           vercel build --token "$VERCEL_TOKEN"
           API_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN" \
             --env DATABASE_URL_APP="$DATABASE_URL_APP" \
-            --env MCP_OAUTH_TOKEN_SECRET="$MCP_OAUTH_TOKEN_SECRET")
-          API_ALIAS="pr-${PR_NUMBER}.api.langopia.com"
+            --env MCP_OAUTH_TOKEN_SECRET="$MCP_OAUTH_TOKEN_SECRET" \
+            --env BETTER_AUTH_URL="$BETTER_AUTH_URL" \
+            --env BETTER_AUTH_TRUSTED_ORIGINS="$BETTER_AUTH_TRUSTED_ORIGINS")
           vercel alias set "$API_URL" "$API_ALIAS" --token "$VERCEL_TOKEN"
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
           echo "api_alias=$API_ALIAS" >> "$GITHUB_OUTPUT"
