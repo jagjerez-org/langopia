@@ -1,8 +1,9 @@
 @import "tailwindcss";
-@import "./ui/tokens.css";
+@import "@langopia/ui/theme.css";
+@source "../../../packages/ui/src";
 
 /*
- * Reset mínimo. Los tokens de diseño (Tarea 4, `apps/web/src/ui/tokens.css`)
+ * Reset mínimo. Los tokens de diseño (`@langopia/ui/theme.css`)
  * fijan el `color-scheme` real por tema; este fichero solo pone la base
  * tipográfica y de caja sobre esos tokens.
  */
