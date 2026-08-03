@@ -337,6 +337,7 @@
   --color-warning-bg: var(--ink-warning-bg);
   --color-critical: var(--ink-critical-text);
   --color-critical-bg: var(--ink-critical-bg);
+  --duration-fast: var(--ink-duration-fast);
 }
 
 /* Movimiento: quien active «reducir movimiento» en su sistema no ve barridos
