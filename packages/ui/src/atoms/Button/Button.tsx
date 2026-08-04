@@ -27,6 +27,9 @@ export function buttonStyles(): string {
     "data-[variant=ghost]:bg-transparent data-[variant=ghost]:text-muted data-[variant=ghost]:not-disabled:hover:bg-surface-secondary data-[variant=ghost]:not-disabled:hover:text-text data-[variant=ghost]:not-disabled:active:bg-sunken data-[variant=ghost]:disabled:text-[var(--ink-text-disabled)]",
     // Variante danger: acciones destructivas.
     "data-[variant=danger]:bg-[var(--ink-critical-solid)] data-[variant=danger]:text-text-inverse data-[variant=danger]:not-disabled:hover:bg-[var(--ink-critical-solid-hover)] data-[variant=danger]:not-disabled:active:bg-[var(--ink-critical-solid-active)] data-[variant=danger]:disabled:bg-sunken data-[variant=danger]:disabled:text-[var(--ink-text-disabled)]",
+    // Rama enlace deshabilitada (FormAction con href): <a> no admite
+    // `disabled`, así que se bloquea el puntero con un data-attribute.
+    "data-[disabled]:pointer-events-none",
   ].join(" ");
 }
 

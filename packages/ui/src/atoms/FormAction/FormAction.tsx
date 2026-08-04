@@ -8,6 +8,9 @@ import type {
 } from "react";
 import { Button, buttonStyles } from "../Button/Button.js";
 import type { ButtonSize, ButtonVariant } from "../Button/Button.js";
+import { IconSpinner } from "../Icons/Icons.js";
+
+const iconStyles = "inline-flex shrink-0 text-[1.1em] leading-none";
 
 export interface FormActionProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type" | "className" | "children"> {
@@ -29,13 +32,15 @@ export interface FormActionProps
 /**
  * Acción de formulario: el botón que envía o reinicia un formulario, o un
  * enlace con el mismo aspecto. Reutiliza `Button` y su cadena de utilidades —
- * ambos casos son visualmente idénticos.
+ * ambos casos son visualmente idénticos. En la rama de enlace (`href`),
+ * `disabled`/`isLoading` se comunican con `aria-disabled`, `tabIndex={-1}` y
+ * puntero bloqueado, porque `<a>` no admite el atributo `disabled`.
  */
 export const FormAction = forwardRef<
   HTMLButtonElement | HTMLAnchorElement,
   FormActionProps
 >(function FormAction(
-  { variant = "primary", size = "md", type = "submit", isLoading = false, children, href, ...rest },
+  { variant = "primary", size = "md", type = "submit", isLoading = false, disabled = false, children, href, ...rest },
   ref,
 ): ReactElement {
   if (href !== undefined) {
@@ -43,6 +48,9 @@ export const FormAction = forwardRef<
     // HTMLButtonElement; en la rama de enlace el elemento es <a>. El cast es
     // seguro: los eventos DOM que llegan son los mismos.
     const anchorProps = rest as unknown as AnchorHTMLAttributes<HTMLAnchorElement>;
+    // <a> no admite `disabled`: se comunica con aria-disabled, se saca del
+    // orden de tabulación y se bloquea el puntero (data-disabled en buttonStyles).
+    const isDisabled = disabled || isLoading;
     return (
       <a
         {...anchorProps}
@@ -51,7 +59,12 @@ export const FormAction = forwardRef<
         className={buttonStyles()}
         data-variant={variant}
         data-size={size}
+        data-disabled={isDisabled || undefined}
+        aria-disabled={isDisabled || undefined}
+        aria-busy={isLoading || undefined}
+        tabIndex={isDisabled ? -1 : undefined}
       >
+        {isLoading && <IconSpinner className={iconStyles} />}
         <span className="min-w-0">{children}</span>
       </a>
     );
@@ -65,6 +78,7 @@ export const FormAction = forwardRef<
       size={size}
       type={type}
       isLoading={isLoading}
+      disabled={disabled}
     >
       {children}
     </Button>

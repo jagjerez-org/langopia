@@ -26,6 +26,19 @@ describe("Breadcrumb", () => {
     expect(current.getAttribute("aria-current")).toBe("page");
   });
 
+  it("un nivel intermedio sin href se renderiza como texto, no como enlace", () => {
+    render(
+      <Breadcrumb
+        items={[{ label: "Inicio", href: "/" }, { label: "Sección" }, { label: "Detalle" }]}
+        ariaLabel="Migas de pan"
+      />,
+    );
+
+    expect(screen.queryByRole("link", { name: "Sección" })).toBeNull();
+    expect(screen.getByText("Sección").tagName).toBe("SPAN");
+    expect(screen.getByRole("link", { name: "Inicio" })).toBeDefined();
+  });
+
   it("usa el separador por defecto \"/\" y admite uno personalizado", () => {
     const { rerender } = render(<Breadcrumb items={items} ariaLabel="Migas de pan" />);
 

@@ -61,4 +61,16 @@ describe("ActionBar", () => {
 
     expect(screen.getByRole("button", { name: "Aprobar" })).toBeDefined();
   });
+
+  it("las acciones href con icono conservan el nombre accesible del enlace", () => {
+    render(
+      <ActionBar
+        actions={[{ label: "Nuevo alumno", href: "/alumnos/nuevo", icon: <IconCheck /> }]}
+      />,
+    );
+
+    const link = screen.getByRole("link", { name: "Nuevo alumno" });
+    expect(link.getAttribute("href")).toBe("/alumnos/nuevo");
+    expect(link.querySelector("svg")).not.toBeNull();
+  });
 });

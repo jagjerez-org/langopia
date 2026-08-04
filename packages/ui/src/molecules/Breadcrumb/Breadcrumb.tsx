@@ -87,10 +87,13 @@ export function Breadcrumb({
                   <span className={currentStyles} aria-current="page">
                     {item.label}
                   </span>
-                ) : (
-                  <a className={linkStyles} href={item.href ?? "#"}>
+                ) : item.href !== undefined ? (
+                  <a className={linkStyles} href={item.href}>
                     {item.label}
                   </a>
+                ) : (
+                  // Nivel intermedio sin destino: texto plano, no enlace.
+                  <span className={linkStyles}>{item.label}</span>
                 )}
               </li>
               {position < visible.length - 1 && (

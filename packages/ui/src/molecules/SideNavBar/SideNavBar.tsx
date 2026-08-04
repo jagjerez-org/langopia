@@ -13,29 +13,37 @@ export interface SideNavBarItem {
   active?: boolean;
 }
 
-export interface SideNavBarProps {
+export interface SideNavBarBaseProps {
   /** Destinos de la navegación, en orden. */
   items: SideNavBarItem[];
   /** Nombre accesible del landmark `<nav>` (p. ej. "Navegación principal"). */
   ariaLabel: string;
   /** Modo colapsado: solo iconos visibles; las etiquetas siguen accesibles. */
   collapsed?: boolean;
-  /**
-   * Si se pasa, se muestra un botón para alternar el modo colapsado. El estado
-   * lo controla quien llama (el componente es presentacional).
-   */
-  onToggleCollapse?: () => void;
-  /** Nombre accesible del botón de alternar (obligatorio si hay `onToggleCollapse`). */
-  toggleLabel?: string;
   /** Slot de cabecera: logo, nombre de la app... */
   header?: ReactNode;
   /** Slot de pie: p. ej. el futuro componente de usuario. */
   footer?: ReactNode;
 }
 
+/**
+ * El botón de alternar el colapso es todo o nada: con `onToggleCollapse` el
+ * `toggleLabel` (nombre accesible) es obligatorio; sin él, ninguno de los dos.
+ */
+export type SideNavBarProps = SideNavBarBaseProps &
+  (
+    | {
+        /** Muestra un botón para alternar el modo colapsado; el estado lo controla quien llama. */
+        onToggleCollapse: () => void;
+        /** Nombre accesible del botón de alternar. */
+        toggleLabel: string;
+      }
+    | { onToggleCollapse?: undefined; toggleLabel?: undefined }
+  );
+
 const navStyles = [
   // Columna fija al borde; el ancho cambia según el modo.
-  "flex h-full flex-col gap-2 border-r border-border bg-surface p-3 transition-[width] duration-normal",
+  "flex h-full flex-col gap-2 border-r border-border bg-surface p-3 transition-[width] duration-[var(--ink-duration-base)]",
   "w-64 data-[collapsed]:w-16",
 ].join(" ");
 

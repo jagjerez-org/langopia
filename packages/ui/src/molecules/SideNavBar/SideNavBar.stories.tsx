@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import type { ComponentType } from "react";
 import { IconInbox } from "../../atoms/Icons/Icons.js";
 import { UserAvatar } from "../../atoms/UserAvatar/UserAvatar.js";
 import { SideNavBar } from "./SideNavBar.js";
+import type { SideNavBarBaseProps } from "./SideNavBar.js";
 
 const items = [
   { href: "/inicio", label: "Inicio", icon: <IconInbox /> },
@@ -10,9 +12,17 @@ const items = [
   { href: "/pagos", label: "Pagos", icon: <IconInbox /> },
 ];
 
-const meta: Meta<typeof SideNavBar> = {
+// Args "planos" solo para las stories: la unión discriminada de SideNavBarProps
+// colapsa a `never` al pasar por la inferencia de StoryObj/Meta. El cast del
+// componente es seguro: cada combinación válida de args encaja en la unión.
+type StoryArgs = SideNavBarBaseProps & {
+  onToggleCollapse?: () => void;
+  toggleLabel?: string;
+};
+
+const meta = {
   title: "Molecules/SideNavBar",
-  component: SideNavBar,
+  component: SideNavBar as ComponentType<StoryArgs>,
   tags: ["autodocs"],
   argTypes: {
     onToggleCollapse: { action: "toggle-collapse" },
@@ -30,7 +40,7 @@ const meta: Meta<typeof SideNavBar> = {
       </div>
     ),
   ],
-};
+} satisfies Meta<StoryArgs>;
 
 export default meta;
 

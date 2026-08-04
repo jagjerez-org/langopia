@@ -62,6 +62,35 @@ describe("FormAction", () => {
     expect(button.getAttribute("aria-busy")).toBe("true");
   });
 
+  it("en la rama enlace, disabled se comunica con aria-disabled sin atributo disabled", () => {
+    render(
+      <FormAction href="/alumnos" disabled>
+        Volver
+      </FormAction>,
+    );
+
+    const link = screen.getByRole("link", { name: "Volver" });
+
+    expect(link.hasAttribute("disabled")).toBe(false);
+    expect(link.getAttribute("aria-disabled")).toBe("true");
+    expect(link.getAttribute("tabindex")).toBe("-1");
+  });
+
+  it("en la rama enlace, isLoading muestra el spinner y bloquea la navegación", () => {
+    render(
+      <FormAction href="/alumnos" isLoading>
+        Volver
+      </FormAction>,
+    );
+
+    const link = screen.getByRole("link", { name: "Volver" });
+
+    expect(link.getAttribute("aria-disabled")).toBe("true");
+    expect(link.getAttribute("aria-busy")).toBe("true");
+    expect(link.getAttribute("tabindex")).toBe("-1");
+    expect(link.querySelector("svg")).not.toBeNull();
+  });
+
   it("reenvía la ref al button o al anchor según el caso", () => {
     const buttonRef = createRef<HTMLButtonElement | HTMLAnchorElement>();
     const linkRef = createRef<HTMLButtonElement | HTMLAnchorElement>();
