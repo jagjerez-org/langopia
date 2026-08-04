@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Button, Card, EmptyState, ErrorState, Input, Skeleton, Tag } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Input, Skeleton, Chip } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatDate } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
@@ -130,9 +130,9 @@ function PendingAttemptCard({
     failure instanceof ApiError ? errorMessage(failure.problem) : t("exercises.inbox.genericError");
 
   return (
-    <Card
+    <Panel
       title={entry.studentName}
-      actions={<Tag>{labelFor(t, `content.exerciseType.${entry.exerciseType}`, entry.exerciseType)}</Tag>}
+      actions={<Chip>{labelFor(t, `content.exerciseType.${entry.exerciseType}`, entry.exerciseType)}</Chip>}
     >
       <div className="flex flex-col gap-3">
         <p className="text-sm">
@@ -200,6 +200,6 @@ function PendingAttemptCard({
         </div>
         <p className="text-sm">{t("exercises.inbox.returnHint")}</p>
       </div>
-    </Card>
+    </Panel>
   );
 }

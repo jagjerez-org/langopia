@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import type { Room } from "livekit-client";
-import { Button } from "../../ui/index.js";
+import { Button } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 
 export interface LiveKitRoomProps {

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Select } from "../../../ui/index.js";
+import { Selector } from "@langopia/ui";
 import { useT } from "../../../i18n/translate.js";
 import { readStringArray } from "./props.js";
 import type { ExerciseInputProps } from "./props.js";
@@ -40,7 +40,7 @@ export function MatchingInput({ prompt, value, onChange, fieldPrefix }: Exercise
   return (
     <div className="flex flex-col gap-3">
       {left.map((item, leftIndex) => (
-        <Select
+        <Selector
           key={leftIndex}
           label={item}
           value={chosenFor(leftIndex) === UNANSWERED ? "" : String(chosenFor(leftIndex))}

@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Button } from "../../../ui/index.js";
+import { Button } from "@langopia/ui";
 import { useT } from "../../../i18n/translate.js";
 import { readStringArray } from "./props.js";
 import type { ExerciseInputProps } from "./props.js";

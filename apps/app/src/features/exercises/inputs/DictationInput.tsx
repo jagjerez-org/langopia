@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Input } from "../../../ui/index.js";
+import { Input } from "@langopia/ui";
 import { useT } from "../../../i18n/translate.js";
 import { AudioPlayer } from "../AudioPlayer.js";
 import { readNumber, readString } from "./props.js";

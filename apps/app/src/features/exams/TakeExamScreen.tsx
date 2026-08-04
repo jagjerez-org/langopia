@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { useParams } from "@tanstack/react-router";
-import { Button, Card } from "../../ui/index.js";
+import { Button, Panel } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -150,7 +150,7 @@ export function TakeExamScreen(): ReactElement {
   };
 
   return (
-    <Card>
+    <Panel>
       <h1>{exam.title}</h1>
       {exam.status === "scheduled" && (
         <Button onClick={() => void handleStart()} isLoading={busy}>
@@ -188,6 +188,6 @@ export function TakeExamScreen(): ReactElement {
       {(exam.status === "submitted" || exam.status === "ai_graded" || exam.status === "teacher_validated") && (
         <p role="status">{t("exams.take.submitted")}</p>
       )}
-    </Card>
+    </Panel>
   );
 }

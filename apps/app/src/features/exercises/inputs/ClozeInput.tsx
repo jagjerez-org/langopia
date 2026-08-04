@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Input, Select } from "../../../ui/index.js";
+import { Input, Selector } from "@langopia/ui";
 import { useT } from "../../../i18n/translate.js";
 import { readObjectArray, readString, readStringArray } from "./props.js";
 import type { ExerciseInputProps } from "./props.js";
@@ -52,7 +52,7 @@ export function ClozeInput({ prompt, value, onChange, fieldPrefix }: ExerciseInp
             id={`${fieldPrefix}-blank-${blank.id}`}
           />
         ) : (
-          <Select
+          <Selector
             key={blank.id}
             label={t("exercises.cloze.blankLabel", { number: blank.id })}
             hint={blank.hint}

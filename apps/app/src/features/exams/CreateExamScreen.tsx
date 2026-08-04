@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
-import { Button, Card, Input, Select } from "../../ui/index.js";
+import { Button, Panel, Input, Selector } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -88,10 +88,10 @@ export function CreateExamScreen(): ReactElement {
   });
 
   return (
-    <Card>
+    <Panel>
       <h1>{t("exams.create.title")}</h1>
       <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4">
-        <Select
+        <Selector
           label={t("exams.create.kindLabel")}
           options={KINDS.map((value) => ({
             value,
@@ -124,7 +124,7 @@ export function CreateExamScreen(): ReactElement {
           error={errors.language?.message}
           {...register("language", { required: true })}
         />
-        <Select label={t("exams.create.levelLabel")} options={CEFR_LEVELS.map((value) => ({ value, label: value }))} {...register("level")} />
+        <Selector label={t("exams.create.levelLabel")} options={CEFR_LEVELS.map((value) => ({ value, label: value }))} {...register("level")} />
         <Input
           label={t("exams.create.unitsLabel")}
           hint={t("exams.create.unitsHint")}
@@ -157,6 +157,6 @@ export function CreateExamScreen(): ReactElement {
           {isSubmitting ? t("exams.create.submitting") : t("exams.create.submit")}
         </Button>
       </form>
-    </Card>
+    </Panel>
   );
 }

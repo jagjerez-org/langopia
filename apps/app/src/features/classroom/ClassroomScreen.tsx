@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import { Button, Card, ErrorState, Skeleton, Tag } from "../../ui/index.js";
+import { Button, Panel, ErrorState, Skeleton, Chip } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -69,20 +69,20 @@ export function ClassroomScreen(): ReactElement {
       <h1 className="text-2xl font-semibold">{t("classroom.title")}</h1>
 
       {recording.blocked && (
-        <Tag variant="warning">
+        <Chip variant="warning">
           {t("classroom.recordingBlocked", {
             reason: recording.blockedReason ?? t("classroom.recordingBlockedReasonUnknown"),
           })}
-        </Tag>
+        </Chip>
       )}
 
       {kind === "external" ? (
-        <Card title={t("classroom.externalTitle")}>
+        <Panel title={t("classroom.externalTitle")}>
           <p className="mb-4">{t("classroom.externalDescription")}</p>
           <a href={url} target="_blank" rel="noreferrer">
             {t("classroom.externalOpenLink")}
           </a>
-        </Card>
+        </Panel>
       ) : (
         <LiveKitRoom url={url} token={token} />
       )}

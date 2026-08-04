@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
-import { Button, Select } from "../../ui/index.js";
+import { Button, Selector } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 
 /**
@@ -146,7 +146,7 @@ export function AudioPlayer({ src, label, initialRate }: AudioPlayerProps): Reac
           {playing ? t("exercises.audio.pause") : t("exercises.audio.play")}
         </Button>
 
-        <Select
+        <Selector
           label={t("exercises.audio.speedLabel")}
           value={String(rate)}
           onChange={(event) => setRate(Number(event.target.value))}

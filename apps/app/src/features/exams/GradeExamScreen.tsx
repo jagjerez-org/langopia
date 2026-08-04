@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { useParams } from "@tanstack/react-router";
-import { Button, Card, Input } from "../../ui/index.js";
+import { Button, Panel, Input } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -68,7 +68,7 @@ export function GradeExamScreen(): ReactElement {
   };
 
   return (
-    <Card>
+    <Panel>
       <h1>{t("exams.grade.title")}</h1>
       <h2>{exam.title}</h2>
 
@@ -117,6 +117,6 @@ export function GradeExamScreen(): ReactElement {
       )}
 
       {exam.status === "teacher_validated" && <p role="status">{t("exams.grade.validated")}</p>}
-    </Card>
+    </Panel>
   );
 }

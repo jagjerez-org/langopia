@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Button, Card, Tag } from "../../ui/index.js";
+import { Button, Panel, Chip } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -56,9 +56,9 @@ export function ExerciseAttemptCard({
     failure instanceof ApiError ? errorMessage(failure.problem) : t("exercises.submitGenericError");
 
   return (
-    <Card
+    <Panel
       title={labelFor(t, `content.exerciseType.${exercise.type}`, exercise.type)}
-      actions={<Tag>{labelFor(t, `content.skill.${exercise.skill}`, exercise.skill)}</Tag>}
+      actions={<Chip>{labelFor(t, `content.skill.${exercise.skill}`, exercise.skill)}</Chip>}
     >
       <div className="flex flex-col gap-3">
         <p className="text-sm">
@@ -68,7 +68,7 @@ export function ExerciseAttemptCard({
 
         {exercise.requiresTeacherValidation && (
           <p className="text-sm">
-            <Tag variant="warning">{t("exercises.todo.needsTeacherTag")}</Tag>
+            <Chip variant="warning">{t("exercises.todo.needsTeacherTag")}</Chip>
           </p>
         )}
 
@@ -130,6 +130,6 @@ export function ExerciseAttemptCard({
           </Button>
         </div>
       </div>
-    </Card>
+    </Panel>
   );
 }

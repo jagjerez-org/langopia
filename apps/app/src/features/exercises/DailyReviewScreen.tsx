@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button, EmptyState, ErrorState, Skeleton } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Skeleton } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatDate } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
