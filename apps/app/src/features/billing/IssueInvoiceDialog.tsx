@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Dialog, Input, Select } from "../../ui/index.js";
+import { Button, Dialog, Input, Selector } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -140,7 +140,7 @@ export function IssueInvoiceDialog({ open, onClose, onIssued }: IssueInvoiceDial
       }
     >
       <form id="issue-invoice-form" onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4">
-        <Select
+        <Selector
           label={t("billing.issue.studentLabel")}
           required
           isLoading={studentsQuery.isPending}
@@ -152,7 +152,7 @@ export function IssueInvoiceDialog({ open, onClose, onIssued }: IssueInvoiceDial
           }))}
           {...register("studentId", { required: t("billing.issue.studentRequired") })}
         />
-        <Select
+        <Selector
           label={t("billing.issue.billToLabel")}
           required
           isLoading={targetsQuery.isFetching}

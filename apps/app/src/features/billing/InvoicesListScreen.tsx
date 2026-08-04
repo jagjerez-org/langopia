@@ -3,8 +3,8 @@ import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { InvoiceListItem } from "@langopia/contracts";
-import { Button, EmptyState, ErrorState, Select, Table, Tag } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Selector, Table, Chip } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatMoney } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
@@ -18,7 +18,7 @@ const PAGE_SIZE = 20;
 
 const INVOICE_STATUSES = ["draft", "open", "paid", "past_due", "void", "uncollectible"] as const;
 
-const STATUS_VARIANT: Record<(typeof INVOICE_STATUSES)[number], TagVariant> = {
+const STATUS_VARIANT: Record<(typeof INVOICE_STATUSES)[number], ChipVariant> = {
   draft: "neutral",
   open: "warning",
   paid: "success",
@@ -94,10 +94,10 @@ export function InvoicesListScreen(): ReactElement {
         header: t("billing.list.columnStatus"),
         render: (row) => (
           <>
-            <Tag variant={STATUS_VARIANT[row.status as (typeof INVOICE_STATUSES)[number]] ?? "neutral"}>
+            <Chip variant={STATUS_VARIANT[row.status as (typeof INVOICE_STATUSES)[number]] ?? "neutral"}>
               {t(`billing.status.${row.status}`)}
-            </Tag>
-            {row.hasFailedPayment && <Tag variant="critical">{t("billing.list.failedPaymentTag")}</Tag>}
+            </Chip>
+            {row.hasFailedPayment && <Chip variant="critical">{t("billing.list.failedPaymentTag")}</Chip>}
           </>
         ),
       },
@@ -138,7 +138,7 @@ export function InvoicesListScreen(): ReactElement {
       </div>
 
       <div className="flex flex-wrap items-end gap-4 mb-4">
-        <Select
+        <Selector
           label={t("billing.statusLabel")}
           value={status}
           onChange={(event) => {

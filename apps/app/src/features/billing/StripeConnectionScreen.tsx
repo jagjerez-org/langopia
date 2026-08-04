@@ -1,14 +1,14 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Card, ErrorState, Skeleton, Tag } from "../../ui/index.js";
-import type { TagVariant } from "../../ui/index.js";
+import { Button, Panel, ErrorState, Skeleton, Chip } from "@langopia/ui";
+import type { ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
 import { getMerchantStatus, startMerchantOnboarding } from "./api.js";
 
-const STATUS_VARIANT: Record<string, TagVariant> = {
+const STATUS_VARIANT: Record<string, ChipVariant> = {
   not_started: "neutral",
   pending: "warning",
   active: "success",
@@ -66,23 +66,23 @@ export function StripeConnectionScreen(): ReactElement {
       <h1 className="text-2xl font-semibold mb-4">{t("billing.connect.title")}</h1>
       <p className="mb-4">{t("billing.connect.subtitle")}</p>
 
-      <Card title={t("billing.connect.usableWithoutConnectingTitle")}>
+      <Panel title={t("billing.connect.usableWithoutConnectingTitle")}>
         <p>{t("billing.connect.usableWithoutConnectingDescription")}</p>
-      </Card>
+      </Panel>
 
-      <Card title={t("billing.connect.unlocksTitle")}>
+      <Panel title={t("billing.connect.unlocksTitle")}>
         <ul className="list-disc pl-6 flex flex-col gap-2">
           <li>{t("billing.connect.unlockCharge")}</li>
           <li>{t("billing.connect.unlockReceipts")}</li>
           <li>{t("billing.connect.unlockRefunds")}</li>
         </ul>
-      </Card>
+      </Panel>
 
-      <Card title={t("billing.connect.statusLabel")}>
+      <Panel title={t("billing.connect.statusLabel")}>
         {statusQuery.isPending && (
           <>
             <p role="status">{t("common.loading")}</p>
-            <Skeleton variant="rect" height="4rem" />
+            <Skeleton variant="rect" height="xs" />
           </>
         )}
         {statusQuery.isError && (
@@ -97,9 +97,9 @@ export function StripeConnectionScreen(): ReactElement {
         )}
         {statusQuery.data && (
           <>
-            <Tag variant={STATUS_VARIANT[statusQuery.data.merchantStatus] ?? "neutral"}>
+            <Chip variant={STATUS_VARIANT[statusQuery.data.merchantStatus] ?? "neutral"}>
               {t(`billing.merchantStatus.${statusQuery.data.merchantStatus}`)}
-            </Tag>
+            </Chip>
             <p>
               {statusQuery.data.applicationFeeEnabled && statusQuery.data.applicationFeeBps > 0
                 ? t("billing.connect.feeSummaryEnabled", { rate: statusQuery.data.applicationFeeBps / 100 })
@@ -123,7 +123,7 @@ export function StripeConnectionScreen(): ReactElement {
             )}
           </>
         )}
-      </Card>
+      </Panel>
     </main>
   );
 }

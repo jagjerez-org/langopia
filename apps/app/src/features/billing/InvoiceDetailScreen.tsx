@@ -3,8 +3,8 @@ import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 import type { PaymentView, RefundView } from "@langopia/contracts";
-import { Button, Card, EmptyState, ErrorState, Skeleton, Table, Tag, useToast } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Skeleton, Table, Chip, useToast } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatDate, formatMoney } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
@@ -13,7 +13,7 @@ import { getInvoiceDetail, getSchoolTimezone } from "./api.js";
 import { formatInvoiceDateOnly } from "./date-only.js";
 import { OpenRefundDialog } from "./OpenRefundDialog.js";
 
-const STATUS_VARIANT: Record<string, TagVariant> = {
+const STATUS_VARIANT: Record<string, ChipVariant> = {
   draft: "neutral",
   open: "warning",
   paid: "success",
@@ -22,7 +22,7 @@ const STATUS_VARIANT: Record<string, TagVariant> = {
   uncollectible: "critical",
 };
 
-const PAYMENT_STATUS_VARIANT: Record<string, TagVariant> = {
+const PAYMENT_STATUS_VARIANT: Record<string, ChipVariant> = {
   pending: "warning",
   succeeded: "success",
   failed: "critical",
@@ -30,7 +30,7 @@ const PAYMENT_STATUS_VARIANT: Record<string, TagVariant> = {
   partially_refunded: "warning",
 };
 
-const REFUND_STATUS_VARIANT: Record<string, TagVariant> = {
+const REFUND_STATUS_VARIANT: Record<string, ChipVariant> = {
   pending: "warning",
   succeeded: "success",
   failed: "critical",
@@ -78,7 +78,7 @@ export function InvoiceDetailScreen(): ReactElement {
     return (
       <main className="p-6" aria-busy="true">
         <p role="status">{t("billing.detail.loadingTitle")}</p>
-        <Skeleton variant="rect" height="20rem" />
+        <Skeleton variant="rect" height="lg" />
       </main>
     );
   }
@@ -130,9 +130,9 @@ export function InvoiceDetailScreen(): ReactElement {
       header: t("billing.detail.columnPaymentStatus"),
       render: (row) => (
         <>
-          <Tag variant={PAYMENT_STATUS_VARIANT[row.status] ?? "neutral"}>
+          <Chip variant={PAYMENT_STATUS_VARIANT[row.status] ?? "neutral"}>
             {t(`billing.paymentStatus.${row.status}`)}
-          </Tag>
+          </Chip>
           {row.failureMessage && (
             <p>{t("billing.detail.paymentFailureReason", { message: row.failureMessage })}</p>
           )}
@@ -160,7 +160,7 @@ export function InvoiceDetailScreen(): ReactElement {
       key: "status",
       header: t("billing.detail.columnRefundStatus"),
       render: (row) => (
-        <Tag variant={REFUND_STATUS_VARIANT[row.status] ?? "neutral"}>{t(`billing.refundStatus.${row.status}`)}</Tag>
+        <Chip variant={REFUND_STATUS_VARIANT[row.status] ?? "neutral"}>{t(`billing.refundStatus.${row.status}`)}</Chip>
       ),
     },
     {
@@ -184,10 +184,10 @@ export function InvoiceDetailScreen(): ReactElement {
       </p>
       <div className="flex items-center justify-between gap-4 mb-4">
         <h1 className="text-2xl font-semibold">{invoice.number}</h1>
-        <Tag variant={STATUS_VARIANT[invoice.status] ?? "neutral"}>{t(`billing.status.${invoice.status}`)}</Tag>
+        <Chip variant={STATUS_VARIANT[invoice.status] ?? "neutral"}>{t(`billing.status.${invoice.status}`)}</Chip>
       </div>
 
-      <Card title={t("billing.detail.numberLabel")}>
+      <Panel title={t("billing.detail.numberLabel")}>
         <dl className="grid grid-cols-2 gap-2">
           <dt>{t("billing.detail.directionLabel")}</dt>
           <dd>{t(`billing.direction.${invoice.direction}`)}</dd>
@@ -200,9 +200,9 @@ export function InvoiceDetailScreen(): ReactElement {
           <dt>{t("billing.detail.paidAtLabel")}</dt>
           <dd>{invoice.paidAt ? formatInstant(invoice.paidAt) : t("billing.detail.notPaidYet")}</dd>
         </dl>
-      </Card>
+      </Panel>
 
-      <Card title={t("billing.detail.linesTitle")}>
+      <Panel title={t("billing.detail.linesTitle")}>
         <Table
           columns={[
             { key: "description", header: t("billing.detail.columnDescription"), render: (row) => row.description },
@@ -233,9 +233,9 @@ export function InvoiceDetailScreen(): ReactElement {
           <dt>{t("billing.detail.totalLabel")}</dt>
           <dd className="font-semibold">{formatMoney(invoice.totalCents, invoice.currency, locale)}</dd>
         </dl>
-      </Card>
+      </Panel>
 
-      <Card title={t("billing.detail.feeTitle")}>
+      <Panel title={t("billing.detail.feeTitle")}>
         {invoice.applicationFeeCents === 0 && invoice.applicationFeeBps === 0 ? (
           <p>{t("billing.detail.feeNoneHint")}</p>
         ) : (
@@ -246,9 +246,9 @@ export function InvoiceDetailScreen(): ReactElement {
             <dd>{formatMoney(invoice.applicationFeeCents, invoice.currency, locale)}</dd>
           </dl>
         )}
-      </Card>
+      </Panel>
 
-      <Card title={t("billing.detail.remainingLabel")}>
+      <Panel title={t("billing.detail.remainingLabel")}>
         <dl className="grid grid-cols-2 gap-2">
           <dt>{t("billing.detail.remainingLabel")}</dt>
           <dd>{formatMoney(invoice.remainingCents, invoice.currency, locale)}</dd>
@@ -260,9 +260,9 @@ export function InvoiceDetailScreen(): ReactElement {
             {t("billing.detail.openRefundAction")}
           </Button>
         )}
-      </Card>
+      </Panel>
 
-      <Card
+      <Panel
         title={t("billing.detail.paymentsTitle")}
         actions={undefined}
       >
@@ -274,9 +274,9 @@ export function InvoiceDetailScreen(): ReactElement {
           captionVisuallyHidden
           emptyState={<EmptyState title={t("billing.detail.paymentsEmptyTitle")} />}
         />
-      </Card>
+      </Panel>
 
-      <Card title={t("billing.detail.refundsTitle")}>
+      <Panel title={t("billing.detail.refundsTitle")}>
         <Table
           columns={refundColumns}
           rows={invoice.refunds}
@@ -285,7 +285,7 @@ export function InvoiceDetailScreen(): ReactElement {
           captionVisuallyHidden
           emptyState={<EmptyState title={t("billing.detail.refundsEmptyTitle")} />}
         />
-      </Card>
+      </Panel>
 
       <OpenRefundDialog
         open={refundOpen}

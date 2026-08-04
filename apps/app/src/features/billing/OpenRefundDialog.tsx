@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
-import { Button, Dialog, Input, Select } from "../../ui/index.js";
+import { Button, Dialog, Input, Selector } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatMoney } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
@@ -117,7 +117,7 @@ export function OpenRefundDialog({
           error={errors.amount?.message}
           {...register("amount", { required: t("billing.refund.amountRequired") })}
         />
-        <Select
+        <Selector
           label={t("billing.refund.reasonLabel")}
           required
           error={errors.reason?.message}

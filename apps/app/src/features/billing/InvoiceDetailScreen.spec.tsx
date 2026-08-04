@@ -5,7 +5,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { InvoiceDetail } from "@langopia/contracts";
 import { ApiError } from "../../lib/api-client.js";
-import { ToastProvider } from "../../ui/index.js";
+import { ToastProvider } from "@langopia/ui";
 import "./dialog-polyfill.testsupport.js";
 import { createTestRouter } from "./test-router.testsupport.js";
 
