@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Button, EmptyState, ErrorState, Input, Select, Table, Tag, useToast } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Input, Selector, Table, Chip, useToast } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useLocale } from "../../i18n/translate.js";
@@ -18,7 +18,7 @@ export const TEACHERS_QUERY_KEY = ["teachers", "list"] as const;
 const TIERS: TeacherTier[] = ["community", "professional", "specialist"];
 const STATUSES: TeacherStatus[] = ["active", "on_leave", "left"];
 
-const STATUS_VARIANT: Record<TeacherStatus, TagVariant> = {
+const STATUS_VARIANT: Record<TeacherStatus, ChipVariant> = {
   active: "success",
   on_leave: "warning",
   left: "neutral",
@@ -94,7 +94,7 @@ export function TeachersListScreen(): ReactElement {
     {
       key: "status",
       header: t("teachers.list.columnStatus"),
-      render: (row) => <Tag variant={STATUS_VARIANT[row.status]}>{t(`teachers.status.${row.status}`)}</Tag>,
+      render: (row) => <Chip variant={STATUS_VARIANT[row.status]}>{t(`teachers.status.${row.status}`)}</Chip>,
     },
     {
       key: "languages",
@@ -119,14 +119,14 @@ export function TeachersListScreen(): ReactElement {
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
-        <Select
+        <Selector
           label={t("teachers.list.tierLabel")}
           value={tier}
           onChange={(event) => setTier(event.target.value)}
           options={TIERS.map((value) => ({ value, label: t(`teachers.tier.${value}`) }))}
           placeholder={t("teachers.list.tierAll")}
         />
-        <Select
+        <Selector
           label={t("teachers.list.statusLabel")}
           value={status}
           onChange={(event) => setStatus(event.target.value)}

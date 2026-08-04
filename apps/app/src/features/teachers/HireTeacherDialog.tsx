@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
-import { Button, Dialog, Input, Select } from "../../ui/index.js";
+import { Button, Dialog, Input, Selector } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -120,7 +120,7 @@ export function HireTeacherDialog({ open, onClose, onHired }: HireTeacherDialogP
             pattern: { value: EMAIL_PATTERN, message: t("teachers.create.emailInvalid") },
           })}
         />
-        <Select
+        <Selector
           label={t("teachers.create.tierLabel")}
           options={TIERS.map((value) => ({ value, label: t(`teachers.tier.${value}`) }))}
           {...register("tier")}

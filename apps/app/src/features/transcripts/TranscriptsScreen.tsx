@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Card, EmptyState, ErrorState, Input, Skeleton, Tag } from "../../ui/index.js";
-import type { TagVariant } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Input, Skeleton, Chip } from "@langopia/ui";
+import type { ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
 import { listTranscripts } from "./api.js";
 import type { TranscriptStatus } from "./api.js";
 
-const STATUS_VARIANT: Record<TranscriptStatus, TagVariant> = {
+const STATUS_VARIANT: Record<TranscriptStatus, ChipVariant> = {
   pending: "neutral",
   recording: "warning",
   processing: "warning",
@@ -77,9 +77,9 @@ export function TranscriptsScreen(): ReactElement {
           </section>
 
           <section aria-label={t("transcripts.viewerLabel")}>
-            <Card
+            <Panel
               title={selected.title}
-              actions={<Tag variant={STATUS_VARIANT[selected.status]}>{t(`transcripts.status.${selected.status}`)}</Tag>}
+              actions={<Chip variant={STATUS_VARIANT[selected.status]}>{t(`transcripts.status.${selected.status}`)}</Chip>}
             >
               <div className="flex flex-col gap-4">
                 {selected.status === "blocked_no_consent" && (
@@ -126,7 +126,7 @@ export function TranscriptsScreen(): ReactElement {
                   </>
                 )}
               </div>
-            </Card>
+            </Panel>
           </section>
         </div>
       )}

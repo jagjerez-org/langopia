@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
-import { Button, Card, Dialog, ErrorState, Input, Select, Skeleton, Tag, useToast } from "../../ui/index.js";
+import { Button, Panel, Dialog, ErrorState, Input, Selector, Skeleton, Chip, useToast } from "@langopia/ui";
 import { useT, useLocale } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatMoney } from "../../i18n/format.js";
@@ -145,7 +145,7 @@ function DataTab({ teacher }: { teacher: TeacherListItem }): ReactElement {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title={t("teachers.detail.profileTitle")}>
+      <Panel title={t("teachers.detail.profileTitle")}>
         <dl className="grid grid-cols-2 gap-2 mb-4">
           <dt className="text-muted">{t("teachers.detail.tierLabel")}</dt>
           <dd>{t(`teachers.tier.${teacher.tier}`)}</dd>
@@ -157,9 +157,9 @@ function DataTab({ teacher }: { teacher: TeacherListItem }): ReactElement {
           <dd>{teacher.contractedHoursWeek}</dd>
           <dt className="text-muted">{t("teachers.detail.statusLabel")}</dt>
           <dd>
-            <Tag variant={teacher.status === "active" ? "success" : teacher.status === "on_leave" ? "warning" : "neutral"}>
+            <Chip variant={teacher.status === "active" ? "success" : teacher.status === "on_leave" ? "warning" : "neutral"}>
               {t(`teachers.status.${teacher.status}`)}
-            </Tag>
+            </Chip>
           </dd>
           <dt className="text-muted">{t("teachers.detail.languagesLabel")}</dt>
           <dd>{teacher.languages.length > 0 ? teacher.languages.join(", ") : "—"}</dd>
@@ -182,7 +182,7 @@ function DataTab({ teacher }: { teacher: TeacherListItem }): ReactElement {
         </dl>
 
         <form onSubmit={(event) => void onSubmitEdit(event)} noValidate className="flex flex-col gap-4 max-w-sm">
-          <Select
+          <Selector
             label={t("teachers.detail.tierLabel")}
             options={TIERS.map((value) => ({ value, label: t(`teachers.tier.${value}`) }))}
             {...editForm.register("tier")}
@@ -200,7 +200,7 @@ function DataTab({ teacher }: { teacher: TeacherListItem }): ReactElement {
             {editMutation.isPending ? t("teachers.detail.editSubmitting") : t("teachers.detail.editSubmit")}
           </Button>
         </form>
-      </Card>
+      </Panel>
 
       {teacher.status !== "left" && (
         <div>
