@@ -337,7 +337,10 @@
   --color-warning-bg: var(--ink-warning-bg);
   --color-critical: var(--ink-critical-text);
   --color-critical-bg: var(--ink-critical-bg);
-  --duration-fast: var(--ink-duration-fast);
+  /* Tailwind v4 mapea `duration-*` al namespace `--transition-duration-*`;
+     una clave `--duration-fast` aquí no genera ninguna utilidad (bug
+     detectado en la revisión de la migración: la clase quedaba muerta). */
+  --transition-duration-fast: var(--ink-duration-fast);
 }
 
 /* Movimiento: quien active «reducir movimiento» en su sistema no ve barridos
