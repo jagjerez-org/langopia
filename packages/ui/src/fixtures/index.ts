@@ -7,6 +7,7 @@ export * from "./builders.js";
 export * from "./calendar.js";
 export * from "./cards.js";
 export * from "./checkout.js";
+export * from "./content.js";
 export * from "./kpis.js";
 export * from "./lists.js";
 export * from "./management.js";
