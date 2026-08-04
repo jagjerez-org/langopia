@@ -30,6 +30,24 @@ describe("Selector", () => {
     expect(placeholder.hasAttribute("disabled")).toBe(true);
   });
 
+  it("el placeholder queda seleccionado por defecto en vez de la primera opción", () => {
+    // Un <select> nativo salta la primera opción disabled: el componente
+    // fuerza defaultValue="" para que el placeholder sea visible.
+    render(<Selector label="Idioma" options={OPTIONS} placeholder="Elige un idioma" />);
+
+    const select = screen.getByRole("combobox", { name: "Idioma" }) as HTMLSelectElement;
+
+    expect(select.value).toBe("");
+  });
+
+  it("defaultValue explícito gana al placeholder", () => {
+    render(<Selector label="Idioma" options={OPTIONS} placeholder="Elige un idioma" defaultValue="en" />);
+
+    const select = screen.getByRole("combobox", { name: "Idioma" }) as HTMLSelectElement;
+
+    expect(select.value).toBe("en");
+  });
+
   it("notifica onChange al elegir una opción", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

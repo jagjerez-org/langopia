@@ -66,6 +66,16 @@ export const Selector = forwardRef<HTMLSelectElement, SelectorProps>(function Se
   const errorId = error ? `${selectId}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 
+  // Un <select> nativo salta la primera opción deshabilitada y selecciona la
+  // primera habilitada: sin un valor inicial explícito, el placeholder nunca
+  // llega a mostrarse. Si el caller no controla el valor, forzamos la opción
+  // vacía como selección inicial.
+  const { value, defaultValue, ...selectRest } = rest;
+  const uncontrolledDefault =
+    placeholder !== undefined && value === undefined && defaultValue === undefined
+      ? ""
+      : defaultValue;
+
   return (
     <div className="group flex w-full flex-col gap-1" data-disabled={disabled || undefined}>
       <label htmlFor={selectId} className={labelStyles}>
@@ -78,9 +88,11 @@ export const Selector = forwardRef<HTMLSelectElement, SelectorProps>(function Se
       </label>
       <div className="relative">
         <select
-          {...rest}
+          {...selectRest}
           ref={ref}
           id={selectId}
+          value={value}
+          defaultValue={uncontrolledDefault}
           className={selectStyles}
           disabled={disabled || isLoading}
           required={required}
