@@ -73,6 +73,15 @@ jobs:
       - name: Pruebas (panel)
         run: npm run test --workspace @langopia/app
 
+      # El design system (`packages/ui`) es el contrato visual de todos los
+      # frontends: sus tests y el build de Storybook son el smoke que detecta
+      # una regresión en el paquete antes de que llegue a las apps (ADR-004).
+      - name: Pruebas (design system)
+        run: npm run test --workspace @langopia/ui
+
+      - name: Build de Storybook (smoke del catálogo)
+        run: npm run storybook:build --workspace @langopia/ui
+
       # Tarea 10 de la ola 1, Tarea 13 de la ola 2 y Tarea 11 de la ola 3:
       # criterios de «listo»
       # de la API automatizados. Corren aparte de la batería unitaria de
