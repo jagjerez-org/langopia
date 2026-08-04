@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
 import { Globe } from "lucide-react";
-import { Button, Input } from "../../ui/index.js";
+import { Button, Input } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import type { Translate } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";

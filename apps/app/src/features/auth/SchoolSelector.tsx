@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Button, EmptyState } from "../../ui/index.js";
+import { Button, EmptyState } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import { useChooseSchool } from "./session.js";
 import styles from "./SchoolSelector.module.css";

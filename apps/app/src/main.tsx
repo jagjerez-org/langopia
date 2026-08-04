@@ -6,7 +6,7 @@ import { RouterProvider } from "@tanstack/react-router";
 import { I18nProvider, useT } from "./i18n/translate.js";
 import { DEFAULT_LOCALE, isLocale } from "./i18n/locale.js";
 import { router } from "./router.js";
-import { ToastProvider } from "./ui/index.js";
+import { ToastProvider } from "@langopia/ui";
 import "./index.css";
 
 /**

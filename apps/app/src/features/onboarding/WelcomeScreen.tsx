@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Button, Card, ErrorState, Input, Select, Skeleton, Tag, useToast } from "../../ui/index.js";
+import { Button, Panel, ErrorState, Input, Selector, Skeleton, Chip, useToast } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatRelative } from "../../i18n/format.js";
 import { SUPPORTED_LOCALES } from "../../i18n/locale.js";
@@ -45,7 +45,7 @@ export function WelcomeScreen(): ReactElement {
   if (settingsQuery.isPending) {
     return (
       <main className="p-6" aria-busy="true">
-        <Skeleton variant="rect" height="20rem" />
+        <Skeleton variant="rect" height="lg" />
       </main>
     );
   }
@@ -92,7 +92,7 @@ function TrialBanner({ settings }: { settings: SchoolSettings }): ReactElement |
 
   return (
     <p role="status" className="text-sm text-muted">
-      <Tag variant="neutral">{t("onboarding.trial.banner", { relative: formatRelative(settings.trialEndsAt, locale) })}</Tag>
+      <Chip variant="neutral">{t("onboarding.trial.banner", { relative: formatRelative(settings.trialEndsAt, locale) })}</Chip>
     </p>
   );
 }
@@ -101,8 +101,8 @@ type StepStatus = "pending" | "done" | "skipped";
 
 function StepStatusTag({ status }: { status: StepStatus }): ReactElement | null {
   const t = useT();
-  if (status === "done") return <Tag variant="success">{t("onboarding.brandStep.done")}</Tag>;
-  if (status === "skipped") return <Tag variant="neutral">{t("onboarding.brandStep.skipped")}</Tag>;
+  if (status === "done") return <Chip variant="success">{t("onboarding.brandStep.done")}</Chip>;
+  if (status === "skipped") return <Chip variant="neutral">{t("onboarding.brandStep.skipped")}</Chip>;
   return null;
 }
 
@@ -131,7 +131,7 @@ function BrandStep({ currentName, onSaved }: { currentName: string; onSaved: () 
   });
 
   return (
-    <Card title={t("onboarding.brandStep.title")} actions={<StepStatusTag status={status} />}>
+    <Panel title={t("onboarding.brandStep.title")} actions={<StepStatusTag status={status} />}>
       <p className="mb-4 text-muted">{t("onboarding.brandStep.description")}</p>
       {status !== "skipped" && (
         <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4">
@@ -152,7 +152,7 @@ function BrandStep({ currentName, onSaved }: { currentName: string; onSaved: () 
           </div>
         </form>
       )}
-    </Card>
+    </Panel>
   );
 }
 
@@ -186,11 +186,11 @@ function LanguageStep({ currentLocale, onSaved }: { currentLocale: string; onSav
   });
 
   return (
-    <Card title={t("onboarding.languageStep.title")} actions={<StepStatusTag status={status} />}>
+    <Panel title={t("onboarding.languageStep.title")} actions={<StepStatusTag status={status} />}>
       <p className="mb-4 text-muted">{t("onboarding.languageStep.description")}</p>
       {status !== "skipped" && (
         <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4">
-          <Select
+          <Selector
             label={t("onboarding.languageStep.label")}
             error={errors.defaultLocale?.message}
             options={SUPPORTED_LOCALES.map((code) => ({ value: code, label: languageDisplayName(code, locale) }))}
@@ -207,7 +207,7 @@ function LanguageStep({ currentLocale, onSaved }: { currentLocale: string; onSav
           </div>
         </form>
       )}
-    </Card>
+    </Panel>
   );
 }
 
@@ -235,7 +235,7 @@ function TeacherStep(): ReactElement {
   });
 
   return (
-    <Card title={t("onboarding.teacherStep.title")} actions={<StepStatusTag status={status} />}>
+    <Panel title={t("onboarding.teacherStep.title")} actions={<StepStatusTag status={status} />}>
       <p className="mb-4 text-muted">{t("onboarding.teacherStep.description")}</p>
       {status === "done" && invitedEmail && (
         <div>
@@ -265,7 +265,7 @@ function TeacherStep(): ReactElement {
           </div>
         </form>
       )}
-    </Card>
+    </Panel>
   );
 }
 
@@ -276,7 +276,7 @@ function CourseStep({ defaultLocale, supportedLocales }: { defaultLocale: string
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
-    <Card title={t("onboarding.courseStep.title")} actions={<StepStatusTag status={status} />}>
+    <Panel title={t("onboarding.courseStep.title")} actions={<StepStatusTag status={status} />}>
       <p className="mb-4 text-muted">{t("onboarding.courseStep.description")}</p>
       {status === "pending" && (
         <div className="flex gap-2">
@@ -297,6 +297,6 @@ function CourseStep({ defaultLocale, supportedLocales }: { defaultLocale: string
           showToast({ variant: "success", title: t("courses.create.success") });
         }}
       />
-    </Card>
+    </Panel>
   );
 }

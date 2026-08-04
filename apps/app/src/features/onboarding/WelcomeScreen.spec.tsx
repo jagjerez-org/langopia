@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createMemoryHistory, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../lib/api-client.js";
-import { ToastProvider } from "../../ui/index.js";
+import { ToastProvider } from "@langopia/ui";
 
 const { getSchoolSettingsMock, updateSchoolSettingsMock, inviteTeacherMock } = vi.hoisted(() => ({
   getSchoolSettingsMock: vi.fn(),

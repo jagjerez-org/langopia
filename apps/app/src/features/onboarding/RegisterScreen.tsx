@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button, Input, Skeleton, Tag } from "../../ui/index.js";
+import { Button, Input, Skeleton, Chip } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import type { Translate } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
@@ -54,7 +54,7 @@ export function RegisterScreen(): ReactElement | null {
   if (session.status === "loading") {
     return (
       <main className="p-6" aria-busy="true">
-        <Skeleton variant="rect" height="12rem" />
+        <Skeleton variant="rect" height="sm" />
       </main>
     );
   }
@@ -217,14 +217,14 @@ function describeSlugAvailability(
   if (availability === "available") {
     return (
       <p role="status" className="mt-1">
-        <Tag variant="success">{t("onboarding.register.slugAvailable")}</Tag>
+        <Chip variant="success">{t("onboarding.register.slugAvailable")}</Chip>
       </p>
     );
   }
   if (availability === "unavailable") {
     return (
       <p role="status" className="mt-1">
-        <Tag variant="critical">{t("onboarding.register.slugUnavailable")}</Tag>
+        <Chip variant="critical">{t("onboarding.register.slugUnavailable")}</Chip>
       </p>
     );
   }
