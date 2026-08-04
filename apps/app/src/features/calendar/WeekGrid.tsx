@@ -4,8 +4,8 @@ import type { AgendaEntry } from "@langopia/contracts";
 import { formatDate } from "../../i18n/format.js";
 import type { Locale } from "../../i18n/locale.js";
 import { useT } from "../../i18n/translate.js";
-import { Tag } from "../../ui/index.js";
-import type { TagVariant } from "../../ui/index.js";
+import { Chip } from "@langopia/ui";
+import type { ChipVariant } from "@langopia/ui";
 import { layoutDayLanes } from "./day-lanes.js";
 import { teacherColorIndex } from "./teacher-color.js";
 import { zonedDateAndMinutes, zonedTimeToUtcIso } from "./zoned-time.js";
@@ -16,7 +16,7 @@ const HOUR_START = 6;
 const HOUR_END = 22;
 const TOTAL_MINUTES = (HOUR_END - HOUR_START) * 60;
 
-const STATUS_TAG_VARIANT: Record<string, TagVariant> = {
+const STATUS_TAG_VARIANT: Record<string, ChipVariant> = {
   scheduled: "neutral",
   in_progress: "success",
   completed: "success",
@@ -189,7 +189,7 @@ export function WeekGrid({
                   <span className={styles.sessionTitle}>{entry.groupName}</span>
                   <span className={styles.sessionMeta}>{timeRange}</span>
                   <span className={styles.sessionMeta}>{teacherLabel}</span>
-                  <Tag variant={STATUS_TAG_VARIANT[entry.status] ?? "neutral"}>{statusLabel}</Tag>
+                  <Chip variant={STATUS_TAG_VARIANT[entry.status] ?? "neutral"}>{statusLabel}</Chip>
                 </button>
               );
             })}

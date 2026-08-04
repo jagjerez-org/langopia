@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import type { AgendaEntry } from "@langopia/contracts";
-import { Button, Dialog, Input, Select } from "../../ui/index.js";
+import { Button, Dialog, Input, Selector } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -114,7 +114,7 @@ export function RescheduleDialog({
           error={errors.newStartsAt?.message}
           {...register("newStartsAt", { required: t("calendar.newStartsAtLabel") })}
         />
-        <Select
+        <Selector
           label={t("calendar.teacherLabel")}
           error={errors.teacherId?.message}
           options={[

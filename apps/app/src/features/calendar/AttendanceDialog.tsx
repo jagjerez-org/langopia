@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { AgendaEntry } from "@langopia/contracts";
-import { Button, Dialog, EmptyState, ErrorState, Skeleton } from "../../ui/index.js";
+import { Button, Dialog, EmptyState, ErrorState, Skeleton } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";

@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { formatDate } from "../../i18n/format.js";
 import type { Locale } from "../../i18n/locale.js";
 import { useT } from "../../i18n/translate.js";
-import { Button, Dialog } from "../../ui/index.js";
+import { Button, Dialog } from "@langopia/ui";
 
 export interface SessionMenuDialogProps {
   open: boolean;

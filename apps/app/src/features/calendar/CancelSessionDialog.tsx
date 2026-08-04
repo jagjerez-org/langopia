@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import type { AgendaEntry } from "@langopia/contracts";
-import { Button, Dialog, Select, Input } from "../../ui/index.js";
+import { Button, Dialog, Selector, Input } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -86,7 +86,7 @@ export function CancelSessionDialog({
       }
     >
       <form id="cancel-session-form" onSubmit={(event) => void onSubmit(event)} noValidate>
-        <Select
+        <Selector
           label={t("calendar.partyLabel")}
           options={[
             { value: "school", label: t("calendar.partySchool") },

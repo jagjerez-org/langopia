@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AgendaEntry } from "@langopia/contracts";
-import { Button, EmptyState, ErrorState, Skeleton } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Skeleton } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatDate } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
@@ -134,7 +134,7 @@ export function CalendarScreen(): ReactElement {
       <main aria-busy="true">
         <h1>{t("calendar.title")}</h1>
         <p role="status">{t("common.loading")}</p>
-        <Skeleton variant="rect" height="32rem" />
+        <Skeleton variant="rect" height="xl" />
       </main>
     );
   }
