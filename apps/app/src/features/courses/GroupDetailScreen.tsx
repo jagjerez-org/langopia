@@ -3,8 +3,8 @@ import type { ReactElement } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
-import { Button, EmptyState, ErrorState, Input, Select, Skeleton, Table, Tag, useToast } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Input, Selector, Skeleton, Table, Chip, useToast } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useLocale, useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -14,7 +14,7 @@ import { enrolStudentInGroup, getGroup } from "./api.js";
 import { formatDateOnly } from "./format.js";
 import type { GroupDetail, GroupStatus } from "./types.js";
 
-const GROUP_STATUS_VARIANT: Record<GroupStatus, TagVariant> = {
+const GROUP_STATUS_VARIANT: Record<GroupStatus, ChipVariant> = {
   planned: "neutral",
   running: "success",
   finished: "neutral",
@@ -127,7 +127,7 @@ function GroupDetailContent({ groupId, group }: { groupId: string; group: GroupD
         <dd>{group.teacherName ?? t("courses.groupDetail.teacherUnassigned")}</dd>
         <dt className="text-muted">{t("courses.groupDetail.statusLabel")}</dt>
         <dd>
-          <Tag variant={GROUP_STATUS_VARIANT[group.status]}>{t(`courses.groupStatus.${group.status}`)}</Tag>
+          <Chip variant={GROUP_STATUS_VARIANT[group.status]}>{t(`courses.groupStatus.${group.status}`)}</Chip>
         </dd>
         <dt className="text-muted">{t("courses.groupDetail.startsOnLabel")}</dt>
         <dd>{formatDateOnly(group.startsOn, locale)}</dd>
@@ -136,7 +136,7 @@ function GroupDetailContent({ groupId, group }: { groupId: string; group: GroupD
         <dt className="text-muted">{t("courses.groupDetail.capacityLabel")}</dt>
         <dd>
           {t("courses.groupDetail.capacityValue", { enrolled: roster.length, capacity: group.capacity })}{" "}
-          {isFull && <Tag variant="warning">{t("courses.groupDetail.capacityFull")}</Tag>}
+          {isFull && <Chip variant="warning">{t("courses.groupDetail.capacityFull")}</Chip>}
         </dd>
       </dl>
 
@@ -154,7 +154,7 @@ function GroupDetailContent({ groupId, group }: { groupId: string; group: GroupD
 
       <h2 className="text-xl font-semibold mt-6 mb-2">{t("courses.groupDetail.enrolTitle")}</h2>
       <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4 max-w-sm">
-        <Select
+        <Selector
           label={t("courses.groupDetail.studentLabel")}
           required
           isLoading={studentsQuery.isPending}

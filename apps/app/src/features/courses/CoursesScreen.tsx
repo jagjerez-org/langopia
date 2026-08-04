@@ -2,8 +2,8 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Button, Card, EmptyState, ErrorState, Skeleton, Table, Tag, useToast } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Skeleton, Table, Chip, useToast } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useLocale, useT } from "../../i18n/translate.js";
 import { formatMoney } from "../../i18n/format.js";
@@ -18,7 +18,7 @@ import type { CourseGroupSummary, CourseListItem, GroupStatus } from "./types.js
 export const COURSES_QUERY_KEY = ["courses", "list"] as const;
 const SCHOOL_LOCALES_QUERY_KEY = ["courses", "school-locales"] as const;
 
-const GROUP_STATUS_VARIANT: Record<GroupStatus, TagVariant> = {
+const GROUP_STATUS_VARIANT: Record<GroupStatus, ChipVariant> = {
   planned: "neutral",
   running: "success",
   finished: "neutral",
@@ -59,7 +59,7 @@ export function CoursesScreen(): ReactElement {
     return (
       <main className="p-6">
         <h1 className="text-2xl font-semibold mb-4">{t("courses.title")}</h1>
-        <Skeleton variant="rect" height="16rem" />
+        <Skeleton variant="rect" height="md" />
       </main>
     );
   }
@@ -179,7 +179,7 @@ function CourseCard({
     {
       key: "status",
       header: t("courses.list.columnGroupStatus"),
-      render: (group) => <Tag variant={GROUP_STATUS_VARIANT[group.status]}>{t(`courses.groupStatus.${group.status}`)}</Tag>,
+      render: (group) => <Chip variant={GROUP_STATUS_VARIANT[group.status]}>{t(`courses.groupStatus.${group.status}`)}</Chip>,
     },
     {
       key: "dates",
@@ -195,7 +195,7 @@ function CourseCard({
   ];
 
   return (
-    <Card
+    <Panel
       title={`${course.code} — ${translation?.name ?? course.code}`}
       actions={
         <Button variant="secondary" size="sm" onClick={onNewGroup}>
@@ -226,6 +226,6 @@ function CourseCard({
         captionVisuallyHidden
         emptyState={<EmptyState title={t("courses.list.groupsEmpty")} />}
       />
-    </Card>
+    </Panel>
   );
 }

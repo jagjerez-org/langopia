@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
-import { Button, Dialog, Input, Select } from "../../ui/index.js";
+import { Button, Dialog, Input, Selector } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useLocale, useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -142,12 +142,12 @@ export function CreateCourseDialog({
           error={errors.language?.message}
           {...register("language", { required: t("courses.create.languageRequired") })}
         />
-        <Select
+        <Selector
           label={t("courses.create.levelLabel")}
           options={CEFR_LEVELS.map((value) => ({ value, label: value }))}
           {...register("level")}
         />
-        <Select
+        <Selector
           label={t("courses.create.modalityLabel")}
           options={MODALITIES.map((value) => ({ value, label: t(`courses.modality.${value}`) }))}
           {...register("modality")}
