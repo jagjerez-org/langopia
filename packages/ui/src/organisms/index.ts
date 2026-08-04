@@ -24,6 +24,37 @@ export {
   type ExerciseTypeOption,
 } from "./ExerciseBuilder/ExerciseBuilder.js";
 export {
+  KpiPage,
+  type KpiPageLabels,
+  type KpiPageProps,
+  type KpiRangeOption,
+} from "./KpiPage/KpiPage.js";
+export {
+  PaymentsPage,
+  type PaymentAction,
+  type PaymentRecord,
+  type PaymentsPageLabels,
+  type PaymentsPageProps,
+  type PaymentStatus,
+} from "./PaymentsPage/PaymentsPage.js";
+export {
+  PlanningPage,
+  type PlanningCalendarProps,
+  type PlanningPageLabels,
+  type PlanningPageProps,
+  type PlanningSession,
+  type PlanningSessionAction,
+  type PlanningSessionStatus,
+} from "./PlanningPage/PlanningPage.js";
+export {
+  RolesPermissionsPage,
+  type PermissionCategory,
+  type PermissionItem,
+  type RoleDefinition,
+  type RolesPermissionsPageLabels,
+  type RolesPermissionsPageProps,
+} from "./RolesPermissionsPage/RolesPermissionsPage.js";
+export {
   Shell,
   type ShellBaseProps,
   type ShellBreadcrumbProps,
