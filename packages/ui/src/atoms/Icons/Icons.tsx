@@ -108,6 +108,21 @@ export function IconChevronDown(props: IconProps): ReactElement {
   );
 }
 
+/** Atrás — cheurón hacia la izquierda. Navegación temporal del `Calendar`. */
+export function IconChevronLeft(props: IconProps): ReactElement {
+  return (
+    <svg {...base(props)}>
+      <path
+        d="M12.5 5l-5 5 5 5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Adelante / detalle — cheurón hacia la derecha. Accesorio de `ItemList`. */
 export function IconChevronRight(props: IconProps): ReactElement {
   return (

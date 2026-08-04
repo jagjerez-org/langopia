@@ -11,6 +11,7 @@ export {
   IconCheck,
   IconCheckCircle,
   IconChevronDown,
+  IconChevronLeft,
   IconChevronRight,
   IconClose,
   IconDot,
