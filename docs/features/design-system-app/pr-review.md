@@ -85,3 +85,14 @@ El plan distingue correctamente lo automatizado de lo manual y cubre lo no autom
 2. **B-CI (ADR-004)**: añadir a `.github/workflows/ci.yml` `npm run test --workspace @langopia/ui` y `npm run storybook:build --workspace @langopia/ui`, o enmendar ADR-004 declarando la validación local/manual y registrar la deuda.
 
 **Recordatorio operativo pre-merge (no es condición del veredicto, es proceso ya acordado)**: ejecutar la checklist Vercel de `manual-test-plan.md` §3.2 antes de mergear a `main` (riesgo RD-1: el deploy de CI deriva el proyecto del nombre del directorio y fallará si `langopia-app` no existe).
+
+---
+
+## Actualización post-CONDITIONAL (commit b8db031)
+
+Las dos condiciones quedan cerradas:
+
+- **B-DOC**: creado `packages/ui/README.md` (uso, estructura, convenciones, ADRs). CA-6 cumplido.
+- **B-CI**: `.github/workflows/ci.yml` ejecuta ahora `npm run test --workspace @langopia/ui` y `npm run storybook:build --workspace @langopia/ui` como pasos del job `verificar`. ADR-004 cumplido.
+
+**Veredicto actualizado: APPROVED.** Único pendiente: checklist manual de Vercel (manual-test-plan.md §3.2) antes de mergear a `main`, de naturaleza operativa y documentada.
