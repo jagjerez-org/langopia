@@ -184,4 +184,64 @@ describe("Calendar", () => {
     const headers = screen.getAllByRole("columnheader");
     expect(headers[0]!.getAttribute("aria-label")).toBe("domingo");
   });
+
+  it("firstDayOfWeek fuera de rango se normaliza con módulo 7", () => {
+    renderCalendar({ firstDayOfWeek: 9 }); // 9 % 7 = 2 → martes
+
+    const headers = screen.getAllByRole("columnheader");
+    expect(headers[0]!.getAttribute("aria-label")).toBe("martes");
+  });
+
+  it("con fecha controlada, la vista día sigue a la fecha del padre", () => {
+    const { rerender } = render(<Calendar view="day" date={ANCHOR} events={EVENTS} />);
+
+    expect(screen.getByRole("heading", { name: fullDay.format(ANCHOR) })).toBeDefined();
+    expect(screen.getByText("Clase de conversación")).toBeDefined();
+
+    const nextDay = new Date(2026, 2, 13);
+    rerender(<Calendar view="day" date={nextDay} events={EVENTS} />);
+
+    expect(screen.getByRole("heading", { name: fullDay.format(nextDay) })).toBeDefined();
+    expect(screen.getByText("Repaso de vocabulario")).toBeDefined();
+    expect(screen.queryByText("Clase de conversación")).toBeNull();
+  });
+
+  it("navegar en vista día con fecha controlada no mueve la cabecera sin el padre", async () => {
+    const user = userEvent.setup();
+    const onDateChange = vi.fn();
+    render(<Calendar view="day" date={ANCHOR} onDateChange={onDateChange} />);
+
+    await user.click(screen.getByRole("button", { name: "Siguiente" }));
+
+    expect(onDateChange).toHaveBeenCalledTimes(1);
+    expect(onDateChange).toHaveBeenCalledWith(new Date(2026, 2, 13));
+    // La fecha es controlada: la cabecera no cambia sin que el padre la mueva.
+    expect(screen.getByRole("heading", { name: fullDay.format(ANCHOR) })).toBeDefined();
+  });
+
+  it("en vista semana las columnas sin eventos muestran el estado vacío", () => {
+    renderCalendar({ defaultView: "week", events: EVENTS });
+
+    // Semana del 9 al 15 de marzo: eventos el 12 y el 13 → 5 columnas vacías.
+    expect(screen.getAllByText("Sin eventos")).toHaveLength(5);
+  });
+
+  it("ignora eventos con fecha malformada y avisa en desarrollo", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      renderCalendar({
+        events: [
+          { id: "roto", date: "12/03/2026", title: "Evento roto" },
+          { id: "desbordado", date: "2026-02-31", title: "Otro evento roto" },
+        ],
+      });
+
+      // Ningún punto en el día 12: los eventos inválidos no se agrupan.
+      const day = screen.getByRole("button", { name: dayName(new Date(2026, 2, 12)) });
+      expect(day.querySelector("[aria-hidden]")).toBeNull();
+      expect(warn).toHaveBeenCalledTimes(2);
+    } finally {
+      warn.mockRestore();
+    }
+  });
 });

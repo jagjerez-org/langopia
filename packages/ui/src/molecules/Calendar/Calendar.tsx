@@ -30,7 +30,11 @@ export interface CalendarProps {
   view?: CalendarView;
   defaultView?: CalendarView;
   onViewChange?: (view: CalendarView) => void;
-  /** Fecha visible (ancla), controlada. Si no se pasa, `defaultDate`. */
+  /**
+   * Fecha visible (ancla), controlada. Si no se pasa, `defaultDate`.
+   * En vista día, el día mostrado es este anchor (modo controlado) o el día
+   * seleccionado internamente (modo no controlado).
+   */
   date?: Date;
   defaultDate?: Date;
   onDateChange?: (date: Date) => void;
@@ -41,7 +45,10 @@ export interface CalendarProps {
   isDateDisabled?: (date: Date) => boolean;
   /** Locale BCP-47 para `Intl.DateTimeFormat` (nombres de mes y días). */
   locale?: string;
-  /** Primer día de la semana: 0 = domingo … 6 = sábado. Por defecto lunes. */
+  /**
+   * Primer día de la semana: 0 = domingo … 6 = sábado. Por defecto lunes.
+   * Los valores fuera de rango se normalizan con módulo 7 (p. ej. 9 → 2).
+   */
   firstDayOfWeek?: number;
   previousLabel?: string;
   nextLabel?: string;
@@ -52,7 +59,7 @@ export interface CalendarProps {
   viewGroupLabel?: string;
   /** Nombres de los tipos de evento en los chips. */
   kindLabels?: CalendarKindLabels;
-  /** Texto cuando un día no tiene eventos (vistas día/semana). */
+  /** Texto cuando un día no tiene eventos (vistas día y semana). */
   emptyEventsLabel?: string;
   /** Nombre accesible del botón de cada mes en la vista año. */
   goToMonthLabel?: (monthName: string, year: number) => string;
@@ -91,14 +98,26 @@ function addMonths(date: Date, months: number): Date {
 /**
  * Normaliza la fecha de un evento. La cadena `YYYY-MM-DD` se parsea a mano:
  * `new Date("2026-03-12")` la interpreta en UTC y en zonas negativas cae en el
- * día anterior.
+ * día anterior. Devuelve `null` si la fecha no es válida (formato distinto o
+ * día inexistente, p. ej. "2026-02-31"): quien llama decide cómo ignorarla.
  */
-function parseEventDate(date: string | Date): Date {
+function parseEventDate(date: string | Date): Date | null {
   if (date instanceof Date) {
-    return startOfDay(date);
+    return Number.isNaN(date.getTime()) ? null : startOfDay(date);
   }
-  const [year, month, day] = date.split("-").map(Number);
-  return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) {
+    return null;
+  }
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(year, month - 1, day);
+  // `Date` desborda en silencio ("2026-02-31" → 3 de marzo): se rechaza.
+  if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+    return null;
+  }
+  return parsed;
 }
 
 /** Lunes (o el `firstDayOfWeek` pedido) de la semana que contiene `date`. */
@@ -210,6 +229,13 @@ export function Calendar({
   const [selected, setSelected] = useState<Date>(() =>
     startOfDay(dateProp ?? defaultDate ?? new Date()),
   );
+  const isControlled = dateProp !== undefined;
+  // En modo controlado la vista día sigue al anchor del padre; si no, a la
+  // selección interna. Sin esto, `selected` (que se inicializa una vez) dejaría
+  // la vista día obsoleta y la cabecera se movería sola al navegar.
+  const dayViewDate = isControlled ? anchor : selected;
+  // Normaliza a 0–6: los valores fuera de rango se envuelven (p. ej. 9 → 2).
+  const weekStartsOn = (((firstDayOfWeek % DAYS_PER_WEEK) + DAYS_PER_WEEK) % DAYS_PER_WEEK);
 
   const setView = (next: CalendarView): void => {
     if (viewProp === undefined) {
@@ -244,7 +270,18 @@ export function Calendar({
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const event of events) {
-      const key = dayKey(parseEventDate(event.date));
+      const parsed = parseEventDate(event.date);
+      // Fecha inválida: el evento se ignora y, en desarrollo, se avisa.
+      if (!parsed) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(
+            `Calendar: se ignora el evento "${event.id}"; su fecha no es una cadena YYYY-MM-DD ni un Date válido:`,
+            event.date,
+          );
+        }
+        continue;
+      }
+      const key = dayKey(parsed);
       const list = map.get(key);
       if (list) {
         list.push(event);
@@ -256,15 +293,15 @@ export function Calendar({
   }, [events]);
 
   const today = startOfDay(new Date());
-  const weekStart = startOfWeek(anchor, firstDayOfWeek);
+  const weekStart = startOfWeek(anchor, weekStartsOn);
   const weekDays = Array.from({ length: DAYS_PER_WEEK }, (_, i) => addDays(weekStart, i));
 
   // Celdas de la rejilla de mes: 42 días empezando en la semana del día 1.
   const monthDays = useMemo(() => {
     const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-    const start = startOfWeek(first, firstDayOfWeek);
+    const start = startOfWeek(first, weekStartsOn);
     return Array.from({ length: GRID_WEEKS * DAYS_PER_WEEK }, (_, i) => addDays(start, i));
-  }, [anchor, firstDayOfWeek]);
+  }, [anchor, weekStartsOn]);
 
   /** Paso temporal según la vista: 1 día, 1 semana, 1 mes o 1 año. */
   const shift = (from: Date, step: number): Date => {
@@ -282,10 +319,11 @@ export function Calendar({
 
   const navigate = (step: number): void => {
     // En vista día la fecha visible y la seleccionada son la misma.
-    const base = view === "day" ? selected : anchor;
+    const base = view === "day" ? dayViewDate : anchor;
     const next = shift(base, step);
     setAnchor(next);
-    if (view === "day") {
+    // En modo controlado el `selected` interno no gobierna la vista día.
+    if (view === "day" && !isControlled) {
       setSelected(next);
     }
   };
@@ -313,7 +351,7 @@ export function Calendar({
         ? formats.year.format(anchor)
         : view === "week"
           ? `${formats.dayMedium.format(weekStart)} – ${formats.dayMedium.format(addDays(weekStart, DAYS_PER_WEEK - 1))}`
-          : formats.dayFull.format(selected);
+          : formats.dayFull.format(dayViewDate);
 
   /** Eventos de un día, ordenados por hora (los sin hora primero). */
   const eventsOf = (day: Date): CalendarEvent[] =>
@@ -390,7 +428,9 @@ export function Calendar({
                 onSelect={handleSelect}
               />
             </div>
-            {dayEvents.length > 0 && (
+            {dayEvents.length === 0 ? (
+              <p className={emptyStyles}>{emptyEventsLabel}</p>
+            ) : (
               <ul className={eventListStyles}>{dayEvents.map(renderEventItem)}</ul>
             )}
           </section>
@@ -400,7 +440,7 @@ export function Calendar({
   );
 
   const renderDay = (): ReactElement => {
-    const dayEvents = eventsOf(selected);
+    const dayEvents = eventsOf(dayViewDate);
     return (
       <section role="group" aria-label={title} className="flex flex-col gap-2">
         {dayEvents.length === 0 ? (
@@ -418,7 +458,7 @@ export function Calendar({
         const first = new Date(anchor.getFullYear(), month, 1);
         const monthName = formats.monthLong.format(first);
         // Mini-rejilla decorativa: la navegación la da el botón del mes.
-        const start = startOfWeek(first, firstDayOfWeek);
+        const start = startOfWeek(first, weekStartsOn);
         const cells = Array.from({ length: GRID_WEEKS * DAYS_PER_WEEK }, (_, i) =>
           addDays(start, i),
         );
