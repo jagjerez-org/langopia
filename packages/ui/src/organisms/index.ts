@@ -14,6 +14,14 @@ export {
   type CheckoutSuccessProps,
 } from "./CheckoutSuccess/CheckoutSuccess.js";
 export {
+  ElearningPage,
+  type ElearningCourse,
+  type ElearningLesson,
+  type ElearningLessonAction,
+  type ElearningPageLabels,
+  type ElearningPageProps,
+} from "./ElearningPage/ElearningPage.js";
+export {
   ExerciseBuilder,
   EXERCISE_TYPES,
   type ExerciseBuilderLabels,
@@ -29,6 +37,14 @@ export {
   type KpiPageProps,
   type KpiRangeOption,
 } from "./KpiPage/KpiPage.js";
+export {
+  MediaLibraryPage,
+  type MediaFile,
+  type MediaFileAction,
+  type MediaLibraryPageLabels,
+  type MediaLibraryPageProps,
+  type MediaType,
+} from "./MediaLibraryPage/MediaLibraryPage.js";
 export {
   PaymentsPage,
   type PaymentAction,
