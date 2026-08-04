@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Card, EmptyState, ErrorState, Table, Tag } from "../../ui/index.js";
-import type { TableColumn } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Table, Chip } from "@langopia/ui";
+import type { TableColumn } from "@langopia/ui";
 import { useLocale, useT } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -19,7 +19,7 @@ import styles from "./AtRiskStudentsTable.module.css";
  * En la Escuela Atlántico del seed esta lista sale con 33 de 48 alumnos
  * activos (el criterio de riesgo, sin ponderar todavía, llega a la ola 3):
  * se pintan todas las filas que devuelva la API, sin recortar ni paginar
- * aquí — la tabla comparte contenedor con Card, así que crece con la
+ * aquí — la tabla comparte contenedor con Panel, así que crece con la
  * pantalla en vez de con un límite inventado en el cliente.
  *
  * Enlace con `<a>`, no con el `Link` tipado de TanStack Router: la ficha
@@ -68,10 +68,10 @@ export function AtRiskStudentsTable(): ReactElement {
       render: (row) => (
         <span className={styles.tags}>
           {row.reasons.includes("low_attendance") && (
-            <Tag variant="critical">{t("dashboard.atRisk.reasonLowAttendance")}</Tag>
+            <Chip variant="critical">{t("dashboard.atRisk.reasonLowAttendance")}</Chip>
           )}
           {row.reasons.includes("no_recent_evaluation") && (
-            <Tag variant="warning">{t("dashboard.atRisk.reasonNoRecentEvaluation")}</Tag>
+            <Chip variant="warning">{t("dashboard.atRisk.reasonNoRecentEvaluation")}</Chip>
           )}
         </span>
       ),
@@ -94,7 +94,7 @@ export function AtRiskStudentsTable(): ReactElement {
   ) : undefined;
 
   return (
-    <Card title={t("dashboard.atRisk.title")}>
+    <Panel title={t("dashboard.atRisk.title")}>
       <Table
         columns={columns}
         rows={query.data?.studentsRequiringAttention ?? []}
@@ -105,6 +105,6 @@ export function AtRiskStudentsTable(): ReactElement {
         error={errorNode}
         emptyState={<EmptyState title={t("dashboard.atRisk.emptyTitle")} />}
       />
-    </Card>
+    </Panel>
   );
 }

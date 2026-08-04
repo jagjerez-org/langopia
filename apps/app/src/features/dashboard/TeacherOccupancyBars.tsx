@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Card, EmptyState, ErrorState, Skeleton, Tag } from "../../ui/index.js";
-import type { TagVariant } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Skeleton, Chip } from "@langopia/ui";
+import type { ChipVariant } from "@langopia/ui";
 import { useLocale, useT } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -11,7 +11,7 @@ import { getTeacherOccupancy } from "./api.js";
 import type { TeacherOccupancyView } from "./api.js";
 import styles from "./TeacherOccupancyBars.module.css";
 
-const TAG_VARIANT_BY_SIGNAL: Record<TeacherOccupancyView["signal"], TagVariant> = {
+const TAG_VARIANT_BY_SIGNAL: Record<TeacherOccupancyView["signal"], ChipVariant> = {
   healthy: "success",
   overloaded: "critical",
   underused: "warning",
@@ -71,8 +71,8 @@ export function TeacherOccupancyBars(): ReactElement {
         <ul className={styles.list}>
           {[0, 1, 2].map((index) => (
             <li key={index} className={styles.row}>
-              <Skeleton variant="text" width="40%" />
-              <Skeleton variant="rect" height="0.5rem" />
+              <Skeleton variant="text" className="w-2/5" />
+              <Skeleton variant="rect" className="h-2" />
             </li>
           ))}
         </ul>
@@ -90,7 +90,7 @@ export function TeacherOccupancyBars(): ReactElement {
           <li key={row.teacherId} className={styles.row}>
             <div className={styles.rowHeader}>
               <span className={styles.name}>{row.teacherName}</span>
-              <Tag variant={TAG_VARIANT_BY_SIGNAL[row.signal]}>{signalLabel[row.signal]}</Tag>
+              <Chip variant={TAG_VARIANT_BY_SIGNAL[row.signal]}>{signalLabel[row.signal]}</Chip>
               <span className={styles.percent}>{formatPercent(row.occupancyRate, locale)}</span>
             </div>
             <div className={styles.track} aria-hidden="true">
@@ -113,5 +113,5 @@ export function TeacherOccupancyBars(): ReactElement {
     );
   })();
 
-  return <Card title={t("dashboard.occupancy.title")}>{body}</Card>;
+  return <Panel title={t("dashboard.occupancy.title")}>{body}</Panel>;
 }

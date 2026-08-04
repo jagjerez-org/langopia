@@ -1,6 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button, Card, ErrorState, Skeleton, Tag } from "../../ui/index.js";
+import { Button, Panel, ErrorState, Skeleton, Chip } from "@langopia/ui";
 import { useLocale, useT } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatMoney } from "../../i18n/format.js";
@@ -21,17 +21,17 @@ interface IndicatorProps {
 /** Una tarjeta. La cifra se pinta en cuanto llega, incluido un cero real: no hay "vacío" que fabricar aquí. */
 function Indicator({ label, hint, value, isLoading, pending }: IndicatorProps): ReactElement {
   return (
-    <Card>
+    <Panel>
       <p className={styles.label}>{label}</p>
       {isLoading ? (
-        <Skeleton variant="text" width="4rem" height="var(--ink-text-3xl)" />
+        <Skeleton variant="text" className="w-16 h-[var(--ink-text-3xl)]" />
       ) : pending !== undefined ? (
-        <Tag variant="neutral">{pending}</Tag>
+        <Chip variant="neutral">{pending}</Chip>
       ) : (
         <p className={styles.value}>{value}</p>
       )}
       {hint && !isLoading && <p className={styles.hint}>{hint}</p>}
-    </Card>
+    </Panel>
   );
 }
 

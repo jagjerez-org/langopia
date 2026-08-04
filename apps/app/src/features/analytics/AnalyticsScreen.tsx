@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Button, Card, EmptyState, ErrorState, Skeleton, Table, Tag } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Skeleton, Table, Chip } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatPercent } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
@@ -23,13 +23,13 @@ import type {
   TeacherProductivityView,
 } from "./api.js";
 
-const RISK_VARIANT: Record<StudentAtRiskView["level"], TagVariant> = {
+const RISK_VARIANT: Record<StudentAtRiskView["level"], ChipVariant> = {
   low: "neutral",
   medium: "warning",
   high: "critical",
 };
 
-const MCP_VARIANT: Record<McpAuthorizationView["status"], TagVariant> = {
+const MCP_VARIANT: Record<McpAuthorizationView["status"], ChipVariant> = {
   active: "success",
   expired: "warning",
   revoked: "neutral",
@@ -121,7 +121,7 @@ function SatisfactionSection({
     <section>
       <h2 className="text-xl font-semibold mb-3">{t("analytics.satisfaction.title")}</h2>
       <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-        <Card title={t("analytics.satisfaction.nps")}>
+        <Panel title={t("analytics.satisfaction.nps")}>
           {isLoading ? (
             <Skeleton variant="text" lines={2} />
           ) : (
@@ -137,8 +137,8 @@ function SatisfactionSection({
               </p>
             </>
           )}
-        </Card>
-        <Card title={t("analytics.satisfaction.csat")}>
+        </Panel>
+        <Panel title={t("analytics.satisfaction.csat")}>
           {isLoading ? (
             <Skeleton variant="text" lines={2} />
           ) : (
@@ -154,7 +154,7 @@ function SatisfactionSection({
               ))}
             </>
           )}
-        </Card>
+        </Panel>
       </div>
     </section>
   );
@@ -169,7 +169,7 @@ function RiskSection({ isLoading, rows }: { isLoading: boolean; rows: StudentAtR
       {
         key: "level",
         header: t("analytics.risk.columnLevel"),
-        render: (row) => <Tag variant={RISK_VARIANT[row.level]}>{t(`analytics.risk.level.${row.level}`)}</Tag>,
+        render: (row) => <Chip variant={RISK_VARIANT[row.level]}>{t(`analytics.risk.level.${row.level}`)}</Chip>,
       },
       {
         key: "score",
@@ -319,7 +319,7 @@ function McpSection({
       {
         key: "status",
         header: t("analytics.mcp.columnStatus"),
-        render: (row) => <Tag variant={MCP_VARIANT[row.status]}>{t(`analytics.mcp.status.${row.status}`)}</Tag>,
+        render: (row) => <Chip variant={MCP_VARIANT[row.status]}>{t(`analytics.mcp.status.${row.status}`)}</Chip>,
       },
       {
         key: "actions",

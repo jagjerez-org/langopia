@@ -1,15 +1,15 @@
 import { useMemo } from "react";
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, EmptyState, ErrorState, Skeleton, Table, Tag } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Panel, EmptyState, ErrorState, Skeleton, Table, Chip } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
 import { listLeads } from "./api.js";
 import type { LeadFunnelView, LeadStatus } from "./api.js";
 
-const STATUS_VARIANT: Record<LeadStatus, TagVariant> = {
+const STATUS_VARIANT: Record<LeadStatus, ChipVariant> = {
   new: "neutral",
   placement_sent: "warning",
   placement_done: "success",
@@ -40,7 +40,7 @@ export function LeadsFunnelScreen(): ReactElement {
       {
         key: "status",
         header: t("leads.columnStatus"),
-        render: (row) => <Tag variant={STATUS_VARIANT[row.status]}>{t(`leads.status.${row.status}`)}</Tag>,
+        render: (row) => <Chip variant={STATUS_VARIANT[row.status]}>{t(`leads.status.${row.status}`)}</Chip>,
       },
       {
         key: "level",
@@ -66,15 +66,15 @@ export function LeadsFunnelScreen(): ReactElement {
       <h1 className="text-2xl font-semibold mb-4">{t("leads.title")}</h1>
 
       <section className="grid gap-4 mb-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-        <Card title={t("leads.metricTotal")}>
+        <Panel title={t("leads.metricTotal")}>
           {query.isPending ? <Skeleton variant="text" lines={1} /> : <p className="text-2xl font-semibold">{t("leads.count", { count: metrics.total })}</p>}
-        </Card>
-        <Card title={t("leads.metricPlacementDone")}>
+        </Panel>
+        <Panel title={t("leads.metricPlacementDone")}>
           {query.isPending ? <Skeleton variant="text" lines={1} /> : <p className="text-2xl font-semibold">{t("leads.placementDoneCount", { count: metrics.placementDone })}</p>}
-        </Card>
-        <Card title={t("leads.metricCold")}>
+        </Panel>
+        <Panel title={t("leads.metricCold")}>
           {query.isPending ? <Skeleton variant="text" lines={1} /> : <p className="text-2xl font-semibold">{t("leads.coldCount", { count: metrics.cold })}</p>}
-        </Card>
+        </Panel>
       </section>
 
       {query.isPending && (
