@@ -133,4 +133,34 @@ describe("SiteBuilder", () => {
     await user.click(screen.getByRole("button", { name: "Publicar" }));
     expect(onPublish.mock.calls[0]![0]).toHaveLength(2);
   });
+
+  it("añadir con contenido inicial no genera ids duplicados y las acciones solo afectan al bloque correcto", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <SiteBuilder
+        availableBlocks={siteBuilderAvailableBlocks}
+        initialBlocks={siteBuilderInitialBlocks}
+        labels={siteBuilderLabels}
+        onChange={onChange}
+      />,
+    );
+
+    // Añade otra "Portada" (el inicial ya usa el id "hero-1").
+    await user.click(screen.getByText("Portada"));
+
+    const added = onChange.mock.calls.at(-1)![0];
+    expect(added).toHaveLength(3);
+    expect(new Set(added.map((block: { id: string }) => block.id)).size).toBe(3);
+
+    // Eliminar la nueva no toca la "Portada principal" inicial.
+    await user.click(screen.getByRole("button", { name: "Acciones de Portada" }));
+    await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
+
+    const remaining = onChange.mock.calls.at(-1)![0];
+    expect(remaining.map((block: { id: string }) => block.id)).toEqual(["hero-1", "text-1"]);
+    const canvas = within(screen.getByRole("region", { name: "Lienzo" }));
+    expect(canvas.getByText("Portada principal")).toBeDefined();
+  });
 });

@@ -80,7 +80,11 @@ export interface ExerciseBuilderLabels {
 export interface ExerciseBuilderProps {
   /** Opciones del selector de tipo, ya traducidas. */
   typeOptions: ExerciseTypeOption[];
-  /** Ejercicio inicial (modo edición). */
+  /**
+   * Ejercicio inicial (modo edición). Solo se lee en el montaje: el estado
+   * es interno y no controlado — cambiar esta prop después no actualiza el
+   * constructor.
+   */
   initialExercise?: ExerciseDefinition;
   /** Textos de la interfaz, ya traducidos. */
   labels: ExerciseBuilderLabels;
@@ -131,6 +135,8 @@ export function ExerciseBuilder({
   );
   const [questions, setQuestions] = useState<ExerciseQuestion[]>(initialExercise?.questions ?? []);
   const [editing, setEditing] = useState<EditingQuestion>(null);
+  // Contador para ids de preguntas nuevas; el prefijo "new-" evita colisiones
+  // con los ids de `initialExercise.questions`, que los asigna la app.
   const nextId = useRef(1);
 
   /** Aplica el cambio y notifica la definición resultante. */
@@ -144,7 +150,7 @@ export function ExerciseBuilder({
     const answer = String(values.answer ?? "");
     let next: ExerciseQuestion[];
     if (editing === "new") {
-      next = [...questions, { id: `q-${nextId.current}`, prompt, answer }];
+      next = [...questions, { id: `new-q-${nextId.current}`, prompt, answer }];
       nextId.current += 1;
     } else {
       next = questions.map((question) =>

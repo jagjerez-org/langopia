@@ -73,4 +73,21 @@ describe("ActionBar", () => {
     expect(link.getAttribute("href")).toBe("/alumnos/nuevo");
     expect(link.querySelector("svg")).not.toBeNull();
   });
+
+  it("una acción con type submit envía el formulario que la contiene", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn((event: { preventDefault: () => void }) => event.preventDefault());
+
+    render(
+      <form onSubmit={onSubmit}>
+        <ActionBar actions={[{ label: "Guardar", variant: "primary", type: "submit" }]} />
+      </form>,
+    );
+
+    const submit = screen.getByRole("button", { name: "Guardar" });
+    expect(submit.getAttribute("type")).toBe("submit");
+
+    await user.click(submit);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
 });

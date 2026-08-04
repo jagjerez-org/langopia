@@ -13,7 +13,12 @@ export interface SiteBuilderBlockDefinition {
   label: string;
   /** Descripción corta bajo el nombre (ya traducida). */
   description?: string;
-  /** Props iniciales de las instancias nuevas (pares clave/valor editables). */
+  /**
+   * Props iniciales de las instancias nuevas (pares clave/valor editables).
+   * Define también QUÉ claves son editables: el panel lateral solo muestra
+   * campos para las claves ya presentes en el bloque — no se pueden añadir
+   * claves nuevas desde la interfaz.
+   */
   defaultProps?: Record<string, string>;
 }
 
@@ -59,7 +64,11 @@ export interface SiteBuilderLabels {
 export interface SiteBuilderProps {
   /** Catálogo de bloques disponibles (datos, no componentes). */
   availableBlocks: SiteBuilderBlockDefinition[];
-  /** Bloques iniciales del lienzo (modo edición). */
+  /**
+   * Bloques iniciales del lienzo (modo edición). Solo se leen en el montaje:
+   * el estado es interno y no controlado — cambiar esta prop después no
+   * actualiza el lienzo.
+   */
   initialBlocks?: SiteBuilderBlock[];
   /** Textos de la interfaz, ya traducidos. */
   labels: SiteBuilderLabels;
@@ -110,6 +119,8 @@ export function SiteBuilder({
   const [blocks, setBlocks] = useState<SiteBuilderBlock[]>(initialBlocks);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Contador para ids estables de las instancias nuevas durante la sesión.
+  // El prefijo "new-" evita colisiones con los ids de `initialBlocks`, que
+  // los asigna la app y pueden tener cualquier formato (p. ej. "hero-1").
   const nextId = useRef(1);
 
   /** Aplica el cambio de estado y notifica la lista resultante. */
@@ -120,7 +131,7 @@ export function SiteBuilder({
 
   const addBlock = (definition: SiteBuilderBlockDefinition) => {
     const block: SiteBuilderBlock = {
-      id: `${definition.type}-${nextId.current}`,
+      id: `new-${definition.type}-${nextId.current}`,
       type: definition.type,
       label: definition.label,
       props: { ...definition.defaultProps },

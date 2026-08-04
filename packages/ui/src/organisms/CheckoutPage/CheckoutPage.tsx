@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ReactElement, ReactNode } from "react";
+import type { FormEvent, ReactElement, ReactNode } from "react";
 import { Input } from "../../atoms/Input/Input.js";
 import { Selector } from "../../atoms/Selector/Selector.js";
 import { Textarea } from "../../atoms/Textarea/Textarea.js";
@@ -52,7 +52,10 @@ export interface CheckoutPageProps {
    * envío real los hace la app al conectar el pago).
    */
   billingFields: CrudField[];
-  /** Valores iniciales de facturación por nombre de campo. */
+  /**
+   * Valores iniciales de facturación por nombre de campo. Solo se leen en el
+   * montaje: el estado es interno y no controlado.
+   */
   billingDefaultValues?: CheckoutBillingValues;
   /**
    * Slot para el método de pago: aquí la app monta Stripe Elements u otro
@@ -96,6 +99,11 @@ const billingGridStyles = "grid grid-cols-1 gap-3 sm:grid-cols-2";
  * para que la app monte el proveedor — sin integración Stripe en el paquete),
  * datos de facturación y barra de acciones con confirmar/cancelar.
  *
+ * Todo va dentro de un `<form noValidate>`: confirmar es un botón submit y
+ * Enter desde un campo también envía. Se usa `noValidate` a propósito (patrón
+ * de las moléculas de formulario del paquete): la validación de verdad la
+ * hace la app al conectar el pago — `required` es solo indicación visual.
+ *
  * `onSubmit` recibe solo los datos de facturación (no sensibles). Los estados
  * `isProcessing` y `error` se controlan por props.
  */
@@ -124,8 +132,13 @@ export function CheckoutPage({
     setBillingValues((current) => ({ ...current, [name]: value }));
   };
 
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!isProcessing) onSubmit(billingValues);
+  };
+
   return (
-    <div className={wrapperStyles}>
+    <form noValidate onSubmit={handleSubmit} className={wrapperStyles}>
       <h1 className={titleStyles}>{labels.title}</h1>
       {error && (
         <p role="alert" className={errorStyles}>
@@ -217,11 +230,11 @@ export function CheckoutPage({
           {
             label: labels.submitLabel,
             variant: "primary" as const,
+            type: "submit" as const,
             isLoading: isProcessing,
-            onClick: () => onSubmit(billingValues),
           },
         ]}
       />
-    </div>
+    </form>
   );
 }

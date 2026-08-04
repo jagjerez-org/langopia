@@ -133,6 +133,37 @@ describe("ExerciseBuilder", () => {
     expect(onSave.mock.calls[0]![0]).toEqual(exerciseInitial);
   });
 
+  it("añadir con contenido inicial no genera ids duplicados y las acciones solo afectan a la pregunta correcta", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(
+      <ExerciseBuilder
+        typeOptions={exerciseTypeOptions}
+        initialExercise={exerciseInitial}
+        labels={exerciseBuilderLabels}
+        onChange={onChange}
+      />,
+    );
+
+    // Añade una pregunta (las iniciales ya usan los ids "q-1" y "q-2").
+    await user.click(screen.getByRole("button", { name: "Añadir pregunta" }));
+    await user.type(screen.getByRole("textbox", { name: "Pregunta" }), "¿Nueva pregunta?");
+    await user.type(screen.getByRole("textbox", { name: "Respuesta" }), "Sí");
+    await user.click(screen.getByRole("button", { name: "Guardar pregunta" }));
+
+    const added = onChange.mock.calls.at(-1)![0].questions;
+    expect(added).toHaveLength(3);
+    expect(new Set(added.map((question: { id: string }) => question.id)).size).toBe(3);
+
+    // Eliminar la nueva no toca las preguntas iniciales.
+    await user.click(screen.getByRole("button", { name: "Acciones de ¿Nueva pregunta?" }));
+    await user.click(screen.getByRole("menuitem", { name: "Eliminar" }));
+
+    const remaining = onChange.mock.calls.at(-1)![0].questions;
+    expect(remaining.map((question: { id: string }) => question.id)).toEqual(["q-1", "q-2"]);
+  });
+
   it("la vista previa muestra el título y las preguntas como las vería el alumno", () => {
     render(
       <ExerciseBuilder

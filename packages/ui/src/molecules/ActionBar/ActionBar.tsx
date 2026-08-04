@@ -8,6 +8,11 @@ export interface ActionBarAction {
   label: string;
   /** Acción de botón (formulario/comando). Excluyente con `href`. */
   onClick?: () => void;
+  /**
+   * Tipo del botón: por defecto "button". Con "submit" (dentro de un
+   * `<form>`) el botón envía el formulario y Enter funciona desde los campos.
+   */
+  type?: "submit";
   /** Acción de navegación: se renderiza como enlace con aspecto de botón. */
   href?: string;
   /** Énfasis visual; por defecto `secondary` (el primario lo decide quien llama). */
@@ -63,7 +68,7 @@ export function ActionBar({ actions, title, sticky = false }: ActionBarProps): R
         ) : (
           <Button
             key={action.label}
-            type="button"
+            type={action.type ?? "button"}
             variant={action.variant ?? "secondary"}
             leadingIcon={action.icon}
             disabled={action.disabled}
