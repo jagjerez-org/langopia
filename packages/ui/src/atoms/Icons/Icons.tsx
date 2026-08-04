@@ -108,6 +108,21 @@ export function IconChevronDown(props: IconProps): ReactElement {
   );
 }
 
+/** Adelante / detalle — cheurón hacia la derecha. Accesorio de `ItemList`. */
+export function IconChevronRight(props: IconProps): ReactElement {
+  return (
+    <svg {...base(props)}>
+      <path
+        d="M7.5 5l5 5-5 5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Cerrar / quitar — aspa. Botón de quitar del `Chip` eliminable. */
 export function IconClose(props: IconProps): ReactElement {
   return (
@@ -117,6 +132,37 @@ export function IconClose(props: IconProps): ReactElement {
         stroke="currentColor"
         strokeWidth="1.6"
         strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+/** Más acciones — tres puntos verticales (⋮). Disparador de `TreeDots`. */
+export function IconDotsVertical(props: IconProps): ReactElement {
+  return (
+    <svg {...base(props)}>
+      <circle cx="10" cy="4.5" r="1.4" fill="currentColor" />
+      <circle cx="10" cy="10" r="1.4" fill="currentColor" />
+      <circle cx="10" cy="15.5" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
+/** Bandeja vacía — icono por defecto de estados vacíos. */
+export function IconInbox(props: IconProps): ReactElement {
+  return (
+    <svg {...base(props)}>
+      <path
+        d="M3 11.5l2.1-6.3A1.5 1.5 0 0 1 6.5 4h7a1.5 1.5 0 0 1 1.4 1.2l2.1 6.3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3 11.5h4.2l.9 1.8h3.8l.9-1.8H17v3a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5v-3Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
       />
     </svg>
   );
