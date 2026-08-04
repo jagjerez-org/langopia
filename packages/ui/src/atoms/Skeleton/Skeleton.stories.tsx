@@ -18,6 +18,10 @@ const meta: Meta<typeof Skeleton> = {
       options: [undefined, "xs", "sm", "md", "lg", "xl"] satisfies (SkeletonHeight | undefined)[],
       description: "Altura predefinida (solo variante rect)",
     },
+    className: {
+      control: "text",
+      description: "Dimensiones del placeholder como utilidades Tailwind (sustituye al ancho por defecto)",
+    },
   },
   args: {
     variant: "text",
@@ -49,6 +53,17 @@ export const AlturasRectangulo: Story = {
       {(["xs", "sm", "md", "lg", "xl"] as const).map((height) => (
         <Skeleton key={height} variant="rect" height={height} />
       ))}
+    </div>
+  ),
+};
+
+/** Casos reales de la app: la barra de ocupación del dashboard y la cifra grande de un indicador. */
+export const MedidasPropias: Story = {
+  render: () => (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+      <Skeleton variant="text" className="w-2/5" />
+      <Skeleton variant="rect" className="h-2" />
+      <Skeleton variant="text" className="h-[var(--ink-text-3xl)] w-16" />
     </div>
   ),
 };
