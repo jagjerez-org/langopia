@@ -16,19 +16,19 @@ export function list(root: string): void {
 
   const rows = names.map((name) => {
     const offset = portsReg[name] ?? 0;
-    const ports = name === 'main' ? { web: 5173, api: 3000, sites: 4321 } : getPorts(name, offset);
+    const ports = name === 'main' ? { app: 5173, api: 3000, sites: 4321 } : getPorts(name, offset);
     const db = dbReg[name] ?? 'shared';
     return { name, branch: name, ports, db };
   });
 
   const maxName = Math.max(...rows.map((r) => r.name.length), 4);
   console.log('');
-  console.log(`  ${'NAME'.padEnd(maxName + 2)}BRANCH  WEB    API    SITES  DB`);
+  console.log(`  ${'NAME'.padEnd(maxName + 2)}BRANCH  APP    API    SITES  DB`);
   console.log('  ' + '─'.repeat(maxName + 38));
   for (const row of rows) {
     console.log(
       `  ${row.name.padEnd(maxName + 2)}${row.branch.padEnd(7)}` +
-        `${String(row.ports.web).padEnd(7)}${String(row.ports.api).padEnd(7)}${String(row.ports.sites).padEnd(7)}${row.db}`,
+        `${String(row.ports.app).padEnd(7)}${String(row.ports.api).padEnd(7)}${String(row.ports.sites).padEnd(7)}${row.db}`,
     );
   }
   console.log('');

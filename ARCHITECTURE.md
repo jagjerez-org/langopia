@@ -9,7 +9,7 @@ existe.
 | Ruta | Qué es |
 |---|---|
 | `apps/api` | API NestJS. **Toda la lógica de negocio está aquí y solo aquí** |
-| `apps/web` | Panel, aula y portal. SPA con Vite + React. Consume la API y pinta |
+| `apps/app` | Panel, aula y portal. SPA con Vite + React. Consume la API y pinta |
 | `apps/sites` | Webs públicas de las escuelas. Astro con SSR multidominio (ola 4) |
 | `packages/db` | Esquema, políticas de aislamiento y seed |
 | `packages/contracts` | Tipos de la API, compartidos entre backend y frontend |
@@ -336,7 +336,7 @@ un sitio:
 
 | Nivel | Dónde vive | Ejemplo |
 |---|---|---|
-| Interfaz | Ficheros de traducción en `apps/web/src/i18n/` | «Guardar», «Alumnado» |
+| Interfaz | Ficheros de traducción en `apps/app/src/i18n/` | «Guardar», «Alumnado» |
 | Mensajes de la API | Catálogo del backend, por `code` | «El profesor ya tiene otra clase…» |
 | Datos de la escuela | Tablas `*_translations` en la base de datos | Nombre de un curso |
 

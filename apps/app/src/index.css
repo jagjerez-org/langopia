@@ -1,0 +1,27 @@
+@import "tailwindcss";
+@import "@langopia/ui/theme.css";
+@source "../../../packages/ui/src";
+
+/*
+ * Reset mínimo. Los tokens de diseño (`@langopia/ui/theme.css`)
+ * fijan el `color-scheme` real por tema; este fichero solo pone la base
+ * tipográfica y de caja sobre esos tokens.
+ */
+body {
+  margin: 0;
+  min-height: 100svh;
+  font-family: var(--font-sans);
+  font-size: var(--ink-text-base);
+  line-height: var(--ink-leading-base);
+  color: var(--ink-text-primary);
+  background: var(--ink-bg-canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Anillo de foco consistente para cualquier elemento que no reciba ya el
+   suyo propio del sistema de diseño: nunca "sin foco visible" por descuido. */
+:focus-visible {
+  outline: 2px solid var(--ink-focus-ring);
+  outline-offset: 2px;
+}

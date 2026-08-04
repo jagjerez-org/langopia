@@ -23,7 +23,7 @@ que suben a la raíz para compilar los paquetes workspace.
     `GET /api/v1/cron/*`, protegidas por `CronSecretGuard` con `CRON_SECRET`
     (Vercel firma sus llamadas con ese bearer). Los horarios están
     declarados en `apps/api/vercel.json` (`crons`).
-- **Panel (`langopia-web`, `apps/web`)**: SPA estática de Vite. Su
+- **Panel (`langopia-app`, `apps/app`)**: SPA estática de Vite. Su
   `vercel.json` reescribe `/api/*` hacia el despliegue de la API (mismo
   origen de cara al navegador: cookies sin CORS) y el resto a `index.html`.
 - **Sites (`langopia-sites`, `apps/sites`)**: Astro SSR con
@@ -91,9 +91,9 @@ debe dejar de mandarle tráfico a esta instancia.
 
 ## Primer despliegue
 
-1. Crear los tres proyectos en Vercel (`langopia-api`, `langopia-web`,
+1. Crear los tres proyectos en Vercel (`langopia-api`, `langopia-app`,
    `langopia-sites`), cada uno con su *Root Directory* (`apps/api`,
-   `apps/web`, `apps/sites`).
+   `apps/app`, `apps/sites`).
 2. Crear el Postgres (Neon) desde Storage en el dashboard de Vercel y
    conectarlo al proyecto `langopia-api`.
 3. Fijar las variables de entorno de la tabla de arriba en cada proyecto.

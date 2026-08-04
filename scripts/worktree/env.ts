@@ -11,7 +11,7 @@ export function buildWorktreeEnv(
   rootEnv: string,
   worktreeName: string,
   dbName: string,
-  ports: { web: number; api: number; sites: number },
+  ports: { app: number; api: number; sites: number },
 ): string {
   // Parse root DATABASE_URL to build isolated URL
   const dbMatch = rootEnv.match(/^DATABASE_URL=(.+)$/m);
@@ -26,7 +26,7 @@ export function buildWorktreeEnv(
   env = rewriteEnvLine(env, 'DATABASE_URL', isolatedUrl);
   env = rewriteEnvLine(env, 'DATABASE_URL_APP', appUrl);
   env = rewriteEnvLine(env, 'BETTER_AUTH_URL', `http://localhost:${ports.api}/api/v1/auth`);
-  env = rewriteEnvLine(env, 'BETTER_AUTH_TRUSTED_ORIGINS', `http://localhost:${ports.web}`);
+  env = rewriteEnvLine(env, 'BETTER_AUTH_TRUSTED_ORIGINS', `http://localhost:${ports.app}`);
   env = rewriteEnvLine(env, 'API_URL', `http://localhost:${ports.api}`);
   return env;
 }

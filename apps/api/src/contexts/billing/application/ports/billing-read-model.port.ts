@@ -12,7 +12,7 @@
  * un céntimo de la aritmética que ya vive en `Invoice`/`Money`/`PlatformFee`.
  *
  * Los tipos que devuelve viven en `@langopia/contracts` (Tarea 2 del panel):
- * la misma forma que consume `apps/web`.
+ * la misma forma que consume `apps/app`.
  */
 
 export type {

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd ../.. && test -d node_modules/.bin || npm ci",
+  "buildCommand": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/app",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://api.langopia.com/api/:path*" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ],
+  "ignoreCommand": "echo 'Deployment handled by GitHub Actions CI' && exit 0"
+}

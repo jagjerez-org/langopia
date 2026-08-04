@@ -58,7 +58,7 @@ export async function createApp(): Promise<NestExpressApplication> {
     }),
   );
 
-  // El panel (`apps/web`) es una SPA servida desde otro origen (otro puerto en
+  // El panel (`apps/app`) es una SPA servida desde otro origen (otro puerto en
   // desarrollo, otro dominio en producción): el navegador exige CORS además de
   // que Better Auth valide `Origin`. Misma lista de orígenes de confianza que
   // usa Better Auth, para no mantener dos listas que puedan divergir.
