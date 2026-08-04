@@ -2,7 +2,7 @@ import { useCallback, useId, useRef, useState } from "react";
 import type { DragEvent, ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Button, Card, Tag, useToast } from "../../../ui/index.js";
+import { Button, Panel, Chip, useToast } from "@langopia/ui";
 import { useErrorMessage } from "../../../i18n/errors.js";
 import { useLocale, useT } from "../../../i18n/translate.js";
 import { ApiError } from "../../../lib/api-client.js";
@@ -121,7 +121,7 @@ export function UploadMaterialScreen(): ReactElement {
         </p>
       </header>
 
-      <Card title={t("content.upload.dropzoneTitle")}>
+      <Panel title={t("content.upload.dropzoneTitle")}>
         <button
           type="button"
           id={dropzoneId}
@@ -157,7 +157,7 @@ export function UploadMaterialScreen(): ReactElement {
         />
         <p>{t("content.upload.acceptedFormats", { formats: MATERIAL_FORMATS.join(", ").toUpperCase() })}</p>
         <p>{t("content.upload.noCreditsHint")}</p>
-      </Card>
+      </Panel>
 
       {items.length === 0 ? (
         <p role="status">{t("content.upload.emptyQueue")}</p>
@@ -165,7 +165,7 @@ export function UploadMaterialScreen(): ReactElement {
         <ul className="flex flex-col gap-3">
           {items.map((item) => (
             <li key={item.key}>
-              <Card title={item.filename}>
+              <Panel title={item.filename}>
                 <p>{formatBytes(item.bytes, locale)}</p>
 
                 {item.status === "uploading" && (
@@ -183,7 +183,7 @@ export function UploadMaterialScreen(): ReactElement {
                 {item.status === "done" && item.result && (
                   <MaterialResult result={item.result} unavailableTypes={unavailableTypes} />
                 )}
-              </Card>
+              </Panel>
             </li>
           ))}
         </ul>
@@ -273,10 +273,10 @@ function MaterialResult({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-2 items-center">
-        <Tag variant="success">{t("content.upload.uploaded")}</Tag>
-        <Tag variant={result.indexed ? "success" : "neutral"}>
+        <Chip variant="success">{t("content.upload.uploaded")}</Chip>
+        <Chip variant={result.indexed ? "success" : "neutral"}>
           {result.indexed ? t("content.upload.indexed") : t("content.upload.notIndexed")}
-        </Tag>
+        </Chip>
       </div>
 
       {!result.indexed && <p>{t("content.upload.notIndexedHint")}</p>}

@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Button, EmptyState, ErrorState, Select, Table, Tag } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Selector, Table, Chip } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatDate } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
@@ -14,7 +14,7 @@ import { getSchoolTimezone, listUnits } from "./api.js";
 import { CONTENT_STATUSES } from "./types.js";
 import type { ContentUnitListItem } from "./types.js";
 
-const STATUS_VARIANT: Record<string, TagVariant> = {
+const STATUS_VARIANT: Record<string, ChipVariant> = {
   draft: "neutral",
   in_review: "warning",
   published: "success",
@@ -84,7 +84,7 @@ export function ContentUnitsListScreen(): ReactElement {
         key: "status",
         header: t("content.list.columnStatus"),
         render: (row) => (
-          <Tag variant={STATUS_VARIANT[row.status] ?? "neutral"}>{t(`content.status.${row.status}`)}</Tag>
+          <Chip variant={STATUS_VARIANT[row.status] ?? "neutral"}>{t(`content.status.${row.status}`)}</Chip>
         ),
       },
       {
@@ -120,7 +120,7 @@ export function ContentUnitsListScreen(): ReactElement {
       </div>
 
       <div className="flex flex-wrap items-end gap-4 mb-4">
-        <Select
+        <Selector
           label={t("content.list.statusLabel")}
           value={status}
           onChange={(event) => setStatus(event.target.value)}

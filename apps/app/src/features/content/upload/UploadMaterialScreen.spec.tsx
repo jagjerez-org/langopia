@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../../lib/api-client.js";
-import { ToastProvider } from "../../../ui/index.js";
+import { ToastProvider } from "@langopia/ui";
 import { createTestRouter } from "../test-router.testsupport.js";
 import type { UploadMaterialResult } from "./types.js";
 

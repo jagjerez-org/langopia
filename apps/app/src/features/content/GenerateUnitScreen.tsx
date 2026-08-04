@@ -3,7 +3,7 @@ import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Button, Card, Input, Select } from "../../ui/index.js";
+import { Button, Panel, Input, Selector } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatRelative } from "../../i18n/format.js";
 import { SUPPORTED_LOCALES } from "../../i18n/locale.js";
@@ -181,14 +181,14 @@ export function GenerateUnitScreen(): ReactElement {
   if (isSubmitting) {
     return (
       <main className="p-6" aria-busy="true">
-        <Card title={t("content.form.progressTitle")}>
+        <Panel title={t("content.form.progressTitle")}>
           <p role="status">{t("content.form.progressDescription")}</p>
           <p>{t("content.form.progressElapsed", { elapsed: formatElapsed(elapsedSeconds) })}</p>
           <p role="alert">{t("content.form.leaveWarning")}</p>
           <Button type="button" isLoading disabled>
             {t("content.form.submitting")}
           </Button>
-        </Card>
+        </Panel>
       </main>
     );
   }
@@ -202,7 +202,7 @@ export function GenerateUnitScreen(): ReactElement {
       <p>{t("content.form.subtitle")}</p>
 
       {pending && (
-        <Card title={t("content.form.pendingBannerTitle")}>
+        <Panel title={t("content.form.pendingBannerTitle")}>
           <p role="status">
             {t("content.form.pendingBannerDescription", {
               code: pending.code,
@@ -221,10 +221,10 @@ export function GenerateUnitScreen(): ReactElement {
               {t("content.form.pendingBannerDismiss")}
             </Button>
           </div>
-        </Card>
+        </Panel>
       )}
 
-      <Card title={t("content.form.creditsTitle")}>
+      <Panel title={t("content.form.creditsTitle")}>
         {estimateQuery.isPending && <p role="status">{t("common.loading")}</p>}
         {estimateQuery.isError && (
           <p role="alert">
@@ -247,7 +247,7 @@ export function GenerateUnitScreen(): ReactElement {
             <p>{t("content.form.rejectedDescription")}</p>
           </div>
         )}
-      </Card>
+      </Panel>
 
       <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4">
         <Input
@@ -263,7 +263,7 @@ export function GenerateUnitScreen(): ReactElement {
           error={errors.language?.message}
           {...register("language", { required: t("content.form.languageRequired") })}
         />
-        <Select
+        <Selector
           label={t("content.form.levelLabel")}
           options={CEFR_LEVELS.map((value) => ({ value, label: value }))}
           {...register("level")}
@@ -292,7 +292,7 @@ export function GenerateUnitScreen(): ReactElement {
           {skillsError && <p role="alert">{skillsError}</p>}
         </fieldset>
 
-        <Select
+        <Selector
           label={t("content.form.primaryLocaleLabel")}
           options={SUPPORTED_LOCALES.map((code) => ({
             value: code,

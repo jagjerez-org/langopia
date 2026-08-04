@@ -2,8 +2,8 @@ import { useId, useState } from "react";
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import { Button, Card, EmptyState, ErrorState, Skeleton, Tag, useToast } from "../../ui/index.js";
-import type { TagVariant } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Skeleton, Chip, useToast } from "@langopia/ui";
+import type { ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatDate } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
@@ -11,7 +11,7 @@ import { ApiError } from "../../lib/api-client.js";
 import { getSchoolTimezone, getUnitDetail, listPublishTargets, publishUnit, updateExercise } from "./api.js";
 import type { ContentUnitExerciseView } from "./types.js";
 
-const STATUS_VARIANT: Record<string, TagVariant> = {
+const STATUS_VARIANT: Record<string, ChipVariant> = {
   draft: "neutral",
   in_review: "warning",
   published: "success",
@@ -89,12 +89,12 @@ function ExerciseCard({ contentUnitId, exercise, onSaved }: ExerciseCardProps): 
   };
 
   return (
-    <Card title={t("content.review.exercisePosition", { position: exercise.position })}>
+    <Panel title={t("content.review.exercisePosition", { position: exercise.position })}>
       <div className="flex flex-wrap gap-2 items-center">
-        <Tag variant="neutral">{t(`content.exerciseType.${exercise.type}`)}</Tag>
-        {exercise.skill && <Tag variant="neutral">{t(`content.skill.${exercise.skill}`)}</Tag>}
+        <Chip variant="neutral">{t(`content.exerciseType.${exercise.type}`)}</Chip>
+        {exercise.skill && <Chip variant="neutral">{t(`content.skill.${exercise.skill}`)}</Chip>}
         {exercise.requiresTeacherValidation && (
-          <Tag variant="warning">{t("content.review.requiresValidationTag")}</Tag>
+          <Chip variant="warning">{t("content.review.requiresValidationTag")}</Chip>
         )}
       </div>
 
@@ -141,7 +141,7 @@ function ExerciseCard({ contentUnitId, exercise, onSaved }: ExerciseCardProps): 
           </div>
         </div>
       )}
-    </Card>
+    </Panel>
   );
 }
 
@@ -189,7 +189,7 @@ export function ReviewUnitScreen(): ReactElement {
     return (
       <main className="p-6" aria-busy="true">
         <p role="status">{t("common.loading")}</p>
-        <Skeleton variant="rect" height="20rem" />
+        <Skeleton variant="rect" height="lg" />
       </main>
     );
   }
@@ -260,12 +260,12 @@ export function ReviewUnitScreen(): ReactElement {
 
       <div className="flex items-center justify-between gap-4 mb-4">
         <h1 className="text-2xl font-semibold">{unit.title}</h1>
-        <Tag variant={STATUS_VARIANT[unit.status] ?? "neutral"}>{t(`content.status.${unit.status}`)}</Tag>
+        <Chip variant={STATUS_VARIANT[unit.status] ?? "neutral"}>{t(`content.status.${unit.status}`)}</Chip>
       </div>
 
       {unit.status === "in_review" && <p role="note">{t("content.review.aiProposesNotice")}</p>}
 
-      <Card title={unit.code}>
+      <Panel title={unit.code}>
         <dl className="grid grid-cols-2 gap-2">
           <dt>{t("content.review.metaTopic")}</dt>
           <dd>{unit.topic}</dd>
@@ -280,27 +280,27 @@ export function ReviewUnitScreen(): ReactElement {
         {unit.publishedAt && (
           <p>{t("content.review.publishedMeta", { date: formatInstant(unit.publishedAt) })}</p>
         )}
-      </Card>
+      </Panel>
 
-      <Card title={t("content.review.descriptionTitle")}>
+      <Panel title={t("content.review.descriptionTitle")}>
         <p>{unit.description}</p>
-      </Card>
+      </Panel>
 
-      <Card title={t("content.review.bodyTitle")}>
+      <Panel title={t("content.review.bodyTitle")}>
         <pre>{unit.body}</pre>
-      </Card>
+      </Panel>
 
       {unit.assets && unit.assets.length > 0 && (
-        <Card title={t("content.review.resourcesTitle")}>
+        <Panel title={t("content.review.resourcesTitle")}>
           <ul className="flex flex-col gap-2">
             {unit.assets.map((asset) => (
               <li key={asset.assetId} className="flex flex-col gap-1">
                 <div className="flex flex-wrap gap-2 items-center">
-                  <Tag variant={asset.isBeta ? "warning" : "neutral"}>
+                  <Chip variant={asset.isBeta ? "warning" : "neutral"}>
                     {asset.kind === "video" && asset.isBeta
                       ? t("content.review.videoBetaTitle")
                       : asset.mimeType}
-                  </Tag>
+                  </Chip>
                 </div>
                 {asset.isBeta && (
                   <p role="note">{asset.betaNotice ?? t("content.review.betaNoticeDefault")}</p>
@@ -308,7 +308,7 @@ export function ReviewUnitScreen(): ReactElement {
               </li>
             ))}
           </ul>
-        </Card>
+        </Panel>
       )}
 
       <h2>{t("content.review.exercisesTitle")}</h2>
@@ -325,7 +325,7 @@ export function ReviewUnitScreen(): ReactElement {
         ))
       )}
 
-      <Card title={t("content.review.publishTitle")}>
+      <Panel title={t("content.review.publishTitle")}>
         <p>{t("content.review.publishDescription")}</p>
 
         {targetsQuery.isPending && <p role="status">{t("common.loading")}</p>}
@@ -361,7 +361,7 @@ export function ReviewUnitScreen(): ReactElement {
         <Button type="button" isLoading={publishing} onClick={() => void publish()}>
           {publishing ? t("content.review.publishing") : t("content.review.publish")}
         </Button>
-      </Card>
+      </Panel>
     </main>
   );
 }
