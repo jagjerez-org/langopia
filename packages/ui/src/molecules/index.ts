@@ -4,6 +4,7 @@
 export { ActionBar, type ActionBarAction, type ActionBarProps } from "./ActionBar/ActionBar.js";
 export { BottomPage, type BottomPageItem, type BottomPageProps } from "./BottomPage/BottomPage.js";
 export { Breadcrumb, type BreadcrumbItem, type BreadcrumbProps } from "./Breadcrumb/Breadcrumb.js";
+export { Calendar, type CalendarEvent, type CalendarEventKind, type CalendarKindLabels, type CalendarProps, type CalendarView, type CalendarViewLabels } from "./Calendar/Calendar.js";
 export { Card, type CardAction, type CardImage, type CardOrientation, type CardProps, type CardTag } from "./Card/Card.js";
 export { CrudForm, type CrudField, type CrudFieldType, type CrudFormProps, type CrudFormValues } from "./CrudForm/CrudForm.js";
 export { KpiChart, type KpiChartProps, type KpiTrend } from "./KpiChart/KpiChart.js";
