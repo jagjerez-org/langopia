@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Button, Card, EmptyState, ErrorState, Input, Select, Skeleton, Tag } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Input, Selector, Skeleton, Chip } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -102,9 +102,9 @@ export function SiteEditorScreen(): ReactElement {
       <div className={styles.toolbar}>
         <div>
           <h1 className="text-2xl font-semibold mb-2">{t("sites.editor.title")}</h1>
-          <Tag variant={site.site.status === "published" ? "success" : "warning"}>
+          <Chip variant={site.site.status === "published" ? "success" : "warning"}>
             {t(`sites.editor.status.${site.site.status}`)}
-          </Tag>
+          </Chip>
         </div>
         <div className={styles.actions}>
           <Button
@@ -125,7 +125,7 @@ export function SiteEditorScreen(): ReactElement {
       </div>
 
       <div className={styles.toolbar}>
-        <Select
+        <Selector
           id="site-editor-locale"
           label={t("sites.editor.localeLabel")}
           value={locale}
@@ -135,7 +135,7 @@ export function SiteEditorScreen(): ReactElement {
           }}
           options={site.locales.map((value) => ({ value, label: value }))}
         />
-        <Select
+        <Selector
           id="site-editor-page"
           label={t("sites.editor.pageLabel")}
           value={page.id}
@@ -164,9 +164,9 @@ export function SiteEditorScreen(): ReactElement {
           />
         </section>
         <aside className={styles.previewColumn}>
-          <Card title={t("sites.editor.previewTitle")}>
+          <Panel title={t("sites.editor.previewTitle")}>
             <iframe title={t("sites.editor.previewTitle")} src={site.site.previewUrl} className={styles.preview} />
-          </Card>
+          </Panel>
         </aside>
       </div>
     </main>
@@ -192,10 +192,10 @@ function BlockEditor(props: {
 
   return (
     <>
-      <Card
+      <Panel
         title={props.page.title}
         actions={
-          <Select
+          <Selector
             aria-label={t("sites.editor.addBlock")}
             label={t("sites.editor.addBlock")}
             value=""
@@ -216,7 +216,7 @@ function BlockEditor(props: {
           <ol className={styles.blockList}>
             {blocks.map((block, index) => (
               <li key={block.id}>
-                <Card>
+                <Panel>
                   <div className={styles.blockHeader}>
                     <h2 className={styles.blockTitle}>{t(`sites.editor.blockType.${block.type}`)}</h2>
                     <div className={styles.blockControls}>
@@ -247,12 +247,12 @@ function BlockEditor(props: {
                       setBlocks(blocks.map((candidate) => (candidate.id === updated.id ? updated : candidate)))
                     }
                   />
-                </Card>
+                </Panel>
               </li>
             ))}
           </ol>
         )}
-      </Card>
+      </Panel>
     </>
   );
 }

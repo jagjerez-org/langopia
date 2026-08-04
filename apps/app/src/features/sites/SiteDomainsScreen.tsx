@@ -1,15 +1,15 @@
 import { useState } from "react";
 import type { FormEvent, ReactElement } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Button, Card, EmptyState, ErrorState, Input, Skeleton, Table, Tag } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, Panel, EmptyState, ErrorState, Input, Skeleton, Table, Chip } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useT } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
 import { addSiteDomain, listSiteDomains } from "./api.js";
 import type { SiteDomainView } from "./api.js";
 
-const STATUS_VARIANT: Record<SiteDomainView["status"], TagVariant> = {
+const STATUS_VARIANT: Record<SiteDomainView["status"], ChipVariant> = {
   pending: "warning",
   verified: "success",
   failed: "critical",
@@ -36,7 +36,7 @@ export function SiteDomainsScreen(): ReactElement {
     {
       key: "status",
       header: t("sites.domains.columnStatus"),
-      render: (row) => <Tag variant={STATUS_VARIANT[row.status]}>{t(`sites.domains.status.${row.status}`)}</Tag>,
+      render: (row) => <Chip variant={STATUS_VARIANT[row.status]}>{t(`sites.domains.status.${row.status}`)}</Chip>,
     },
     {
       key: "txt",
@@ -73,7 +73,7 @@ export function SiteDomainsScreen(): ReactElement {
     <main className="p-6">
       <h1 className="text-2xl font-semibold mb-4">{t("sites.domains.title")}</h1>
 
-      <Card title={t("sites.domains.addTitle")}>
+      <Panel title={t("sites.domains.addTitle")}>
         <form
           className="flex flex-col gap-4"
           onSubmit={(event: FormEvent) => {
@@ -103,7 +103,7 @@ export function SiteDomainsScreen(): ReactElement {
             </p>
           )}
         </form>
-      </Card>
+      </Panel>
 
       <section className="mt-6">
         {query.isPending && (

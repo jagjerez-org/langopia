@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactElement } from "react";
 import type { SchoolTimezone } from "@langopia/contracts";
-import type { TableColumn } from "../../ui/index.js";
-import { Button, EmptyState, ErrorState, Table, Tag } from "../../ui/index.js";
+import type { TableColumn } from "@langopia/ui";
+import { Button, EmptyState, ErrorState, Table, Chip } from "@langopia/ui";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatDate } from "../../i18n/format.js";
 import { useLocale, useT } from "../../i18n/translate.js";
@@ -65,7 +65,7 @@ export function ImpersonationHistoryScreen(): ReactElement {
       // marca aparte (regla del brief), no como una fila más.
       render: (entry) =>
         entry.involvesMinor ? (
-          <Tag variant="warning">{t("impersonationHistory.minorYes")}</Tag>
+          <Chip variant="warning">{t("impersonationHistory.minorYes")}</Chip>
         ) : (
           t("impersonationHistory.minorNo")
         ),

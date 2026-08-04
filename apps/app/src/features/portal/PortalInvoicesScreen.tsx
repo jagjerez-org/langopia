@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button, EmptyState, ErrorState, Skeleton, Table, Tag } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Skeleton, Table, Chip } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useT, useLocale } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatDate, formatMoney } from "../../i18n/format.js";
@@ -11,7 +11,7 @@ import { useMyStudentsQuery, useSchoolTimezoneQuery } from "./hooks.js";
 import { StudentSwitcher, usePortalStudentId } from "./StudentSwitcher.js";
 import type { PortalInvoiceEntry } from "./types.js";
 
-const STATUS_VARIANT: Record<string, TagVariant> = {
+const STATUS_VARIANT: Record<string, ChipVariant> = {
   paid: "success",
   open: "warning",
   past_due: "critical",
@@ -81,9 +81,9 @@ export function PortalInvoicesScreen(): ReactElement {
       key: "status",
       header: t("portal.invoices.columnStatus"),
       render: (row) => (
-        <Tag variant={STATUS_VARIANT[row.status] ?? "neutral"}>
+        <Chip variant={STATUS_VARIANT[row.status] ?? "neutral"}>
           {t.has(`portal.invoices.status.${row.status}`) ? t(`portal.invoices.status.${row.status}`) : row.status}
-        </Tag>
+        </Chip>
       ),
     },
     {

@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { Select } from "../../ui/index.js";
+import { Selector } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import type { PortalStudentOption } from "./types.js";
 
@@ -55,7 +55,7 @@ export function StudentSwitcher({ students, value, onChange }: StudentSwitcherPr
   const selected = value && students.some((s) => s.studentId === value) ? value : students[0]!.studentId;
 
   return (
-    <Select
+    <Selector
       label={t("portal.switchStudentLabel")}
       value={selected}
       onChange={(event) => onChange(event.target.value)}

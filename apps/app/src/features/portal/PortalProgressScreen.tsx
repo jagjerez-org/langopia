@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Button, EmptyState, ErrorState, Skeleton } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Skeleton } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { ApiError } from "../../lib/api-client.js";
