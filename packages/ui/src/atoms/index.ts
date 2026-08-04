@@ -8,6 +8,7 @@ export { FormAction, type FormActionProps } from "./FormAction/FormAction.js";
 export {
   IconAlertOctagon,
   IconAlertTriangle,
+  IconAudio,
   IconCheck,
   IconCheckCircle,
   IconChevronDown,
@@ -16,8 +17,11 @@ export {
   IconClose,
   IconDot,
   IconDotsVertical,
+  IconFile,
+  IconImage,
   IconInbox,
   IconSpinner,
+  IconVideo,
 } from "./Icons/Icons.js";
 export { Input, type InputProps } from "./Input/Input.js";
 export { ItemList, type ItemListProps } from "./ItemList/ItemList.js";

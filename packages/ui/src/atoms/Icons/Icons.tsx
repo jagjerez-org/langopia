@@ -53,6 +53,22 @@ export function IconAlertOctagon(props: IconProps): ReactElement {
   );
 }
 
+/** Audio — nota musical. Tipo de medio "audio" de la biblioteca. */
+export function IconAudio(props: IconProps): ReactElement {
+  return (
+    <svg {...base(props)}>
+      <path
+        d="M7 13.5V5.2l8-1.7v9"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="5" cy="13.5" r="2" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="13" cy="12.5" r="2" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 /** Bien / correcto — círculo con marca de verificación. Variante "success" de `Chip`. */
 export function IconCheckCircle(props: IconProps): ReactElement {
   return (
@@ -163,6 +179,50 @@ export function IconDotsVertical(props: IconProps): ReactElement {
   );
 }
 
+/** Documento — hoja con esquina doblada. Tipo de medio "document" de la biblioteca. */
+export function IconFile(props: IconProps): ReactElement {
+  return (
+    <svg {...base(props)}>
+      <path
+        d="M5.5 2.5h5.8l3.2 3.2v11.8h-9V2.5Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M11.3 2.5v3.2h3.2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Imagen — marco con sol y montañas. Tipo de medio "image" de la biblioteca. */
+export function IconImage(props: IconProps): ReactElement {
+  return (
+    <svg {...base(props)}>
+      <rect
+        x="3"
+        y="4"
+        width="14"
+        height="12"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <circle cx="7.4" cy="8.2" r="1.1" fill="currentColor" />
+      <path
+        d="M3.5 14l3.4-3.4 2.3 2.3 3.1-3.1 4.2 4.2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Bandeja vacía — icono por defecto de estados vacíos. */
 export function IconInbox(props: IconProps): ReactElement {
   return (
@@ -175,6 +235,29 @@ export function IconInbox(props: IconProps): ReactElement {
       />
       <path
         d="M3 11.5h4.2l.9 1.8h3.8l.9-1.8H17v3a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5v-3Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Vídeo — cámara de cine. Tipo de medio "video" de la biblioteca. */
+export function IconVideo(props: IconProps): ReactElement {
+  return (
+    <svg {...base(props)}>
+      <rect
+        x="2.5"
+        y="5.5"
+        width="10.5"
+        height="9"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path
+        d="M13 9.2l4.5-2.2v6l-4.5-2.2"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinejoin="round"
