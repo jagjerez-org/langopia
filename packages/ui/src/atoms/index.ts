@@ -42,6 +42,7 @@ export {
   type SelectorWithSearchProps,
   type SelectorWithSearchOption,
 } from "./SelectorWithSearch/SelectorWithSearch.js";
+export { Skeleton, type SkeletonHeight, type SkeletonProps, type SkeletonVariant } from "./Skeleton/Skeleton.js";
 export { Textarea, type TextareaProps } from "./Textarea/Textarea.js";
 export { ThemeToggle, type ThemeToggleProps, type ThemeToggleLabels } from "./ThemeToggle/ThemeToggle.js";
 export { Toggle, type ToggleProps } from "./Toggle/Toggle.js";

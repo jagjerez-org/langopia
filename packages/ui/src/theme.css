@@ -365,3 +365,76 @@
 .ink-spin {
   animation: ink-spin 0.7s linear infinite;
 }
+
+/* Barrido del `Skeleton`: el gradiente y su tamaño los ponen las utilidades de
+   Tailwind en el componente; aquí solo vive el keyframe, que Tailwind no
+   genera. Se recorta a un fotograma con «reducir movimiento» (arriba). */
+@keyframes ink-skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Entrada de los avisos de `Toast`. */
+@keyframes ink-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* `Dialog`: coreografía de apertura/cierre del `<dialog>` nativo. No se puede
+   expresar con utilidades sin pisar la hoja del user agent: el `display` se
+   queda en `none` (heredado de `dialog:not([open])`) hasta que `[open]` lo
+   pone en `flex`; fijarlo con una clase sin condición dejaría el diálogo
+   cerrado ocupando sitio en el flujo, invisible pero capaz de robar foco y
+   clics. Las transiciones de `display`/`overlay` con `allow-discrete` y los
+   `@starting-style` tampoco tienen utilidad equivalente fiable. */
+.ink-dialog {
+  opacity: 0;
+  transform: scale(0.96) translateY(8px);
+  transition:
+    opacity var(--ink-duration-base) var(--ink-ease-standard),
+    transform var(--ink-duration-base) var(--ink-ease-standard),
+    overlay var(--ink-duration-base) allow-discrete,
+    display var(--ink-duration-base) allow-discrete;
+}
+
+.ink-dialog[open] {
+  display: flex;
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+@starting-style {
+  .ink-dialog[open] {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+}
+
+.ink-dialog::backdrop {
+  background: var(--ink-bg-overlay);
+  opacity: 0;
+  transition:
+    opacity var(--ink-duration-base) var(--ink-ease-standard),
+    overlay var(--ink-duration-base) allow-discrete,
+    display var(--ink-duration-base) allow-discrete;
+}
+
+.ink-dialog[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  .ink-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
