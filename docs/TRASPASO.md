@@ -37,7 +37,7 @@ integraciones de vídeo), `billing` (facturación, comisión congelada, alta de 
 destinatario), portal del alumno, alta de escuela autoservicio, importación CSV, RGPD operativo e
 impersonación de soporte. Más una prueba de extremo a extremo contra Postgres real.
 
-**Panel web** (`apps/web`, React + Vite): trece pantallas, sistema de diseño propio, multiidioma,
+**Panel web** (`apps/app`, React + Vite): trece pantallas, sistema de diseño propio, multiidioma,
 sesión con cambio de escuela, y un recorrido completo con Playwright integrado en CI.
 
 ### Ola 2 — Contenido con IA

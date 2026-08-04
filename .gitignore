@@ -11,9 +11,9 @@ coverage/
 
 # Playwright (Tarea 13 del panel web): capturas, trazas e informes de cada
 # ejecución local del recorrido — nunca artefactos que se commiteen.
-apps/web/test-results/
-apps/web/playwright-report/
-apps/web/blob-report/
+apps/app/test-results/
+apps/app/playwright-report/
+apps/app/blob-report/
 
 # Vinculación y salida de builds locales de Vercel (`vercel link/build`).
 .vercel/

@@ -40,7 +40,7 @@ export class GetStudentProgressQuery extends Query<StudentProgress> {
  * Un único punto de entrada (`StudentProgressController`,
  * `assessments/students/:studentId/progress`) sirve a la vez la ficha del
  * alumno (dirección y profesorado) y al portal (el propio alumno y su tutor
- * legal, que llegan al MISMO endpoint desde `apps/web`): `architecture.
+ * legal, que llegan al MISMO endpoint desde `apps/app`): `architecture.
  * spec.ts` («un contexto solo importa los eventos de otro») impide que el
  * controlador de `portal` despache esta consulta directamente, así que quién
  * puede ver A ESTE alumno concreto se decide aquí, con los mismos hechos que

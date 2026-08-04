@@ -14,7 +14,7 @@ export function dev(root: string, args: string[]): void {
     process.exit(1);
   }
 
-  const validApps = ['web', 'api', 'sites'];
+  const validApps = ['app', 'api', 'sites'];
   let filters: string[] = [];
   if (flags.filter) {
     filters = String(flags.filter)

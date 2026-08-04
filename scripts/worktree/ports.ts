@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
-const BASE_PORTS = { web: 5173, api: 3000, sites: 4321 };
+const BASE_PORTS = { app: 5173, api: 3000, sites: 4321 };
 
 export function readPortRegistry(worktreesDir: string): Record<string, number> {
   const file = join(worktreesDir, '.ports.json');
@@ -29,9 +29,9 @@ export function assignOffset(worktreesDir: string, name: string): number {
   return offset;
 }
 
-export function getPorts(name: string, offset: number): { web: number; api: number; sites: number } {
+export function getPorts(name: string, offset: number): { app: number; api: number; sites: number } {
   return {
-    web: BASE_PORTS.web + offset,
+    app: BASE_PORTS.app + offset,
     api: BASE_PORTS.api + offset,
     sites: BASE_PORTS.sites + offset,
   };

@@ -53,7 +53,7 @@ jobs:
       - run: npm run build --workspace @langopia/db
       - run: npm run typecheck
       - run: npm run typecheck:e2e --workspace @langopia/api
-      - run: npm run typecheck:e2e --workspace @langopia/web
+      - run: npm run typecheck:e2e --workspace @langopia/app
 
       - name: Esquema y políticas de aislamiento
         run: |
@@ -67,11 +67,11 @@ jobs:
       - name: Pruebas (API)
         run: npm run test --workspace @langopia/api
 
-      # El panel (`apps/web`) tiene su propia batería (formatos, i18n con sus
+      # El panel (`apps/app`) tiene su propia batería (formatos, i18n con sus
       # cinco idiomas, componentes, clientes de API...): sin este paso, nunca
       # corría en CI y una regresión ahí pasaría desapercibida para siempre.
-      - name: Pruebas (panel web)
-        run: npm run test --workspace @langopia/web
+      - name: Pruebas (panel)
+        run: npm run test --workspace @langopia/app
 
       # Tarea 10 de la ola 1, Tarea 13 de la ola 2 y Tarea 11 de la ola 3:
       # criterios de «listo»
@@ -94,13 +94,13 @@ jobs:
       # alumno viendo solo sus propios datos. Si el panel deja de funcionar
       # de principio a fin, este paso —y solo este— se pone en rojo.
       - name: Recorrido de extremo a extremo del panel (ola 1, Playwright)
-        run: npm run test:e2e --workspace @langopia/web
+        run: npm run test:e2e --workspace @langopia/app
 
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-report
-          path: apps/web/test-results
+          path: apps/app/test-results
           retention-days: 7
 
   desplegar:
@@ -135,7 +135,7 @@ jobs:
       - name: Migraciones y políticas (producción)
         run: npm run db:deploy
 
-      # Un proyecto de Vercel por app (langopia-api, langopia-web,
+      # Un proyecto de Vercel por app (langopia-api, langopia-app,
       # langopia-sites), cada uno con su Root Directory. `vercel build`
       # compila en el runner (los buildCommand de cada vercel.json suben a la
       # raíz del monorepo para construir los paquetes workspace) y
@@ -144,7 +144,7 @@ jobs:
       - name: Desplegar los tres proyectos en Vercel
         run: |
           npm install --global vercel@latest
-          for app in api web sites; do
+          for app in api app sites; do
             (
               cd "apps/$app"
               vercel link --yes --project "langopia-$app" --token "$VERCEL_TOKEN"

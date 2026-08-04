@@ -115,6 +115,6 @@ export function add(root: string, args: string[]): void {
   console.log('');
   console.log(`Worktree ready: .worktrees/${name}`);
   console.log(`  Branch: ${name}`);
-  console.log(`  Ports:  web=${ports.web} api=${ports.api} sites=${ports.sites} (offset: +${offset})`);
+  console.log(`  Ports:  app=${ports.app} api=${ports.api} sites=${ports.sites} (offset: +${offset})`);
   console.log(`  DB:     ${dbName ? dbName + (dbReady ? ' ✓' : ' (pending)') : 'shared'}`);
 }

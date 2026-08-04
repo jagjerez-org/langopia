@@ -12,7 +12,7 @@
  *
  * Los tipos que devuelve son de lectura: no tienen comportamiento y nadie los
  * guarda. `AgendaEntry` y `TeacherOccupancy` viven en `@langopia/contracts`
- * (Tarea 2 del panel): es la misma forma que consume `apps/web`, así que un
+ * (Tarea 2 del panel): es la misma forma que consume `apps/app`, así que un
  * campo que cambie aquí y no allí deja de tipar en los dos lados.
  */
 

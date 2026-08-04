@@ -7,13 +7,13 @@
 #     tras `vercel pull`, sobreescribiendo cualquier valor previo de Vercel.
 #     El build de la API ejecuta db:push + db:policies + db:seed cuando
 #     VERCEL_ENV == preview.
-#   - langopia-web y langopia-sites se despliegan después, apuntando a la URL
+#   - langopia-app y langopia-sites se despliegan después, apuntando a la URL
 #     de la API preview de esta misma PR.
 #   - Al cerrar la PR, preview-cleanup.yml se encarga del teardown.
 #
 # Los despliegues de Vercel se hacen con --prebuilt: GitHub Actions compila en
 # el runner y Vercel solo sube el resultado. Esto evita que Vercel vuelva a
-# compilar y perda variables generadas dinámicamente (vercel.json de web,
+# compilar y perda variables generadas dinámicamente (vercel.json de app,
 # .env de sites).
 #
 # Cada job tiene `if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'` para que,
@@ -77,11 +77,11 @@ jobs:
           # Better Auth deduce su basePath (/api/v1/auth) de BETTER_AUTH_URL.
           # Sin esto usa /api/auth por defecto y todas las rutas de auth dan 404.
           # Los orígenes de confianza deben incluir el dominio desde el que la
-          # web preview enviará el header Origin en sign-in/sign-up.
+          # app preview enviará el header Origin en sign-in/sign-up.
           API_ALIAS="pr-${PR_NUMBER}.api.langopia.com"
-          WEB_ALIAS="pr-${PR_NUMBER}.web.langopia.com"
+          APP_ALIAS="pr-${PR_NUMBER}.app.langopia.com"
           BETTER_AUTH_URL="https://${API_ALIAS}/api/v1/auth"
-          BETTER_AUTH_TRUSTED_ORIGINS="https://${WEB_ALIAS}"
+          BETTER_AUTH_TRUSTED_ORIGINS="https://${APP_ALIAS}"
           echo "BETTER_AUTH_URL=$BETTER_AUTH_URL" >> .vercel/.env.preview.local
           echo "BETTER_AUTH_TRUSTED_ORIGINS=$BETTER_AUTH_TRUSTED_ORIGINS" >> .vercel/.env.preview.local
 
@@ -105,13 +105,13 @@ jobs:
           echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
           echo "api_alias=$API_ALIAS" >> "$GITHUB_OUTPUT"
 
-  deploy-web:
+  deploy-app:
     if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
     needs: deploy-api
     runs-on: ubuntu-latest
     outputs:
-      web_url: ${{ steps.deploy.outputs.web_url }}
-      web_alias: ${{ steps.deploy.outputs.web_alias }}
+      app_url: ${{ steps.deploy.outputs.app_url }}
+      app_alias: ${{ steps.deploy.outputs.app_alias }}
     env:
       PR_NUMBER: ${{ github.event.number }}
     steps:
@@ -125,7 +125,7 @@ jobs:
       - run: npm install --global vercel@latest
 
       - name: Configurar vercel.json apuntando a la API preview
-        working-directory: apps/web
+        working-directory: apps/app
         env:
           API_URL: ${{ needs.deploy-api.outputs.api_url }}
         run: |
@@ -133,7 +133,7 @@ jobs:
           {
             "\$schema": "https://openapi.vercel.sh/vercel.json",
             "installCommand": "cd ../.. && test -d node_modules/.bin || npm ci",
-            "buildCommand": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/web",
+            "buildCommand": "cd ../.. && npm run build --workspace @langopia/contracts && npm run build --workspace @langopia/app",
             "rewrites": [
               { "source": "/api/:path*", "destination": "${API_URL}/api/:path*" },
               { "source": "/((?!api/).*)", "destination": "/index.html" }
@@ -141,20 +141,20 @@ jobs:
           }
           EOF
 
-      - name: Desplegar web preview
+      - name: Desplegar app preview
         id: deploy
-        working-directory: apps/web
+        working-directory: apps/app
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         run: |
-          vercel link --yes --project langopia-web --token "$VERCEL_TOKEN"
+          vercel link --yes --project langopia-app --token "$VERCEL_TOKEN"
           vercel pull --yes --environment=preview --token "$VERCEL_TOKEN"
           vercel build --token "$VERCEL_TOKEN"
-          WEB_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
-          WEB_ALIAS="pr-${PR_NUMBER}.web.langopia.com"
-          vercel alias set "$WEB_URL" "$WEB_ALIAS" --token "$VERCEL_TOKEN"
-          echo "web_url=$WEB_URL" >> "$GITHUB_OUTPUT"
-          echo "web_alias=$WEB_ALIAS" >> "$GITHUB_OUTPUT"
+          APP_URL=$(vercel deploy --prebuilt --token "$VERCEL_TOKEN")
+          APP_ALIAS="pr-${PR_NUMBER}.app.langopia.com"
+          vercel alias set "$APP_URL" "$APP_ALIAS" --token "$VERCEL_TOKEN"
+          echo "app_url=$APP_URL" >> "$GITHUB_OUTPUT"
+          echo "app_alias=$APP_ALIAS" >> "$GITHUB_OUTPUT"
 
   deploy-sites:
     if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
@@ -199,7 +199,7 @@ jobs:
 
   comment:
     if: vars.VERCEL_PREVIEW_DEPLOY_ENABLED == 'true'
-    needs: [deploy-api, deploy-web, deploy-sites]
+    needs: [deploy-api, deploy-app, deploy-sites]
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -214,7 +214,7 @@ jobs:
             | App | URL Vercel | Alias PR |
             | --- | --- | --- |
             | API | ${{ needs.deploy-api.outputs.api_url }} | https://${{ needs.deploy-api.outputs.api_alias }} |
-            | Web | ${{ needs.deploy-web.outputs.web_url }} | https://${{ needs.deploy-web.outputs.web_alias }} |
+            | App | ${{ needs.deploy-app.outputs.app_url }} | https://${{ needs.deploy-app.outputs.app_alias }} |
             | Sites | ${{ needs.deploy-sites.outputs.sites_url }} | https://${{ needs.deploy-sites.outputs.sites_alias }} |
 
             La base de datos es aislada y se ha sembrado con el seed de demo.
