@@ -38,6 +38,22 @@ export {
   type KpiRangeOption,
 } from "./KpiPage/KpiPage.js";
 export {
+  LandingPage,
+  type LandingAction,
+  type LandingFeature,
+  type LandingFeaturesContent,
+  type LandingFinalCtaContent,
+  type LandingFooterContent,
+  type LandingHeaderContent,
+  type LandingHeroContent,
+  type LandingLink,
+  type LandingModule,
+  type LandingModulesContent,
+  type LandingPageProps,
+  type LandingPlan,
+  type LandingPricingContent,
+} from "./LandingPage/LandingPage.js";
+export {
   MediaLibraryPage,
   type MediaFile,
   type MediaFileAction,
