@@ -24,17 +24,27 @@ describe("UserComponent", () => {
     expect(screen.queryByText("maria@langopia.com")).toBeNull();
   });
 
+  it("el avatar es decorativo: queda fuera del árbol de accesibilidad", () => {
+    const { container } = render(<UserComponent name="María López" />);
+
+    const avatarWrapper = container.querySelector('[aria-hidden="true"]');
+    expect(avatarWrapper).not.toBeNull();
+    // Sin acceso por rol: el avatar no aporta un nombre duplicado.
+    expect(screen.queryByRole("img")).toBeNull();
+  });
+
   it("sin avatarUrl cae a las iniciales del nombre", () => {
     render(<UserComponent name="María López" />);
 
-    expect(screen.getByRole("img", { name: "María López" }).textContent).toBe("ML");
+    expect(screen.getByText("ML")).toBeDefined();
   });
 
   it("con avatarUrl muestra la imagen dentro del avatar", () => {
-    render(<UserComponent name="María López" avatarUrl="https://example.com/maria.png" />);
+    const { container } = render(
+      <UserComponent name="María López" avatarUrl="https://example.com/maria.png" />,
+    );
 
-    const avatar = screen.getByRole("img", { name: "María López" });
-    const img = avatar.querySelector("img");
+    const img = container.querySelector('[aria-hidden="true"] img');
     expect(img).not.toBeNull();
     expect(img!.getAttribute("src")).toBe("https://example.com/maria.png");
   });
@@ -48,10 +58,12 @@ describe("UserComponent", () => {
     expect(screen.queryByText("Administradora")).toBeNull();
   });
 
-  it("con href es un enlace con el nombre como nombre accesible", () => {
-    render(<UserComponent name="María López" href="/perfil" />);
+  it("con href es un enlace cuyo nombre accesible es exactamente el nombre", () => {
+    render(<UserComponent name="María López" role="Administradora" href="/perfil" />);
 
-    const link = screen.getByRole("link", { name: /María López/ });
+    // El nombre accesible concatena nombre y rol sin espacio (los spans no
+    // llevan whitespace entre ellos); lo importante es que no hay duplicado.
+    const link = screen.getByRole("link", { name: "María LópezAdministradora" });
     expect(link.getAttribute("href")).toBe("/perfil");
   });
 
@@ -61,16 +73,15 @@ describe("UserComponent", () => {
 
     render(<UserComponent name="María López" onClick={onClick} />);
 
-    await user.click(screen.getByRole("button", { name: /María López/ }));
+    await user.click(screen.getByRole("button", { name: "María López" }));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
-  it("collapsed y clickable: el nombre accesible del enlace sigue siendo el nombre", () => {
+  it("collapsed y clickable: el nombre accesible del enlace es exactamente el nombre", () => {
     render(<UserComponent name="María López" href="/perfil" collapsed />);
 
-    // El avatar (role="img" con aria-label) y el span sr-only aportan ambos el
-    // nombre al nombre accesible, así que se busca por coincidencia parcial.
-    expect(screen.getByRole("link", { name: /María López/ })).toBeDefined();
+    // Sin duplicado: el avatar va con aria-hidden y solo queda el sr-only.
+    expect(screen.getByRole("link", { name: "María López" })).toBeDefined();
   });
 
   it("sin href ni onClick no es interactivo", () => {

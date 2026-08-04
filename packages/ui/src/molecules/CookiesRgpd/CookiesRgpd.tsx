@@ -3,7 +3,7 @@ import { Button } from "../../atoms/Button/Button.js";
 
 export interface CookiesRgpdProps {
   /** Título del aviso, ya traducido (p. ej. "Usamos cookies"). */
-  title: ReactNode;
+  title: string;
   /**
    * Texto del aviso, ya traducido. Es `ReactNode` a propósito: el enlace a la
    * política de cookies/privacidad lo incrusta la app dentro de este slot.

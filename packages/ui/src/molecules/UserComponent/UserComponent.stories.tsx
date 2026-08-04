@@ -1,9 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import type { ComponentType } from "react";
 import { UserComponent } from "./UserComponent.js";
+import type { UserComponentBaseProps } from "./UserComponent.js";
 
-const meta: Meta<typeof UserComponent> = {
+// Args "planos" solo para las stories: la unión discriminada de
+// UserComponentProps colapsa a `never` al pasar por la inferencia de
+// StoryObj/Meta. El cast del componente es seguro: cada combinación válida de
+// args encaja en la unión.
+type StoryArgs = UserComponentBaseProps & {
+  href?: string;
+  onClick?: () => void;
+};
+
+const meta = {
   title: "Molecules/UserComponent",
-  component: UserComponent,
+  component: UserComponent as ComponentType<StoryArgs>,
   tags: ["autodocs"],
   argTypes: {
     size: { control: "radio", options: ["sm", "md", "lg"] },
@@ -13,7 +24,7 @@ const meta: Meta<typeof UserComponent> = {
     name: "María López",
     role: "Administradora",
   },
-};
+} satisfies Meta<StoryArgs>;
 
 export default meta;
 

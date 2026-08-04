@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 import { UserAvatar, type UserAvatarSize } from "../../atoms/UserAvatar/UserAvatar.js";
 
-export interface UserComponentProps {
-  /** Nombre del usuario; es también el nombre accesible del avatar. */
+export interface UserComponentBaseProps {
+  /** Nombre del usuario; es también el nombre accesible del componente. */
   name: string;
   /** Texto secundario bajo el nombre (p. ej. "Administradora"). */
   role?: string;
@@ -17,11 +17,30 @@ export interface UserComponentProps {
    * visualmente pero accesible para lectores de pantalla.
    */
   collapsed?: boolean;
-  /** Si se pasa, el componente es un enlace (p. ej. a la página de perfil). */
-  href?: string;
-  /** Si se pasa (sin `href`), el componente es un botón (p. ej. abrir el menú de perfil). */
-  onClick?: () => void;
 }
+
+/**
+ * La interactividad es exclusiva: o enlace (`href`), o botón (`onClick`), o
+ * bloque de solo lectura (ninguno). Las dos ramas con `never` lo garantizan
+ * en tipos.
+ */
+export type UserComponentProps = UserComponentBaseProps &
+  (
+    | {
+        /** Si se pasa, el componente es un enlace (p. ej. a la página de perfil). */
+        href: string;
+        onClick?: never;
+      }
+    | {
+        href?: undefined;
+        /** Si se pasa, el componente es un botón (p. ej. abrir el menú de perfil). */
+        onClick: () => void;
+      }
+    | {
+        href?: undefined;
+        onClick?: undefined;
+      }
+  );
 
 const baseStyles = [
   // Fila: avatar a la izquierda, textos a la derecha, sin crecer de más.
@@ -50,6 +69,10 @@ const secondaryStyles = [
  * no conoce la sesión ni el router: con `href` es un enlace, con `onClick` un
  * botón, y sin ninguno un bloque de solo lectura. En `collapsed` solo se ve el
  * avatar; el nombre sigue accesible.
+ *
+ * El `UserAvatar` interior va envuelto en `aria-hidden`: el nombre ya lo
+ * aporta el texto visible (o el span `sr-only` en `collapsed`), y el avatar
+ * anunciaría el mismo nombre una segunda vez.
  */
 export function UserComponent({
   name,
@@ -65,7 +88,10 @@ export function UserComponent({
 
   const content = (
     <>
-      <UserAvatar name={name} src={avatarUrl} size={size} />
+      {/* Avatar decorativo: el nombre accesible ya está en el texto. */}
+      <span aria-hidden="true" className="inline-flex shrink-0">
+        <UserAvatar name={name} src={avatarUrl} size={size} />
+      </span>
       {collapsed ? (
         <span className="sr-only">{name}</span>
       ) : (
