@@ -47,6 +47,14 @@ export {
   type PlanningSessionStatus,
 } from "./PlanningPage/PlanningPage.js";
 export {
+  ProfessorsPage,
+  type Professor,
+  type ProfessorAction,
+  type ProfessorsPageLabels,
+  type ProfessorsPageProps,
+  type ProfessorStatus,
+} from "./ProfessorsPage/ProfessorsPage.js";
+export {
   RolesPermissionsPage,
   type PermissionCategory,
   type PermissionItem,
@@ -72,3 +80,11 @@ export {
   type SiteBuilderLabels,
   type SiteBuilderProps,
 } from "./SiteBuilder/SiteBuilder.js";
+export {
+  StudentPage,
+  type Student,
+  type StudentAction,
+  type StudentPageLabels,
+  type StudentPageProps,
+  type StudentStatus,
+} from "./StudentPage/StudentPage.js";
