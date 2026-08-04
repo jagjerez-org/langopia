@@ -9,4 +9,5 @@ export * from "./cards.js";
 export * from "./checkout.js";
 export * from "./kpis.js";
 export * from "./lists.js";
+export * from "./management.js";
 export * from "./shell.js";
