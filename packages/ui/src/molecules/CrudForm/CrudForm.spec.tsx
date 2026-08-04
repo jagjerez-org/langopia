@@ -191,4 +191,19 @@ describe("CrudForm", () => {
     );
     expect((screen.getByLabelText(/Título/) as HTMLInputElement).disabled).toBe(true);
   });
+
+  it("avisa por consola cuando dos campos comparten name y renderiza ambos sin error de keys", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const duplicatedFields: CrudField[] = [
+      { name: "title", label: "Título" },
+      { name: "title", label: "Título repetido" },
+    ];
+
+    render(<CrudForm fields={duplicatedFields} onSubmit={() => {}} />);
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("title"));
+    expect(screen.getByLabelText("Título")).toBeDefined();
+    expect(screen.getByLabelText("Título repetido")).toBeDefined();
+    warn.mockRestore();
+  });
 });

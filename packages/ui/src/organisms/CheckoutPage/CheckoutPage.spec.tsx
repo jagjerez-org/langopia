@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   checkoutBillingFields,
@@ -80,5 +80,49 @@ describe("CheckoutPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Cancelar" }));
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("bloquea el doble submit mientras onSubmit no resuelve y permite reenviar después", async () => {
+    const user = userEvent.setup();
+    let resolveSubmit: (() => void) | undefined;
+    const onSubmit = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSubmit = resolve;
+        }),
+    );
+
+    render(<CheckoutPage {...baseProps} onSubmit={onSubmit} />);
+
+    const submitButton = screen.getByRole("button", { name: "Confirmar pago" });
+    // Dos envíos antes de que la promesa resuelva (la prop isProcessing
+    // llegaría un render tarde): solo debe llamarse una vez a onSubmit.
+    await user.click(submitButton);
+    await user.click(submitButton);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    // Al resolver se libera la guardia y se puede volver a enviar.
+    resolveSubmit!();
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    await user.click(submitButton);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it("también bloquea el doble disparo del mismo gesto con onSubmit síncrono", async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    render(<CheckoutPage {...baseProps} onSubmit={onSubmit} />);
+
+    const form = screen.getByRole("button", { name: "Confirmar pago" }).closest("form")!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+
+    // La guardia se libera en el siguiente microtask: un envío posterior sí entra.
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    await user.click(screen.getByRole("button", { name: "Confirmar pago" }));
+    expect(onSubmit).toHaveBeenCalledTimes(2);
   });
 });

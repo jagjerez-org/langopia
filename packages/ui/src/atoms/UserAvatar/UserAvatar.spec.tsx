@@ -35,6 +35,18 @@ describe("UserAvatar", () => {
     expect(avatar.textContent).toBe("AG");
   });
 
+  it("tras un fallo, una src distinta vuelve a intentar la imagen", () => {
+    const { rerender } = render(<UserAvatar name="Andrea Gil" src="/rota.png" />);
+
+    const avatar = screen.getByRole("img", { name: "Andrea Gil" });
+    fireEvent.error(avatar.querySelector("img")!);
+    expect(avatar.querySelector("img")).toBeNull();
+
+    rerender(<UserAvatar name="Andrea Gil" src="/avatars/andrea.png" />);
+
+    expect(avatar.querySelector("img")!.getAttribute("src")).toBe("/avatars/andrea.png");
+  });
+
   it("expone data-size según la prop", () => {
     render(<UserAvatar name="Andrea Gil" size="lg" />);
 

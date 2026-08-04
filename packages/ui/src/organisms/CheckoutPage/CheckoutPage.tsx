@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent, ReactElement, ReactNode } from "react";
 import { Input } from "../../atoms/Input/Input.js";
 import { Selector } from "../../atoms/Selector/Selector.js";
@@ -70,7 +70,7 @@ export interface CheckoutPageProps {
   /** Error de pago ya traducido, con role="alert". */
   error?: ReactNode;
   /** Recibe los datos de facturación (no sensibles) al confirmar. */
-  onSubmit: (values: CheckoutBillingValues) => void;
+  onSubmit: (values: CheckoutBillingValues) => void | Promise<void>;
   /** Si se pasa, aparece la acción de cancelar. */
   onCancel?: () => void;
 }
@@ -106,6 +106,14 @@ const billingGridStyles = "grid grid-cols-1 gap-3 sm:grid-cols-2";
  *
  * `onSubmit` recibe solo los datos de facturación (no sensibles). Los estados
  * `isProcessing` y `error` se controlan por props.
+ *
+ * Además del `isProcessing` externo, hay una guardia interna contra doble
+ * envío: la prop llega un render tarde, así que dos submits en el mismo tick
+ * (doble clic rápido, Enter + clic) llamarían dos veces a `onSubmit`. La
+ * guardia se activa al empezar el submit y se libera cuando la promesa
+ * devuelta se resuelve o rechaza; si `onSubmit` es síncrono se libera en el
+ * siguiente microtask, suficiente para bloquear el doble disparo del mismo
+ * gesto sin impedir un nuevo envío posterior.
  */
 export function CheckoutPage({
   items,
@@ -132,9 +140,30 @@ export function CheckoutPage({
     setBillingValues((current) => ({ ...current, [name]: value }));
   };
 
+  // Guardia contra doble submit: `isProcessing` llega una render tarde, así
+  // que no basta para bloquear dos submits en el mismo tick.
+  const submitInFlightRef = useRef(false);
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!isProcessing) onSubmit(billingValues);
+    if (isProcessing || submitInFlightRef.current) return;
+    submitInFlightRef.current = true;
+    const release = () => {
+      submitInFlightRef.current = false;
+    };
+    try {
+      const result = onSubmit(billingValues);
+      if (result instanceof Promise) {
+        void result.then(release, release);
+      } else {
+        // Callback síncrono: se libera en el siguiente microtask para que dos
+        // submits del mismo gesto no llamen dos veces a `onSubmit`.
+        queueMicrotask(release);
+      }
+    } catch (error) {
+      release();
+      throw error;
+    }
   };
 
   return (

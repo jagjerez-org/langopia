@@ -37,15 +37,18 @@ const avatarStyles = [
 /**
  * Avatar de usuario: imagen redonda con reserva a iniciales derivadas de
  * `name`. Si la imagen no se puede cargar (URL rota, red caída) se cae a las
- * iniciales sin estado de error visible. El contenedor es `role="img"` con el
- * nombre como etiqueta: la imagen interior lleva `alt=""` para no duplicarlo.
+ * iniciales sin estado de error visible. El fallo se recuerda por `src`: si
+ * llega una `src` distinta se vuelve a intentar la imagen. El contenedor es
+ * `role="img"` con el nombre como etiqueta: la imagen interior lleva `alt=""`
+ * para no duplicarlo.
  */
 export const UserAvatar = forwardRef<HTMLSpanElement, UserAvatarProps>(function UserAvatar(
   { name, src, size = "md" },
   ref,
 ): ReactElement {
-  const [imageFailed, setImageFailed] = useState(false);
-  const showImage = src !== undefined && !imageFailed;
+  // Se guarda qué src falló (no un booleano) para que una src nueva reintente.
+  const [failedSrc, setFailedSrc] = useState<string | undefined>(undefined);
+  const showImage = src !== undefined && failedSrc !== src;
 
   return (
     <span ref={ref} className={avatarStyles} data-size={size} role="img" aria-label={name}>
@@ -54,7 +57,7 @@ export const UserAvatar = forwardRef<HTMLSpanElement, UserAvatarProps>(function 
           src={src}
           alt=""
           className="h-full w-full object-cover"
-          onError={() => setImageFailed(true)}
+          onError={() => setFailedSrc(src)}
         />
       ) : (
         initialsOf(name)

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import type { Control, FieldErrors } from "react-hook-form";
@@ -28,7 +28,11 @@ export type CrudFieldType =
   | "toggle";
 
 export interface CrudField {
-  /** Clave del valor en el objeto que recibe `onSubmit`. */
+  /**
+   * Clave del valor en el objeto que recibe `onSubmit`. Debe ser única dentro
+   * de `fields`: con dos campos del mismo name el esquema zod y los valores se
+   * sobrescriben en silencio (en desarrollo se avisa por consola).
+   */
   name: string;
   /** Etiqueta visible, ya traducida. */
   label: ReactNode;
@@ -45,6 +49,7 @@ export interface CrudField {
 export type CrudFormValues = Record<string, string | number | boolean | string[] | undefined>;
 
 export interface CrudFormProps {
+  /** Descripción de los campos; cada `name` debe ser único (ver `CrudField`). */
   fields: CrudField[];
   /** Valores iniciales por nombre de campo (modo edición). */
   defaultValues?: Partial<CrudFormValues>;
@@ -309,11 +314,29 @@ export function CrudForm({
   const { serverError, wrapSubmit } = useServerError(error, serverErrorMessage);
   const isBusy = isLoading || isSubmitting;
 
+  // En desarrollo se avisa de names duplicados: el esquema zod y los valores
+  // iniciales se sobrescriben en silencio cuando dos campos comparten name.
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production") return;
+    const seen = new Set<string>();
+    const duplicated = new Set<string>();
+    for (const field of fields) {
+      if (seen.has(field.name)) duplicated.add(field.name);
+      seen.add(field.name);
+    }
+    if (duplicated.size > 0) {
+      console.warn(
+        `CrudForm: hay campos con name duplicado (${[...duplicated].join(", ")}). ` +
+          "Los names deben ser únicos; el esquema y los valores del último campo sobrescriben a los anteriores.",
+      );
+    }
+  }, [fields]);
+
   return (
     <form noValidate onSubmit={handleSubmit(wrapSubmit(onSubmit))} className={formStyles}>
-      {fields.map((field) => (
+      {fields.map((field, index) => (
         <FieldControl
-          key={field.name}
+          key={`${field.name}-${index}`}
           field={field}
           control={control}
           register={register}
