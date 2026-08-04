@@ -9,7 +9,6 @@ import type { Translate } from "../../i18n/translate.js";
 import { ApiError } from "../../lib/api-client.js";
 import { signInWithGoogle } from "./api.js";
 import { useSession, useSignInWithEmail } from "./session.js";
-import styles from "./LoginScreen.module.css";
 
 type LoginFormValues = { email: string; password: string };
 
@@ -79,24 +78,24 @@ export function LoginScreen(): ReactElement {
   };
 
   return (
-    <main className={styles.page}>
-      <div className={styles.brand}>
-        <span className={styles.brandMark}>
+    <main className="flex min-h-svh flex-col items-center justify-center gap-6 bg-canvas p-6">
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--ink-radius-md)] bg-[image:var(--ink-brand-gradient)] text-white shadow-[var(--ink-shadow-sm)]">
           <Globe size={20} strokeWidth={1.75} aria-hidden />
         </span>
-        <span className={styles.brandName}>{t("common.appName")}</span>
+        <span className="text-2xl font-bold tracking-[-0.02em]">{t("common.appName")}</span>
       </div>
-      <section className={styles.card}>
-        <div className={styles.heading}>
-          <h1 className={styles.title}>{t("auth.loginTitle")}</h1>
-          <p className={styles.subtitle}>{t("auth.loginSubtitle")}</p>
+      <section className="flex w-[min(24rem,100%)] flex-col gap-4 rounded-[var(--ink-radius-lg)] border border-border bg-surface p-6 shadow-[var(--ink-shadow-md)]">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-[-0.01em]">{t("auth.loginTitle")}</h1>
+          <p className="text-sm text-muted">{t("auth.loginSubtitle")}</p>
         </div>
         {session.status === "unverified" && (
-          <p role="alert" className={styles.alert}>
+          <p role="alert" className="rounded-[var(--ink-radius-md)] bg-critical-bg p-3 font-medium text-critical text-[length:var(--ink-text-sm)]">
             {t("errors.email_not_verified")}
           </p>
         )}
-        <form className={styles.form} onSubmit={(event) => void onSubmit(event)} noValidate>
+        <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)} noValidate>
           <Input
             label={t("auth.emailLabel")}
             type="email"
@@ -117,7 +116,7 @@ export function LoginScreen(): ReactElement {
             {...register("password", { required: t("auth.passwordRequired") })}
           />
           {formError && (
-            <p role="alert" className={styles.alert}>
+            <p role="alert" className="rounded-[var(--ink-radius-md)] bg-critical-bg p-3 font-medium text-critical text-[length:var(--ink-text-sm)]">
               {formError}
             </p>
           )}
@@ -125,7 +124,13 @@ export function LoginScreen(): ReactElement {
             {isSubmitting ? t("auth.submitting") : t("auth.submit")}
           </Button>
         </form>
-        <p aria-hidden="true" className={styles.divider}>
+        {/* Separador «o» con filetes a ambos lados (estilo shadcn). El literal
+            sigue siendo el del diccionario; los filetes son pseudo-elementos,
+            no texto. */}
+        <p
+          aria-hidden="true"
+          className="flex items-center gap-3 text-xs uppercase text-[color:var(--ink-text-tertiary)] before:flex-1 before:border-t before:border-border before:content-[''] after:flex-1 after:border-t after:border-border after:content-['']"
+        >
           {t("auth.orDivider")}
         </p>
         <Button variant="secondary" onClick={() => void onGoogleClick()} isLoading={isGoogleSubmitting}>

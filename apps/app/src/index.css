@@ -20,7 +20,7 @@ body {
 }
 
 /* Anillo de foco consistente para cualquier elemento que no reciba ya el
-   suyo propio desde `ui/`: nunca "sin foco visible" por descuido. */
+   suyo propio del sistema de diseño: nunca "sin foco visible" por descuido. */
 :focus-visible {
   outline: 2px solid var(--ink-focus-ring);
   outline-offset: 2px;

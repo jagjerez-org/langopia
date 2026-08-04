@@ -4,7 +4,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { Button, EmptyState } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import { useChooseSchool } from "./session.js";
-import styles from "./SchoolSelector.module.css";
 
 export interface SchoolSelectorProps {
   /** Slugs de las escuelas usables, tal como los devuelve `resolveTenant` (API). */
@@ -61,15 +60,19 @@ export function SchoolSelector({ schools }: SchoolSelectorProps): ReactElement {
   };
 
   return (
-    <main className={styles.page}>
-      <section className={styles.card}>
-        <div className={styles.heading}>
-          <h1 className={styles.title}>{t("auth.schoolPickerTitle")}</h1>
-          <p className={styles.description}>{t("auth.schoolPickerDescription")}</p>
+    <main className="flex min-h-svh items-center justify-center bg-canvas p-6">
+      <section className="flex w-[min(26rem,100%)] flex-col gap-4 rounded-[var(--ink-radius-lg)] border border-border bg-surface p-6 shadow-[var(--ink-shadow-md)]">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold tracking-[-0.01em]">{t("auth.schoolPickerTitle")}</h1>
+          <p className="text-sm text-muted">{t("auth.schoolPickerDescription")}</p>
         </div>
-        <ul className={styles.list}>
+        <ul className="flex flex-col gap-2">
           {schools.map((slug) => (
-            <li key={slug} className={styles.item}>
+            // Cada escuela ocupa todo el ancho de la tarjeta: es una elección
+            // entre pocas opciones, no una acción más de un formulario. El
+            // `Button` del DS pinta un `<button>` como raíz, así que el hijo
+            // directo del `<li>` ES el botón.
+            <li key={slug} className="[&>*]:w-full">
               <Button
                 onClick={() => void handleChoose(slug)}
                 isLoading={pendingSlug === slug}

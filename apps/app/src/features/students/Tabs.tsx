@@ -16,10 +16,10 @@ export interface TabsProps {
 /**
  * Pestañas de la ficha del alumno.
  *
- * Componente propio de esta pantalla, no del sistema de diseño (`ui/`): la
- * Tarea 4 no construyó ninguno y esta es, de momento, la única pantalla que
- * lo necesita — no hay motivo para ampliar el sistema de diseño compartido
- * por una tarea que no lo pidió.
+ * Componente propio de esta pantalla, no del sistema de diseño
+ * (`@langopia/ui`): la Tarea 4 no construyó ninguno y esta es, de momento,
+ * la única pantalla que lo necesita — no hay motivo para ampliar el sistema
+ * de diseño compartido por una tarea que no lo pidió.
  *
  * Sigue el patrón ARIA de pestañas: `role="tablist"`/`"tab"`/`"tabpanel"`,
  * una sola pestaña con `tabIndex=0` a la vez (roving tabindex) y las flechas

@@ -5,7 +5,6 @@ import { RouterProvider } from "@tanstack/react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { InvoiceListItem } from "@langopia/contracts";
 import { ApiError } from "../../lib/api-client.js";
-import "./dialog-polyfill.testsupport.js";
 import { createTestRouter } from "./test-router.testsupport.js";
 
 const { listInvoicesMock, getBillingSummaryMock, getSessionMock, listStudentsForBillingMock } = vi.hoisted(

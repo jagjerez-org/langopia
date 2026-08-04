@@ -9,6 +9,9 @@
  */
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
+// Relleno de `<dialog>` (`showModal`/`close`, ausentes en jsdom) para las
+// pruebas que montan un `Dialog` del DS — única fuente en el paquete.
+import "@langopia/ui/test/dialog-polyfill";
 
 afterEach(() => {
   cleanup();

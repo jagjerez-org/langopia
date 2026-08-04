@@ -23,7 +23,7 @@ export interface Dictionary {
     unexpectedError: string;
     languageLabel: string;
     /**
-     * Etiquetas accesibles de `ToastProvider` (`ui/Toast.tsx`, Tarea 4),
+     * Etiquetas accesibles de `ToastProvider` (`@langopia/ui`, Tarea 4),
      * montado una sola vez en `main.tsx`: la región donde aparecen los
      * avisos y el botón de cerrar cada uno. Añadidas por la Tarea 7
      * (Alumnado), la primera pantalla que usa `useToast()`.

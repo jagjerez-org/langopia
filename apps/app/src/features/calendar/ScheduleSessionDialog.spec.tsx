@@ -2,7 +2,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../lib/api-client.js";
-import "./dialog-polyfill.testsupport.js";
 
 const { scheduleSessionMock } = vi.hoisted(() => ({ scheduleSessionMock: vi.fn() }));
 

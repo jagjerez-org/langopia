@@ -9,7 +9,6 @@ import type { ChipVariant } from "@langopia/ui";
 import { layoutDayLanes } from "./day-lanes.js";
 import { teacherColorIndex } from "./teacher-color.js";
 import { zonedDateAndMinutes, zonedTimeToUtcIso } from "./zoned-time.js";
-import styles from "./WeekGrid.module.css";
 
 /** Ventana visible de la cuadrícula: cubre con margen las horas del seed (08:00–20:00 locales, en las tres escuelas). */
 const HOUR_START = 6;
@@ -35,6 +34,27 @@ const STATUS_TAG_VARIANT: Record<string, ChipVariant> = {
  */
 const MAX_FLUID_LANES = 3;
 const LANE_MIN_WIDTH_REM = 8.5;
+
+/* Paleta por profesor (índice decidido por `teacher-color.ts`): ocho tonos
+   distintos entre sí y del neutro por defecto (sin profesor asignado, ver
+   `SESSION_NEUTRAL_TONE`). Los valores concretos son deliberadamente
+   saturados y variados para que un vistazo rápido distinga profesores sin
+   depender del texto — el texto (nombre del profesor) sigue presente
+   siempre, el color nunca es la única señal. */
+const TEACHER_COLOR_TONES: Record<number, string> = {
+  0: "border-[#a8c5f5] bg-[#e8f0fe] text-[#1a3d7c]",
+  1: "border-[#f3b3a3] bg-[#fdece8] text-[#7c2b1a]",
+  2: "border-[#9fe0bf] bg-[#e8fbf1] text-[#14532d]",
+  3: "border-[#f0cd97] bg-[#fdf3e8] text-[#7a4a08]",
+  4: "border-[#d3a8f5] bg-[#f3e8fd] text-[#4c1a7c]",
+  5: "border-[#9adaf0] bg-[#e8f9fd] text-[#0b4a5e]",
+  6: "border-[#eadd93] bg-[#fdf8e8] text-[#5c4e08]",
+  7: "border-[#f2a8cc] bg-[#fdeaf3] text-[#7c1a4e]",
+};
+
+/* Clase sin profesor asignado: el neutro suave del sistema de diseño. */
+const SESSION_NEUTRAL_TONE =
+  "border-border-strong bg-[var(--ink-neutral-soft-bg)] text-[var(--ink-neutral-soft-text)]";
 
 function pad(value: number): string {
   return String(value).padStart(2, "0");
@@ -113,11 +133,17 @@ export function WeekGrid({
   }
 
   return (
-    <div className={styles.wrapper}>
-      <div className={styles.headerRow}>
-        <div className={styles.cornerCell} />
+    <div className="overflow-hidden rounded-[var(--ink-radius-lg)] border border-border bg-surface">
+      <div className="grid grid-cols-[3.5rem_repeat(7,minmax(6.5rem,1fr))] border-b border-border bg-surface-secondary">
+        <div className="border-r border-border" />
         {days.map((day) => (
-          <div key={day} className={styles.dayHeader} data-today={day === todayLocalDate || undefined}>
+          <div
+            key={day}
+            className={`border-l border-border p-2 text-center font-semibold text-[length:var(--ink-text-sm)] ${
+              day === todayLocalDate ? "bg-[var(--ink-accent-subtle-bg)] text-[var(--ink-accent-subtle-text)]" : ""
+            }`}
+            data-today={day === todayLocalDate || undefined}
+          >
             {formatDate(`${day}T00:00:00.000Z`, "UTC", locale, {
               weekday: "short",
               day: "numeric",
@@ -126,10 +152,13 @@ export function WeekGrid({
           </div>
         ))}
       </div>
-      <div className={styles.body}>
-        <div className={styles.hourLabels}>
+      <div className="grid max-h-[42rem] grid-cols-[3.5rem_repeat(7,minmax(6.5rem,1fr))] overflow-y-auto">
+        <div className="border-r border-border">
           {hours.map((hour) => (
-            <div key={hour} className={styles.hourLabel}>
+            <div
+              key={hour}
+              className="h-14 -translate-y-[0.5em] pr-2 text-right font-mono text-xs text-[color:var(--ink-text-tertiary)]"
+            >
               {pad(hour)}:00
             </div>
           ))}
@@ -138,15 +167,18 @@ export function WeekGrid({
           const dayEntries = entriesByDay.laidOut.get(day) ?? [];
           const maxLanes = entriesByDay.maxLanesByDay.get(day) ?? 1;
           return (
-          <div key={day} className={styles.dayColumn}>
+          <div key={day} className="overflow-x-auto border-l border-border">
+            {/* Pista del día: contexto de posicionamiento de las tarjetas.
+                Cuando hay muchos carriles solapados crece con el `minWidth` en
+                línea de abajo y la columna la desplaza horizontalmente. */}
             <div
-              className={styles.dayTrack}
+              className="relative h-full min-w-full"
               style={maxLanes > MAX_FLUID_LANES ? { minWidth: `${maxLanes * LANE_MIN_WIDTH_REM}rem` } : undefined}
             >
             {hours.map((hour) => (
               <div
                 key={hour}
-                className={styles.hourCell}
+                className="h-14 border-b border-dashed border-border"
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => handleDrop(event, day, hour)}
               />
@@ -167,12 +199,16 @@ export function WeekGrid({
               })}–${formatDate(entry.end, timeZone, locale, { hour: "2-digit", minute: "2-digit" })}`;
               const teacherLabel = entry.teacherName ?? t("calendar.sessionMenuTeacherUnassigned");
               const statusLabel = t(`calendar.status.${entry.status}`);
+              const isCanceled =
+                entry.status === "canceled_by_school" || entry.status === "canceled_by_student";
+              const tone =
+                teacherColor === null ? SESSION_NEUTRAL_TONE : TEACHER_COLOR_TONES[teacherColor];
 
               return (
                 <button
                   key={entry.sessionId}
                   type="button"
-                  className={styles.session}
+                  className={`absolute box-border flex min-h-11 cursor-pointer flex-col gap-0.5 overflow-hidden rounded-[var(--ink-radius-sm)] border px-2 py-1 text-left text-xs leading-4 focus-visible:z-[5] ${tone} ${isCanceled ? "line-through opacity-70" : ""}`}
                   data-status={entry.status}
                   data-teacher-color={teacherColor ?? undefined}
                   draggable
@@ -186,9 +222,9 @@ export function WeekGrid({
                   }}
                   aria-label={`${entry.groupName} · ${timeRange} · ${teacherLabel} · ${statusLabel}`}
                 >
-                  <span className={styles.sessionTitle}>{entry.groupName}</span>
-                  <span className={styles.sessionMeta}>{timeRange}</span>
-                  <span className={styles.sessionMeta}>{teacherLabel}</span>
+                  <span className="truncate font-semibold">{entry.groupName}</span>
+                  <span className="truncate opacity-85">{timeRange}</span>
+                  <span className="truncate opacity-85">{teacherLabel}</span>
                   <Chip variant={STATUS_TAG_VARIANT[entry.status] ?? "neutral"}>{statusLabel}</Chip>
                 </button>
               );

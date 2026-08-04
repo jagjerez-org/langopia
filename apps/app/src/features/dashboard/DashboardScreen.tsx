@@ -3,7 +3,6 @@ import { useT } from "../../i18n/translate.js";
 import { IndicatorsRow } from "./IndicatorsRow.js";
 import { AtRiskStudentsTable } from "./AtRiskStudentsTable.js";
 import { TeacherOccupancyBars } from "./TeacherOccupancyBars.js";
-import styles from "./DashboardScreen.module.css";
 
 /**
  * Panel de dirección (Tarea 6): la ruta `/`. La pantalla que ve quien
@@ -25,8 +24,8 @@ export function DashboardScreen(): ReactElement {
   const t = useT();
 
   return (
-    <main className={styles.page}>
-      <h1 className={styles.title}>{t("dashboard.title")}</h1>
+    <main className="mx-auto flex max-w-6xl flex-col gap-6 p-6">
+      <h1 className="text-2xl font-semibold">{t("dashboard.title")}</h1>
       <IndicatorsRow />
       <AtRiskStudentsTable />
       <TeacherOccupancyBars />

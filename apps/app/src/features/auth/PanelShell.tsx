@@ -9,7 +9,6 @@ import type { AuthUser } from "./api.js";
 import { AppNav } from "./AppNav.js";
 import { navLinksForRoles } from "./nav-links.js";
 import { useMyRoles, useSignOut, useSwitchSchool } from "./session.js";
-import styles from "./PanelShell.module.css";
 
 export interface PanelShellProps {
   /** Usuaria ya autenticada (sesión en `"ready"`): nombre para la cabecera. */
@@ -60,24 +59,33 @@ export function PanelShell({ user, children }: PanelShellProps): ReactElement {
   );
 
   return (
-    <div className={styles.shell}>
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>
-          <Link to="/" className={styles.brandLink} aria-label={t("common.appName")}>
-            <span className={styles.brandMark}>
+    <div className="flex min-h-svh bg-canvas">
+      {/* Pegajosa a la altura del viewport: el contenido desliza, el marco no.
+          En pantallas estrechas (< 64rem) la sidebar se convierte en una barra
+          de iconos: mejor eso que ocultar la navegación detrás de un menú
+          hamburguesa que todavía no existe. El botón de cambiar de escuela
+          queda sin sitio y se retira SOLO en este modo — es un panel de
+          escritorio primero, y la acción sigue disponible al cerrar sesión y
+          volver a entrar. */}
+      <aside className="sticky top-0 flex h-svh w-64 shrink-0 flex-col border-r border-border bg-surface max-lg:w-[4.5rem]">
+        <div className="border-b border-border px-5 py-4 max-lg:px-2 max-lg:text-center">
+          <Link to="/" className="inline-flex items-center gap-3 rounded-[var(--ink-radius-md)] no-underline" aria-label={t("common.appName")}>
+            {/* El gradiente de marca vive aquí (y en el avatar de escuela):
+                elementos sin texto, donde el contraste de AA no aplica. */}
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--ink-radius-md)] bg-[image:var(--ink-brand-gradient)] text-white shadow-[var(--ink-shadow-sm)]">
               <Globe size={16} strokeWidth={1.75} aria-hidden />
             </span>
-            <span className={styles.brandName}>{t("common.appName")}</span>
+            <span className="text-[length:var(--ink-text-xl)] font-bold tracking-[-0.02em] max-lg:hidden">{t("common.appName")}</span>
           </Link>
         </div>
 
-        <div className={styles.schoolCard}>
-          <span className={styles.schoolAvatar} aria-hidden>
+        <div className="mx-3 mb-1 mt-3 flex items-center gap-3 rounded-[var(--ink-radius-lg)] border border-border bg-surface px-3 py-2 max-lg:justify-center max-lg:p-2">
+          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--ink-radius-md)] bg-[image:var(--ink-brand-gradient)] text-xs font-bold uppercase text-white" aria-hidden>
             {initialsOf(schoolName)}
           </span>
-          <span className={styles.schoolInfo}>
-            <span className={styles.schoolName}>{schoolName}</span>
-            <span className={styles.schoolDetail}>{user.email}</span>
+          <span className="flex min-w-0 flex-1 flex-col max-lg:hidden">
+            <span className="truncate text-sm font-semibold">{schoolName}</span>
+            <span className="truncate text-xs text-[color:var(--ink-text-tertiary)]">{user.email}</span>
           </span>
           {/*
             Cambio de escuela (título de la Tarea 3): siempre disponible, no
@@ -87,7 +95,7 @@ export function PanelShell({ user, children }: PanelShellProps): ReactElement {
           */}
           <button
             type="button"
-            className={styles.schoolSwitch}
+            className="inline-flex shrink-0 cursor-pointer rounded-[var(--ink-radius-sm)] p-1 text-[color:var(--ink-text-tertiary)] transition-[background-color,color] duration-fast ease-[var(--ink-ease-standard)] hover:bg-surface-secondary hover:text-text max-lg:hidden"
             onClick={() => void switchSchool()}
             title={t("auth.switchSchool")}
             aria-label={t("auth.switchSchool")}
@@ -98,34 +106,45 @@ export function PanelShell({ user, children }: PanelShellProps): ReactElement {
 
         <AppNav />
 
-        <div className={styles.sidebarFooter}>
+        <div className="border-t border-border p-2">
           {/*
             Cerrar sesión vivía en el marcador temporal de `/` (Tarea 3);
             desde la Tarea 6 el hook probado (`useSignOut`) se pinta aquí, en
             el pie de la sidebar, disponible en cualquier pantalla del panel.
+            En la barra de iconos (< 64rem) la etiqueta se oculta SOLO a la
+            vista (`sr-only`): sigue siendo el nombre accesible del botón.
           */}
-          <button type="button" className={styles.signOut} onClick={() => void signOut()}>
+          <button
+            type="button"
+            className="flex min-h-9 w-full cursor-pointer items-center gap-3 rounded-[var(--ink-radius-md)] px-3 py-1 text-sm font-medium text-muted transition-[background-color,color] duration-fast ease-[var(--ink-ease-standard)] hover:bg-critical-bg hover:text-critical max-lg:justify-center max-lg:px-0"
+            onClick={() => void signOut()}
+          >
             <LogOut size={16} strokeWidth={1.75} aria-hidden />
-            <span>{t("auth.signOut")}</span>
+            <span className="max-lg:sr-only">{t("auth.signOut")}</span>
           </button>
         </div>
       </aside>
 
-      <div className={styles.main}>
-        <header className={styles.header}>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {/* Cabecera pegajosa: el título de sección y el avatar siguen a la
+            vista al deslizar pantallas largas (calendario, listados). */}
+        <header className="sticky top-0 z-[var(--ink-z-dropdown)] flex h-16 items-center justify-between gap-4 border-b border-border bg-surface px-8">
           {sectionTitle ? (
-            <h1 className={styles.sectionTitle}>{t(sectionTitle.labelKey)}</h1>
+            <h1 className="text-base font-semibold tracking-[-0.01em]">{t(sectionTitle.labelKey)}</h1>
           ) : (
             <span />
           )}
-          <span className={styles.userChip}>
-            <span className={styles.userAvatar} aria-hidden>
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[image:var(--ink-brand-gradient)] text-xs font-semibold uppercase text-white" aria-hidden>
               {initialsOf(user.name)}
             </span>
-            <span className={styles.userName}>{user.name}</span>
+            <span className="truncate text-sm font-medium max-lg:hidden">{user.name}</span>
           </span>
         </header>
-        <div className={styles.content}>{children}</div>
+        {/* Sin max-width: las pantallas que la quieren ya la fijan ellas
+            mismas (DashboardScreen, 72rem); el calendario y el editor web
+            usan el ancho completo. */}
+        <div className="min-w-0 flex-1 px-8 py-6">{children}</div>
       </div>
     </div>
   );

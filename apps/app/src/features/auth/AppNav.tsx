@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   BarChart3,
   BookOpen,
@@ -22,7 +22,19 @@ import type { LucideIcon } from "lucide-react";
 import { useT } from "../../i18n/translate.js";
 import { navLinksForRoles } from "./nav-links.js";
 import { useMyRoles } from "./session.js";
-import styles from "./AppNav.module.css";
+
+/* Base de cada enlace: icono + etiqueta, inactivo en gris con hover suave.
+   A juego con la sidebar estrecha de `PanelShell` (< 64rem): solo el icono,
+   centrado — la etiqueta se oculta con `sr-only`, NO con `display: none`,
+   porque es el único nombre accesible del enlace. */
+const LINK_BASE =
+  "flex min-h-9 items-center gap-3 rounded-[var(--ink-radius-md)] px-3 py-1 text-sm font-medium no-underline transition-[background-color,color] duration-fast ease-[var(--ink-ease-standard)] max-lg:justify-center max-lg:px-0";
+const LINK_INACTIVE = "text-muted hover:bg-surface-secondary hover:text-text";
+/* Activo con acento sólido, no el gradiente de marca: con texto blanco
+   encima da 6.09:1 (AA) en claro y 4.55:1 en oscuro; el stop azul del
+   gradiente se quedaba en 4.16:1, por debajo de AA para texto. */
+const LINK_ACTIVE =
+  "bg-accent text-text-inverse shadow-[var(--ink-shadow-sm),0_2px_10px_color-mix(in_oklch,var(--ink-accent-default)_30%,transparent)] hover:bg-accent-hover hover:text-text-inverse";
 
 /**
  * Icono de cada ruta del menú (lucide, la librería de iconos de la app
@@ -66,27 +78,29 @@ export function AppNav(): ReactElement {
   const t = useT();
   const roles = useMyRoles();
   const links = navLinksForRoles(roles ?? []);
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
-    <nav aria-label={t("nav.label")} className={styles.nav}>
-      <ul className={styles.list}>
+    /* La nav es la única zona de la sidebar que crece y desliza: con muchas
+       entradas (dirección ve diez) el pie con «cerrar sesión» queda siempre
+       visible. */
+    <nav aria-label={t("nav.label")} className="flex-1 overflow-y-auto p-2">
+      <ul className="flex flex-col gap-0.5">
         {links.map((link) => {
           const Icon = ROUTE_ICONS[link.to] ?? Circle;
+          // La raíz ("/") casa por prefijo con TODAS las rutas del panel, así
+          // que es la única que pide coincidencia exacta — la misma regla que
+          // el `activeOptions` del `Link` y que el título de `PanelShell`.
+          const isActive = link.to === "/" ? pathname === "/" : pathname.startsWith(link.to);
           return (
             <li key={link.to}>
-              {/*
-                El estado activo lo pinta el propio `Link` con
-                `data-status="active"` (ver AppNav.module.css). La raíz ("/")
-                casa por prefijo con TODAS las rutas del panel, así que es la
-                única que pide coincidencia exacta.
-              */}
               <Link
                 to={link.to}
                 activeOptions={{ exact: link.to === "/" }}
-                className={styles.link}
+                className={`${LINK_BASE} ${isActive ? LINK_ACTIVE : LINK_INACTIVE}`}
               >
-                <Icon size={16} strokeWidth={1.75} aria-hidden className={styles.icon} />
-                <span>{t(link.labelKey)}</span>
+                <Icon size={16} strokeWidth={1.75} aria-hidden className="shrink-0" />
+                <span className="max-lg:sr-only">{t(link.labelKey)}</span>
               </Link>
             </li>
           );

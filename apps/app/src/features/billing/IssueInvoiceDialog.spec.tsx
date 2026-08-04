@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../lib/api-client.js";
-import "./dialog-polyfill.testsupport.js";
 
 const { issueInvoiceMock, listStudentsForBillingMock, getBillingTargetsMock } = vi.hoisted(() => ({
   issueInvoiceMock: vi.fn(),

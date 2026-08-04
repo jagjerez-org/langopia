@@ -7,7 +7,6 @@ import { formatMoney } from "../../i18n/format.js";
 import { ApiError } from "../../lib/api-client.js";
 import { formatPercent } from "./format.js";
 import { DASHBOARD_SUMMARY_QUERY_KEY, getDashboardSummary } from "./api.js";
-import styles from "./IndicatorsRow.module.css";
 
 interface IndicatorProps {
   label: ReactNode;
@@ -22,15 +21,15 @@ interface IndicatorProps {
 function Indicator({ label, hint, value, isLoading, pending }: IndicatorProps): ReactElement {
   return (
     <Panel>
-      <p className={styles.label}>{label}</p>
+      <p className="font-medium text-muted text-[length:var(--ink-text-sm)]">{label}</p>
       {isLoading ? (
         <Skeleton variant="text" className="w-16 h-[var(--ink-text-3xl)]" />
       ) : pending !== undefined ? (
         <Chip variant="neutral">{pending}</Chip>
       ) : (
-        <p className={styles.value}>{value}</p>
+        <p className="mt-2 font-mono text-3xl font-semibold tabular-nums">{value}</p>
       )}
-      {hint && !isLoading && <p className={styles.hint}>{hint}</p>}
+      {hint && !isLoading && <p className="mt-1 text-xs text-[color:var(--ink-text-tertiary)]">{hint}</p>}
     </Panel>
   );
 }
@@ -71,7 +70,7 @@ export function IndicatorsRow(): ReactElement {
   const isLoading = query.isPending;
 
   return (
-    <div className={styles.grid}>
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(13rem,1fr))] gap-4">
       <Indicator
         label={t("dashboard.indicators.activeStudents")}
         value={summary ? new Intl.NumberFormat(locale).format(summary.activeStudents) : undefined}

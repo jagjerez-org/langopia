@@ -3,7 +3,6 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgendaEntry } from "@langopia/contracts";
-import "./dialog-polyfill.testsupport.js";
 
 const { getCancellationPreviewMock, cancelSessionMock } = vi.hoisted(() => ({
   getCancellationPreviewMock: vi.fn(),

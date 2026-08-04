@@ -16,7 +16,6 @@ import {
   type SiteBlock,
   type SiteBlockType,
 } from "./api.js";
-import styles from "./SiteEditorScreen.module.css";
 
 const BLOCK_TYPES: SiteBlockType[] = [
   "hero",
@@ -99,14 +98,14 @@ export function SiteEditorScreen(): ReactElement {
 
   return (
     <main className="p-6">
-      <div className={styles.toolbar}>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold mb-2">{t("sites.editor.title")}</h1>
           <Chip variant={site.site.status === "published" ? "success" : "warning"}>
             {t(`sites.editor.status.${site.site.status}`)}
           </Chip>
         </div>
-        <div className={styles.actions}>
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="secondary"
             onClick={() => publishMutation.mutate()}
@@ -124,7 +123,7 @@ export function SiteEditorScreen(): ReactElement {
         </div>
       </div>
 
-      <div className={styles.toolbar}>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <Selector
           id="site-editor-locale"
           label={t("sites.editor.localeLabel")}
@@ -154,8 +153,8 @@ export function SiteEditorScreen(): ReactElement {
         </p>
       )}
 
-      <div className={styles.layout}>
-        <section className={styles.editorColumn} aria-label={t("sites.editor.blocksLabel")}>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+        <section className="flex flex-col gap-4" aria-label={t("sites.editor.blocksLabel")}>
           <BlockEditor
             page={page}
             site={site}
@@ -163,9 +162,13 @@ export function SiteEditorScreen(): ReactElement {
             isSaving={saveMutation.isPending}
           />
         </section>
-        <aside className={styles.previewColumn}>
+        <aside className="flex flex-col gap-4">
           <Panel title={t("sites.editor.previewTitle")}>
-            <iframe title={t("sites.editor.previewTitle")} src={site.site.previewUrl} className={styles.preview} />
+            <iframe
+              title={t("sites.editor.previewTitle")}
+              src={site.site.previewUrl}
+              className="min-h-[520px] w-full rounded-lg border border-border bg-white lg:min-h-[640px]"
+            />
           </Panel>
         </aside>
       </div>
@@ -213,13 +216,13 @@ function BlockEditor(props: {
         {blocks.length === 0 ? (
           <EmptyState title={t("sites.editor.noBlocksTitle")} description={t("sites.editor.noBlocksDescription")} />
         ) : (
-          <ol className={styles.blockList}>
+          <ol className="flex flex-col gap-3">
             {blocks.map((block, index) => (
               <li key={block.id}>
                 <Panel>
-                  <div className={styles.blockHeader}>
-                    <h2 className={styles.blockTitle}>{t(`sites.editor.blockType.${block.type}`)}</h2>
-                    <div className={styles.blockControls}>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h2 className="text-base font-bold">{t(`sites.editor.blockType.${block.type}`)}</h2>
+                    <div className="flex gap-1.5">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -270,10 +273,10 @@ function BlockFields(props: {
     const image = objectProp(props.block.props.image);
     const cta = objectProp(props.block.props.callToAction);
     return (
-      <div className={styles.formGrid}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label={t("sites.editor.fieldHeadline")} value={textProp(props.block.props.headline)} onChange={(event) => update({ headline: event.target.value })} />
         <Input label={t("sites.editor.fieldSubtitle")} value={textProp(props.block.props.subtitle)} onChange={(event) => update({ subtitle: event.target.value })} />
-        <div className={styles.full}>
+        <div className="col-span-full">
           <Input label={t("sites.editor.fieldImageUrl")} value={textProp(image.url)} onChange={(event) => update({ image: { ...image, url: event.target.value } })} />
         </div>
         <Input label={t("sites.editor.fieldCtaLabel")} value={textProp(cta.label)} onChange={(event) => update({ callToAction: { ...cta, label: event.target.value } })} />
@@ -285,11 +288,11 @@ function BlockFields(props: {
   if (props.block.type === "teachers") {
     const selected = teachersProp(props.block.props.teachers);
     return (
-      <div className={styles.teacherList}>
+      <div className="flex flex-col gap-2">
         {props.teacherOptions.map((teacher) => {
           const checked = selected.some((candidate) => candidate.teacherId === teacher.teacherId);
           return (
-            <label key={teacher.teacherId} className={styles.teacherRow}>
+            <label key={teacher.teacherId} className="flex items-start gap-2">
               <input
                 type="checkbox"
                 checked={checked}
@@ -302,7 +305,7 @@ function BlockFields(props: {
               />
               <span>
                 {teacher.displayName}
-                {!teacher.imageRights && <p className={styles.warning}>{t("sites.editor.imageRightsWarning")}</p>}
+                {!teacher.imageRights && <p className="mt-1 text-sm text-[#9a3412]">{t("sites.editor.imageRightsWarning")}</p>}
               </span>
             </label>
           );
@@ -314,7 +317,7 @@ function BlockFields(props: {
   if (props.block.type === "faq") {
     const first = faqItems(props.block.props.items)[0] ?? { question: "", answer: "" };
     return (
-      <div className={styles.formGrid}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label={t("sites.editor.fieldQuestion")} value={first.question} onChange={(event) => update({ items: [{ ...first, question: event.target.value }] })} />
         <Input label={t("sites.editor.fieldAnswer")} value={first.answer} onChange={(event) => update({ items: [{ ...first, answer: event.target.value }] })} />
       </div>
@@ -323,7 +326,7 @@ function BlockFields(props: {
 
   if (props.block.type === "contact") {
     return (
-      <div className={styles.formGrid}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Input label={t("sites.editor.fieldTitle")} value={textProp(props.block.props.title)} onChange={(event) => update({ title: event.target.value })} />
         <Input label={t("sites.editor.fieldSubmitLabel")} value={textProp(props.block.props.submitLabel)} onChange={(event) => update({ submitLabel: event.target.value, leadSource: "school_site" })} />
       </div>

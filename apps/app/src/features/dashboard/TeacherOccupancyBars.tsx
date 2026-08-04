@@ -9,12 +9,19 @@ import { formatHours, formatPercent } from "./format.js";
 import { currentWeekRange } from "./current-week-range.js";
 import { getTeacherOccupancy } from "./api.js";
 import type { TeacherOccupancyView } from "./api.js";
-import styles from "./TeacherOccupancyBars.module.css";
 
 const TAG_VARIANT_BY_SIGNAL: Record<TeacherOccupancyView["signal"], ChipVariant> = {
   healthy: "success",
   overloaded: "critical",
   underused: "warning",
+};
+
+/* Relleno de cada barra según la `signal` de la API: los mismos tres tonos
+   semánticos que el `Chip` de al lado (ver `TAG_VARIANT_BY_SIGNAL`). */
+const FILL_COLOR_BY_SIGNAL: Record<TeacherOccupancyView["signal"], string> = {
+  healthy: "bg-success",
+  overloaded: "bg-critical",
+  underused: "bg-warning",
 };
 
 /**
@@ -68,9 +75,9 @@ export function TeacherOccupancyBars(): ReactElement {
 
     if (query.isPending) {
       return (
-        <ul className={styles.list}>
+        <ul className="flex flex-col gap-4">
           {[0, 1, 2].map((index) => (
-            <li key={index} className={styles.row}>
+            <li key={index} className="flex flex-col gap-1">
               <Skeleton variant="text" className="w-2/5" />
               <Skeleton variant="rect" className="h-2" />
             </li>
@@ -85,22 +92,21 @@ export function TeacherOccupancyBars(): ReactElement {
     }
 
     return (
-      <ul className={styles.list}>
+      <ul className="flex flex-col gap-4">
         {rows.map((row) => (
-          <li key={row.teacherId} className={styles.row}>
-            <div className={styles.rowHeader}>
-              <span className={styles.name}>{row.teacherName}</span>
+          <li key={row.teacherId} className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 break-words font-medium">{row.teacherName}</span>
               <Chip variant={TAG_VARIANT_BY_SIGNAL[row.signal]}>{signalLabel[row.signal]}</Chip>
-              <span className={styles.percent}>{formatPercent(row.occupancyRate, locale)}</span>
+              <span className="shrink-0 font-mono text-muted tabular-nums text-[length:var(--ink-text-sm)]">{formatPercent(row.occupancyRate, locale)}</span>
             </div>
-            <div className={styles.track} aria-hidden="true">
+            <div className="h-2 overflow-hidden rounded-full bg-sunken" aria-hidden="true">
               <div
-                className={styles.fill}
-                data-signal={row.signal}
+                className={`h-full rounded-full transition-[width] duration-[var(--ink-duration-slow)] ease-[var(--ink-ease-standard)] ${FILL_COLOR_BY_SIGNAL[row.signal]}`}
                 style={{ width: `${Math.min(row.occupancyRate, 1) * 100}%` }}
               />
             </div>
-            <p className={styles.detail}>
+            <p className="text-xs text-[color:var(--ink-text-tertiary)]">
               {t("dashboard.occupancy.detail", {
                 scheduled: formatHours(row.scheduledHours, locale),
                 contracted: formatHours(row.contractedHours, locale),

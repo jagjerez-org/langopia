@@ -8,7 +8,6 @@ import { ApiError } from "../../lib/api-client.js";
 import { formatPercent } from "./format.js";
 import { DASHBOARD_SUMMARY_QUERY_KEY, getDashboardSummary } from "./api.js";
 import type { AtRiskStudent } from "./api.js";
-import styles from "./AtRiskStudentsTable.module.css";
 
 /**
  * Alumnos que requieren atención (Tarea 6, Paso 4): la tabla del diseño, con
@@ -39,7 +38,7 @@ export function AtRiskStudentsTable(): ReactElement {
       key: "name",
       header: t("dashboard.atRisk.columnStudent"),
       render: (row) => (
-        <a className={styles.name} href={`/alumnos/${row.studentId}`}>
+        <a className="font-medium text-accent no-underline hover:underline focus-visible:underline" href={`/alumnos/${row.studentId}`}>
           {row.name}
         </a>
       ),
@@ -66,7 +65,7 @@ export function AtRiskStudentsTable(): ReactElement {
       key: "status",
       header: t("dashboard.atRisk.columnStatus"),
       render: (row) => (
-        <span className={styles.tags}>
+        <span className="flex flex-wrap gap-1">
           {row.reasons.includes("low_attendance") && (
             <Chip variant="critical">{t("dashboard.atRisk.reasonLowAttendance")}</Chip>
           )}
