@@ -35,3 +35,17 @@
 ---
 
 Documentación completa de la feature en `docs/features/design-system-app/` (brief, análisis de dominio, solución, 6 ADRs, estrategia de tests, plan de slices, informe adversarial, plan de test manual, review final, release readiness).
+
+---
+
+## Ampliación: la app ya usa solo el design system (sin CSS Modules)
+
+Tras la revisión inicial, se ha completado la adopción total en `apps/app`:
+
+- **6 piezas nuevas en el DS** migradas del legacy: `Dialog` (`<dialog>` nativo), `Toast` (+provider/hook), `Skeleton`, `Table`, `EmptyState`, `ErrorState` — más el átomo `Panel` (contenedor estructural, antes `Card` del panel; el `Card` del DS es de marketing).
+- **65 ficheros de la app migrados** a `@langopia/ui` (`Card→Panel`, `Select→Selector`, `Tag→Chip`, `Skeleton` con `className` para dimensiones…). Los 412 tests de la app pasaron sin modificar una sola consulta (todas por rol/nombre accesible).
+- **UI legacy eliminado**: `apps/app/src/ui/` borrado por completo y **cero `.module.css`** en la app — se encontraron y migraron también 10 módulos CSS vivos en `features/` (auth, calendar/WeekGrid, dashboard, sites). Tailwind queda como único sistema de estilos.
+- Fuentes `@fontsource` ahora solo las declara `@langopia/ui`; polyfill de `<dialog>` de test centralizado en el paquete.
+- Fix colateral: la utilidad `duration-fast` del theme existía con la clave equivocada (`--duration-fast` → `--transition-duration-fast`); las transiciones usan ahora los 120ms del token.
+
+Suites tras la migración: `@langopia/app` 400/400 (los 12 tests menos son los que se generaban por fichero legacy borrado), `@langopia/ui` 410/410, typecheck y builds verdes. e2e pendiente de CI (requiere Postgres).
