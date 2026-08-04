@@ -30,7 +30,7 @@ El tema es CSS-first de Tailwind v4 (ADR-002): todos los tokens viven en `src/th
 ```
 src/
 ├── theme.css            # tokens compartidos (única fuente de verdad visual)
-├── atoms/               # Button, Input, Selector, Chip, CalendarDay, UserAvatar… (18)
+├── atoms/               # Button, Input, Selector, Chip, CalendarDay, UserAvatar… (19)
 ├── molecules/           # LoginForm, CrudForm, List, Calendar, SideNavBar, KpiChart… (16)
 ├── organisms/           # Shell, SiteBuilder, CheckoutPage, LandingPage, KpiPage… (14)
 ├── fixtures/            # datos mock para stories y specs (no se exportan del barrel)
