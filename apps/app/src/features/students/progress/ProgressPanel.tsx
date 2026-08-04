@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, EmptyState, ErrorState, Skeleton, Table } from "../../../ui/index.js";
-import type { TableColumn } from "../../../ui/index.js";
+import { Panel, EmptyState, ErrorState, Skeleton, Table } from "@langopia/ui";
+import type { TableColumn } from "@langopia/ui";
 import { useErrorMessage } from "../../../i18n/errors.js";
 import { formatPercent } from "../../../i18n/format.js";
 import { useLocale, useT } from "../../../i18n/translate.js";
@@ -83,7 +83,7 @@ export function ProgressPanel({ studentId }: { studentId: string }): ReactElemen
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title={t("progress.completionTitle")}>
+      <Panel title={t("progress.completionTitle")}>
         {progress.completionRate === null ? (
           <p>{t("progress.completionEmpty")}</p>
         ) : (
@@ -95,9 +95,9 @@ export function ProgressPanel({ studentId }: { studentId: string }): ReactElemen
             })}
           </p>
         )}
-      </Card>
+      </Panel>
 
-      <Card title={t("progress.averageTitle")}>
+      <Panel title={t("progress.averageTitle")}>
         {progress.averageScore === null ? (
           <p>{t("progress.averageEmpty")}</p>
         ) : (
@@ -108,9 +108,9 @@ export function ProgressPanel({ studentId }: { studentId: string }): ReactElemen
             })}
           </p>
         )}
-      </Card>
+      </Panel>
 
-      <Card title={t("progress.skillTitle")}>
+      <Panel title={t("progress.skillTitle")}>
         <Table
           columns={skillColumns}
           rows={progress.skillBreakdown}
@@ -119,9 +119,9 @@ export function ProgressPanel({ studentId }: { studentId: string }): ReactElemen
           captionVisuallyHidden
           emptyState={<EmptyState title={t("progress.skillEmpty")} />}
         />
-      </Card>
+      </Panel>
 
-      <Card title={t("progress.trendTitle")}>
+      <Panel title={t("progress.trendTitle")}>
         <Table
           columns={trendColumns}
           rows={progress.trend}
@@ -130,15 +130,15 @@ export function ProgressPanel({ studentId }: { studentId: string }): ReactElemen
           captionVisuallyHidden
           emptyState={<EmptyState title={t("progress.trendEmpty")} />}
         />
-      </Card>
+      </Panel>
 
-      <Card title={t("progress.streakTitle")}>
+      <Panel title={t("progress.streakTitle")}>
         <p>
           {progress.reviewStreakDays > 0
             ? t("progress.streakValue", { days: progress.reviewStreakDays })
             : t("progress.streakEmpty")}
         </p>
-      </Card>
+      </Panel>
     </div>
   );
 }

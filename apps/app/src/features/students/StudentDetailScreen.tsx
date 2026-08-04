@@ -3,8 +3,8 @@ import type { ReactElement } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
-import { Button, Card, Dialog, EmptyState, ErrorState, Input, Select, Skeleton, Table, Tag, useToast } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, Panel, Dialog, EmptyState, ErrorState, Input, Selector, Skeleton, Table, Chip, useToast } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useT, useLocale } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { formatMoney } from "../../i18n/format.js";
@@ -43,14 +43,14 @@ const CONSENT_KINDS: ConsentKind[] = [
 ];
 const OVERDUE_WEEKS = 3;
 
-const ATTENDANCE_VARIANT: Record<string, TagVariant> = {
+const ATTENDANCE_VARIANT: Record<string, ChipVariant> = {
   present: "success",
   late: "warning",
   absent: "critical",
   excused: "neutral",
 };
 
-const INVOICE_VARIANT: Record<string, TagVariant> = {
+const INVOICE_VARIANT: Record<string, ChipVariant> = {
   paid: "success",
   open: "warning",
   past_due: "critical",
@@ -263,7 +263,7 @@ function DataTab({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card title={t("students.detail.editTitle")}>
+      <Panel title={t("students.detail.editTitle")}>
         <dl className="grid grid-cols-2 gap-2 mb-4">
           <dt className="text-secondary">{t("students.detail.nameLabel")}</dt>
           <dd>{student.name}</dd>
@@ -312,7 +312,7 @@ function DataTab({
             type="date"
             {...editForm.register("dateOfBirth")}
           />
-          <Select
+          <Selector
             label={t("students.create.levelLabel")}
             options={LEVELS.map((level) => ({ value: level, label: level }))}
             placeholder={t("students.levelNone")}
@@ -323,9 +323,9 @@ function DataTab({
             {editMutation.isPending ? t("students.detail.editSubmitting") : t("students.detail.editSubmit")}
           </Button>
         </form>
-      </Card>
+      </Panel>
 
-      <Card title={t("students.detail.guardiansTitle")}>
+      <Panel title={t("students.detail.guardiansTitle")}>
         {exportData && exportData.student && exportData.student.guardians.length > 0 ? (
           <ul>
             {exportData.student.guardians.map((guardian) => (
@@ -337,7 +337,7 @@ function DataTab({
         ) : (
           <p>{t("students.detail.noGuardians")}</p>
         )}
-      </Card>
+      </Panel>
 
       {student.status !== "left" && (
         <div>
@@ -401,9 +401,9 @@ function AttendanceTab({
       key: "status",
       header: t("students.attendance.columnStatus"),
       render: (row) => (
-        <Tag variant={ATTENDANCE_VARIANT[row.status] ?? "neutral"}>
+        <Chip variant={ATTENDANCE_VARIANT[row.status] ?? "neutral"}>
           {t.has(`students.attendance.status.${row.status}`) ? t(`students.attendance.status.${row.status}`) : row.status}
-        </Tag>
+        </Chip>
       ),
     },
     {
@@ -467,13 +467,13 @@ function ConsentsTab({
             <tr key={kind}>
               <td>{t(`students.consents.kind.${kind}`)}</td>
               <td>
-                <Tag variant={granted ? "success" : withdrawn ? "critical" : "neutral"}>
+                <Chip variant={granted ? "success" : withdrawn ? "critical" : "neutral"}>
                   {granted
                     ? t("students.consents.granted")
                     : withdrawn
                       ? t("students.consents.withdrawn")
                       : t("students.consents.notRecorded")}
-                </Tag>
+                </Chip>
               </td>
               <td>
                 {granted && entry?.grantedAt
@@ -516,9 +516,9 @@ function InvoicesTab({
       key: "status",
       header: t("students.invoices.columnStatus"),
       render: (row) => (
-        <Tag variant={INVOICE_VARIANT[row.status] ?? "neutral"}>
+        <Chip variant={INVOICE_VARIANT[row.status] ?? "neutral"}>
           {t.has(`students.invoices.status.${row.status}`) ? t(`students.invoices.status.${row.status}`) : row.status}
-        </Tag>
+        </Chip>
       ),
     },
     {
@@ -637,11 +637,11 @@ function EvaluationsTab({
   return (
     <div className="flex flex-col gap-6">
       {(overdueWeeks !== null || !everEvaluated) && (
-        <Tag variant="warning">
+        <Chip variant="warning">
           {everEvaluated && overdueWeeks !== null
             ? t("students.evaluations.overdueWeeks", { weeks: overdueWeeks })
             : t("students.evaluations.overdueNever")}
-        </Tag>
+        </Chip>
       )}
 
       {isLoading ? (
@@ -684,7 +684,7 @@ function EvaluationsTab({
         </ul>
       )}
 
-      <Card title={t("students.evaluations.formTitle")}>
+      <Panel title={t("students.evaluations.formTitle")}>
         <form onSubmit={(event) => void onSubmit(event)} noValidate className="flex flex-col gap-4 max-w-md">
           <Input
             label={t("students.evaluations.teacherIdLabel")}
@@ -710,12 +710,12 @@ function EvaluationsTab({
             error={errors.periodEnd?.message}
             {...register("periodEnd", { required: t("students.evaluations.periodEndRequired") })}
           />
-          <Select
+          <Selector
             label={t("students.evaluations.ratingLabel")}
             options={["1", "2", "3", "4", "5"].map((value) => ({ value, label: value }))}
             {...register("progressRating")}
           />
-          <Select
+          <Selector
             label={t("students.evaluations.levelAtEvaluationLabel")}
             options={LEVELS.map((level) => ({ value: level, label: level }))}
             placeholder={t("students.levelNone")}
@@ -747,7 +747,7 @@ function EvaluationsTab({
             {isSubmitting ? t("students.evaluations.submitting") : t("students.evaluations.submit")}
           </Button>
         </form>
-      </Card>
+      </Panel>
     </div>
   );
 }

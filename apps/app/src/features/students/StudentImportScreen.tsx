@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button, EmptyState, ErrorState, Tag, useToast } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Chip, useToast } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -139,12 +139,12 @@ export function StudentImportScreen(): ReactElement {
 
       {step.kind === "done" && (
         <div className="flex flex-col gap-4">
-          <Tag variant="success">
+          <Chip variant="success">
             {t("students.import.commitSummary", {
               created: step.report.createdCount ?? 0,
               updated: step.report.updatedCount ?? 0,
             })}
-          </Tag>
+          </Chip>
           <ImportReportTable report={step.report} />
           <div>
             <Button variant="secondary" onClick={() => setStep({ kind: "upload" })}>
@@ -219,13 +219,13 @@ function ImportReportTable({ report }: { report: ImportReport }): ReactElement {
             <td>{row.row}</td>
             <td>
               {row.status === "invalid" ? (
-                <Tag variant="critical">{t("students.import.rowInvalid")}</Tag>
+                <Chip variant="critical">{t("students.import.rowInvalid")}</Chip>
               ) : row.status === "created" ? (
-                <Tag variant="success">{t("students.import.rowCreated")}</Tag>
+                <Chip variant="success">{t("students.import.rowCreated")}</Chip>
               ) : row.status === "updated" ? (
-                <Tag variant="success">{t("students.import.rowUpdated")}</Tag>
+                <Chip variant="success">{t("students.import.rowUpdated")}</Chip>
               ) : (
-                <Tag variant="success">{t("students.import.rowValid")}</Tag>
+                <Chip variant="success">{t("students.import.rowValid")}</Chip>
               )}
             </td>
             <td>

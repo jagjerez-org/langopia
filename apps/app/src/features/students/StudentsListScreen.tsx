@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Button, EmptyState, ErrorState, Input, Select, Table, Tag } from "../../ui/index.js";
-import type { TableColumn, TagVariant } from "../../ui/index.js";
+import { Button, EmptyState, ErrorState, Input, Selector, Table, Chip } from "@langopia/ui";
+import type { TableColumn, ChipVariant } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { useLocale } from "../../i18n/translate.js";
@@ -18,7 +18,7 @@ const LEVELS: CefrLevel[] = ["A1", "A2", "B1", "B2", "C1", "C2"];
 const STATUSES: StudentStatus[] = ["active", "paused", "left"];
 const PAGE_SIZE = 20;
 
-const STATUS_VARIANT: Record<StudentStatus, TagVariant> = {
+const STATUS_VARIANT: Record<StudentStatus, ChipVariant> = {
   active: "success",
   paused: "warning",
   left: "neutral",
@@ -87,12 +87,12 @@ export function StudentsListScreen(): ReactElement {
     {
       key: "status",
       header: t("students.list.columnStatus"),
-      render: (row) => <Tag variant={STATUS_VARIANT[row.status]}>{t(`students.status.${row.status}`)}</Tag>,
+      render: (row) => <Chip variant={STATUS_VARIANT[row.status]}>{t(`students.status.${row.status}`)}</Chip>,
     },
     {
       key: "guardian",
       header: t("students.list.columnGuardian"),
-      render: (row) => (row.guardianRequired ? <Tag variant="warning">{t("students.list.guardianRequired")}</Tag> : "—"),
+      render: (row) => (row.guardianRequired ? <Chip variant="warning">{t("students.list.guardianRequired")}</Chip> : "—"),
     },
     {
       key: "joinedAt",
@@ -126,7 +126,7 @@ export function StudentsListScreen(): ReactElement {
             resetToFirstPage();
           }}
         />
-        <Select
+        <Selector
           label={t("students.list.levelLabel")}
           value={level}
           onChange={(event) => {
@@ -136,7 +136,7 @@ export function StudentsListScreen(): ReactElement {
           options={LEVELS.map((value) => ({ value, label: value }))}
           placeholder={t("students.list.levelAll")}
         />
-        <Select
+        <Selector
           label={t("students.list.statusLabel")}
           value={status}
           onChange={(event) => {

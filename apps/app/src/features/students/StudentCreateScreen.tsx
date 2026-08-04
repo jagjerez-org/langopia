@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ReactElement } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "@tanstack/react-router";
-import { Button, Input, Select } from "../../ui/index.js";
+import { Button, Input, Selector } from "@langopia/ui";
 import { useT } from "../../i18n/translate.js";
 import { useErrorMessage } from "../../i18n/errors.js";
 import { ApiError } from "../../lib/api-client.js";
@@ -139,7 +139,7 @@ export function StudentCreateScreen(): ReactElement {
           error={errors.targetLanguage?.message}
           {...register("targetLanguage", { required: t("students.create.targetLanguageRequired") })}
         />
-        <Select
+        <Selector
           label={t("students.create.levelLabel")}
           options={LEVELS.map((level) => ({ value: level, label: level }))}
           placeholder={t("students.levelNone")}
@@ -171,7 +171,7 @@ export function StudentCreateScreen(): ReactElement {
                   pattern: { value: EMAIL_PATTERN, message: t("students.create.guardianEmailInvalid") },
                 })}
               />
-              <Select
+              <Selector
                 label={t("students.create.guardianRelationshipLabel")}
                 required
                 error={errors.guardian?.relationship?.message}
