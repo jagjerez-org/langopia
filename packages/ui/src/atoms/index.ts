@@ -35,6 +35,7 @@ export {
   MultiSelectorWithSearch,
   type MultiSelectorWithSearchProps,
 } from "./MultiSelectorWithSearch/MultiSelectorWithSearch.js";
+export { Panel, type PanelProps } from "./Panel/Panel.js";
 export { RadioButton, type RadioButtonProps } from "./RadioButton/RadioButton.js";
 export { Selector, type SelectorProps, type SelectorOption } from "./Selector/Selector.js";
 export {
