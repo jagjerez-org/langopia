@@ -7,3 +7,4 @@ export * from "./calendar.js";
 export * from "./cards.js";
 export * from "./kpis.js";
 export * from "./lists.js";
+export * from "./shell.js";
